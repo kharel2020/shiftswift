@@ -1036,7 +1036,7 @@ a { color: inherit; text-decoration: none; }
 
 .compare-section,
 .faq-section {
-  max-width: 880px;
+  max-width: 960px;
   margin: 48px auto 0;
 }
 
@@ -1057,8 +1057,21 @@ a { color: inherit; text-decoration: none; }
 .compare-table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
   font-size: var(--text-body-size);
   font-weight: var(--text-body-weight);
+}
+
+.compare-table__col--challenge {
+  width: 34%;
+}
+
+.compare-table__col--spreadsheets {
+  width: 28%;
+}
+
+.compare-table__col--solution {
+  width: 38%;
 }
 
 .compare-table th,
@@ -1066,6 +1079,13 @@ a { color: inherit; text-decoration: none; }
   padding: 14px 16px;
   text-align: left;
   border-bottom: 1px solid var(--gray-200);
+  vertical-align: top;
+}
+
+.compare-table th:first-child,
+.compare-table td:first-child {
+  padding-right: 20px;
+  white-space: nowrap;
 }
 
 .compare-table th {
