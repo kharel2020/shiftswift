@@ -106,6 +106,8 @@ rsync -a --delete frontend/ /home/shiftswifthr-app/htdocs/app.shiftswifthr.co.uk
 rsync -a --delete frontend/ /home/shiftswifthr/htdocs/www.shiftswifthr.co.uk/
 ```
 
+**Legal pages:** Marketing links use `/payment-terms.html`, `/privacy-policy.html`, etc. Legacy URLs such as `/docs/b2b_payment_terms.md` redirect via `frontend/docs/.htaccess` (Apache/LiteSpeed) or add `deploy/cloudpanel/www-legal-redirects.snippet` to the www vhost nginx custom config.
+
 ---
 
 ## SSH deploy key (recommended)

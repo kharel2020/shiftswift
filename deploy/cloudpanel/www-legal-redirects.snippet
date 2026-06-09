@@ -1,0 +1,8 @@
+# Optional nginx redirects for www / app static sites
+# Add inside the server { } block for www.shiftswifthr.co.uk in CloudPanel → Vhost → Custom Nginx Config
+
+location = /docs/b2b_payment_terms.md { return 301 /payment-terms.html; }
+location = /docs/privacy-policy.md { return 301 /privacy-policy.html; }
+location = /docs/cookies.md { return 301 /cookies.html; }
+location = /docs/eula_hr_module.md { return 301 /eula.html; }
+location = /docs/hr_dpa_outline.md { return 301 /dpa.html; }
