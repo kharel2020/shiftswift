@@ -8,7 +8,7 @@
     <link rel="icon" type="image/svg+xml" href="./assets/shiftswift-hr-icon.svg?v=brandkit-v1" />
     <link rel="apple-touch-icon" href="./assets/shiftswift-hr-icon.png?v=brandkit-v1" />
     <link rel="stylesheet" href="./landing.css?v=brandkit-v8" />
-    <link rel="stylesheet" href="./pricing.css?v=1" />
+    <link rel="stylesheet" href="./pricing.css?v=8" />
   </head>
   <body class="signup-page">
     <div class="signup-page-inner">
@@ -32,7 +32,7 @@
 
         <section class="signup-form-panel" aria-labelledby="form-heading">
           <h2 id="form-heading">Create your workspace</h2>
-          <p class="muted">All HR plans include a 14-day free trial with no card required. Add payroll later if you need RTI submissions. You can upgrade or change plans at any time in admin.</p>
+          <p class="muted signup-form-panel__lead">14-day free trial · no card required · payroll optional</p>
 
           <div id="signup-plan-summary" class="signup-summary" hidden>
             <div class="signup-summary-label">Selected plan</div>
@@ -40,35 +40,66 @@
             <div class="signup-summary-price">Not selected</div>
           </div>
 
-          <form id="signup-form" class="stack" style="margin-top: 20px;">
+          <form id="signup-form" class="signup-form">
             <input type="hidden" id="selected-plan-id" name="plan_id" value="site_starter_monthly" />
             <input type="hidden" id="selected-payroll-plan-id" name="payroll_plan_id" value="" />
-            <label>Business name<input name="business_name" required placeholder="e.g. The Crown Pub" /></label>
-            <label>Billing email<input name="billing_email" type="email" required placeholder="accounts@yourbusiness.co.uk" /></label>
-            <label>VAT number <span class="muted">(optional)</span>
-              <input name="vat_number" placeholder="GB123456789" />
-            </label>
-            <div class="promo-row">
-              <label>Discount code
-                <input name="discount_code" id="discount-code" placeholder="e.g. LAUNCH20" autocomplete="off" />
+
+            <fieldset class="signup-form__section">
+              <legend class="signup-form__legend">Business details</legend>
+              <div class="signup-form__fields">
+                <label class="signup-field">
+                  <span class="signup-field__label">Business name</span>
+                  <input name="business_name" required placeholder="e.g. The Crown Pub" autocomplete="organization" />
+                </label>
+                <label class="signup-field">
+                  <span class="signup-field__label">Billing email</span>
+                  <input name="billing_email" type="email" required placeholder="accounts@yourbusiness.co.uk" autocomplete="email" />
+                </label>
+                <label class="signup-field">
+                  <span class="signup-field__label">VAT number <span class="signup-field__optional">(optional)</span></span>
+                  <input name="vat_number" placeholder="GB123456789" autocomplete="off" />
+                </label>
+              </div>
+            </fieldset>
+
+            <fieldset class="signup-form__section">
+              <legend class="signup-form__legend">Promo codes <span class="signup-form__legend-note">optional</span></legend>
+              <div class="signup-form__fields signup-form__fields--2">
+                <label class="signup-field">
+                  <span class="signup-field__label">Discount code</span>
+                  <input name="discount_code" id="discount-code" placeholder="e.g. LAUNCH20" autocomplete="off" />
+                </label>
+                <label class="signup-field">
+                  <span class="signup-field__label">Referral code</span>
+                  <input name="referral_code" id="referral-code" placeholder="e.g. REF-PUB" autocomplete="off" />
+                </label>
+              </div>
+              <button type="button" class="btn ghost signup-form__apply" id="apply-promo-btn">Apply codes</button>
+              <p id="promo-message" class="promo-message muted" role="status"></p>
+            </fieldset>
+
+            <fieldset class="signup-form__section signup-form__section--legal">
+              <legend class="signup-form__legend">Before you continue</legend>
+              <label class="signup-check">
+                <input type="checkbox" name="start_trial" checked />
+                <span>Start with a 14-day free trial before billing begins</span>
               </label>
-              <label>Referral code
-                <input name="referral_code" id="referral-code" placeholder="e.g. REF-PUB" autocomplete="off" />
+              <label class="signup-check">
+                <input type="checkbox" name="accept_eula" required />
+                <span>
+                  I accept the
+                  <a href="./eula.html" target="_blank" rel="noopener">HR Module EULA</a>
+                  and
+                  <a href="./payment-terms.html" target="_blank" rel="noopener">B2B payment terms</a>.
+                </span>
               </label>
+            </fieldset>
+
+            <div class="signup-form__actions">
+              <button class="btn signup-form__submit" type="submit">Create workspace &amp; continue</button>
+              <p id="signup-status" class="signup-form__status" role="status"></p>
+              <a class="btn ghost signup-form__back" href="./index.html">Back to home</a>
             </div>
-            <button type="button" class="btn ghost" id="apply-promo-btn">Apply codes</button>
-            <p id="promo-message" class="promo-message muted"></p>
-            <label class="checkbox-row">
-              <input type="checkbox" name="start_trial" checked />
-              <span>Start with a 14-day free trial before billing begins</span>
-            </label>
-            <label class="checkbox-row">
-              <input type="checkbox" name="accept_eula" required />
-              <span>I accept the <a href="./eula.html" target="_blank" rel="noopener">HR Module EULA</a> and <a href="./payment-terms.html" target="_blank" rel="noopener">B2B payment terms</a>.</span>
-            </label>
-            <button class="btn" type="submit">Create workspace & continue</button>
-            <p id="signup-status" role="status"></p>
-            <a class="btn ghost" href="./index.html">Back to home</a>
           </form>
         </section>
       </div>
