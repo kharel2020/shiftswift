@@ -29,8 +29,13 @@ if [ -f backend_stub/.venv/bin/activate ]; then
   source backend_stub/.venv/bin/activate
   echo "==> pip install"
   pip install -q -r backend_stub/requirements.txt
+elif [ -f deploy/cloudpanel/install-api.sh ]; then
+  echo "==> venv missing — running install-api.sh"
+  bash deploy/cloudpanel/install-api.sh
+  # shellcheck disable=SC1091
+  source backend_stub/.venv/bin/activate
 else
-  echo "==> venv missing — run deploy/cloudpanel/install-api.sh first"
+  echo "ERROR: backend_stub/.venv missing and install-api.sh not found"
   exit 1
 fi
 
@@ -58,7 +63,13 @@ rsync -a --delete "${API_ROOT}/frontend/" "${WWW_ROOT}/"
 
 echo "==> health check"
 if command -v curl >/dev/null 2>&1; then
-  curl -sf "https://api.shiftswifthr.co.uk/health" && echo "" || echo "Health check failed (API may still be starting)"
+  if curl -sf "http://127.0.0.1:8000/health" >/dev/null; then
+    curl -s "http://127.0.0.1:8000/health"
+    echo ""
+  else
+    echo "Local API not responding on :8000 — check: sudo systemctl status ${SERVICE}"
+    sudo systemctl status "${SERVICE}" --no-pager -l 2>/dev/null | tail -20 || true
+  fi
 fi
 
 echo "Done."

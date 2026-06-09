@@ -28,6 +28,14 @@ cd "$API_ROOT"
 # Clone into site root (folder must be empty or use a temp dir first)
 git clone https://github.com/kharel2020/shiftswift.git .
 
+# If the folder is NOT empty (existing zip deploy), use temp clone + rsync instead:
+# rm -rf /tmp/shiftswift-repo "$API_ROOT/.git"
+# git clone https://github.com/kharel2020/shiftswift.git /tmp/shiftswift-repo
+# rsync -a --exclude '.git' --exclude 'backend_stub/.env' --exclude 'backend_stub/.venv' \
+#   /tmp/shiftswift-repo/ "$API_ROOT/"
+# mv /tmp/shiftswift-repo/.git "$API_ROOT/" && rm -rf /tmp/shiftswift-repo
+# cp /root/shiftswift.env.backup "$API_ROOT/backend_stub/.env"
+
 # Private repo: use a GitHub Personal Access Token as the password, or set up an SSH deploy key:
 # git clone git@github.com:kharel2020/shiftswift.git .
 

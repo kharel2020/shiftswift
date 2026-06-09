@@ -1,8 +1,16 @@
 #!/usr/bin/env bash
-# Run from extracted API package root (contains backend_stub/, scripts/, migrations/).
+# Run from repo root, or: bash deploy/cloudpanel/install-api.sh
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "${SCRIPT_DIR}/backend_stub/requirements.txt" ]; then
+  ROOT_DIR="${SCRIPT_DIR}"
+elif [ -f "${SCRIPT_DIR}/../../backend_stub/requirements.txt" ]; then
+  ROOT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+else
+  echo "Cannot find backend_stub/requirements.txt — run from the shiftswift repo root."
+  exit 1
+fi
 cd "${ROOT_DIR}"
 
 echo "==> ShiftSwift HR API install"
