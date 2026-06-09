@@ -2,6 +2,7 @@
 
 .pricing-section {
   padding: 64px 0 80px;
+  overflow: visible;
 }
 
 .pricing-intro {
@@ -296,11 +297,27 @@
 }
 
 .pricing-footnote {
+  max-width: 42rem;
+  margin: 28px auto 0;
+  padding: 0 12px;
   text-align: center;
-  margin: 28px 0 0;
+  line-height: 1.65;
   font-size: var(--text-caption-size);
   font-weight: var(--text-caption-weight);
   color: var(--gray-400);
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+.pricing-footnote__link {
+  display: block;
+  margin-top: 8px;
+}
+
+.pricing-footnote__link a {
+  color: var(--green-700);
+  font-weight: var(--text-support-weight);
+  text-decoration: underline;
 }
 
 .pricing-loading,
