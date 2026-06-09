@@ -1,7 +1,0 @@
-# Redirect legacy /docs/*.md legal URLs to HTML pages (Apache / OpenLiteSpeed on CloudPanel)
-
-Redirect 301 /docs/b2b_payment_terms.md /payment-terms.html
-Redirect 301 /docs/privacy-policy.md /privacy-policy.html
-Redirect 301 /docs/cookies.md /cookies.html
-Redirect 301 /docs/eula_hr_module.md /eula.html
-Redirect 301 /docs/hr_dpa_outline.md /dpa.html

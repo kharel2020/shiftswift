@@ -106,7 +106,11 @@ rsync -a --delete frontend/ /home/shiftswifthr-app/htdocs/app.shiftswifthr.co.uk
 rsync -a --delete frontend/ /home/shiftswifthr/htdocs/www.shiftswifthr.co.uk/
 ```
 
-**Legal pages:** Marketing links use `/payment-terms.html`, `/privacy-policy.html`, etc. Legacy URLs such as `/docs/b2b_payment_terms.md` redirect via `frontend/docs/.htaccess` (Apache/LiteSpeed) or add `deploy/cloudpanel/www-legal-redirects.snippet` to the www vhost nginx custom config.
+**Legal pages:** Canonical URLs are `/payment-terms.html`, `/privacy-policy.html`, `/cookies.html`, `/eula.html`, `/dpa.html`. Deploy with `pull-production.sh` (rsyncs `frontend/`).
+
+Legacy `/docs/*.md` links: optional nginx rewrites in `deploy/cloudpanel/www-legal-redirects.snippet`. **Do not paste Apache `.htaccess` into CloudPanel nginx config** — use the rewrite lines from that snippet only.
+
+If the site shows an nginx error after editing vhost config, remove the bad custom config, run `sudo nginx -t`, then reload nginx.
 
 ---
 

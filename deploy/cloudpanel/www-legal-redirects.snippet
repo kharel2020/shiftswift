@@ -1,8 +1,25 @@
-# Optional nginx redirects for www / app static sites
-# Add inside the server { } block for www.shiftswifthr.co.uk in CloudPanel → Vhost → Custom Nginx Config
+# Legacy legal URL redirects (nginx only)
 
-location = /docs/b2b_payment_terms.md { return 301 /payment-terms.html; }
-location = /docs/privacy-policy.md { return 301 /privacy-policy.html; }
-location = /docs/cookies.md { return 301 /cookies.html; }
-location = /docs/eula_hr_module.md { return 301 /eula.html; }
-location = /docs/hr_dpa_outline.md { return 301 /dpa.html; }
+CloudPanel → **www.shiftswifthr.co.uk** → Vhost → **Custom Nginx Configuration**
+
+Paste at **server level** (not inside `location /`). Do **not** paste Apache `.htaccess` syntax here — that breaks nginx.
+
+```nginx
+rewrite ^/docs/b2b_payment_terms\.md$ /payment-terms.html permanent;
+rewrite ^/docs/privacy-policy\.md$ /privacy-policy.html permanent;
+rewrite ^/docs/cookies\.md$ /cookies.html permanent;
+rewrite ^/docs/eula_hr_module\.md$ /eula.html permanent;
+rewrite ^/docs/hr_dpa_outline\.md$ /dpa.html permanent;
+```
+
+After saving, test: `sudo nginx -t` then reload.
+
+Canonical pages (no redirect needed):
+
+- `/payment-terms.html`
+- `/privacy-policy.html`
+- `/cookies.html`
+- `/eula.html`
+- `/dpa.html`
+
+These are deployed with `bash deploy/cloudpanel/pull-production.sh`.

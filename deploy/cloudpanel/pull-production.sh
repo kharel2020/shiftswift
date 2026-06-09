@@ -65,6 +65,38 @@ echo "==> sync frontend"
 rsync -a --delete "${API_ROOT}/frontend/" "${APP_ROOT}/"
 rsync -a --delete "${API_ROOT}/frontend/" "${WWW_ROOT}/"
 
+echo "==> verify legal pages (WWW + App)"
+LEGAL_PAGES=(
+  payment-terms.html
+  privacy-policy.html
+  cookies.html
+  eula.html
+  dpa.html
+  legal.css
+)
+LEGAL_DOCS=(
+  docs/b2b_payment_terms.md
+  docs/privacy-policy.md
+  docs/cookies.md
+  docs/eula_hr_module.md
+  docs/hr_dpa_outline.md
+)
+for root in "${APP_ROOT}" "${WWW_ROOT}"; do
+  for page in "${LEGAL_PAGES[@]}"; do
+    if [ ! -f "${root}/${page}" ]; then
+      echo "ERROR: missing ${root}/${page} after rsync — run git pull on API repo first"
+      exit 1
+    fi
+  done
+  for doc in "${LEGAL_DOCS[@]}"; do
+    if [ ! -f "${root}/${doc}" ]; then
+      echo "ERROR: missing ${root}/${doc} after rsync"
+      exit 1
+    fi
+  done
+done
+echo "    legal pages OK"
+
 echo "==> health check"
 if command -v curl >/dev/null 2>&1; then
   health_ok=0
