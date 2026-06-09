@@ -1,8 +1,22 @@
 /* Subscription pricing — marketing & signup (shared with landing.css) */
 
 .pricing-section {
-  padding: 64px 0 80px;
+  padding: 48px 0 48px;
   overflow: visible;
+}
+
+@media (max-width: 900px) {
+  .pricing-section {
+    padding: 32px 0 28px;
+  }
+
+  .pricing-subsection {
+    margin-top: 24px;
+  }
+
+  .pricing-footnote {
+    margin-top: 20px;
+  }
 }
 
 .pricing-intro {
@@ -297,16 +311,18 @@
 }
 
 .pricing-footnote {
+  width: 100%;
   max-width: 42rem;
   margin: 28px auto 0;
-  padding: 0 12px;
+  padding: 0 16px;
+  box-sizing: border-box;
   text-align: center;
   line-height: 1.65;
   font-size: var(--text-caption-size);
   font-weight: var(--text-caption-weight);
   color: var(--gray-400);
-  overflow-wrap: break-word;
-  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .pricing-footnote__link {

@@ -11,8 +11,8 @@
     <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon.png?v=brandkit-v2" />
     <link rel="icon" type="image/svg+xml" href="./assets/shiftswift-hr-icon.svg?v=brandkit-v2" />
     <link rel="apple-touch-icon" href="./assets/shiftswift-hr-icon.png?v=brandkit-v2" />
-    <link rel="stylesheet" href="./landing.css?v=brandkit-v12" />
-    <link rel="stylesheet" href="./pricing.css?v=5" />
+    <link rel="stylesheet" href="./landing.css?v=brandkit-v13" />
+    <link rel="stylesheet" href="./pricing.css?v=7" />
   </head>
   <body>
     <div class="page-bg" aria-hidden="true">
@@ -114,14 +114,14 @@
                   </div>
                 </div>
 
-                <div class="hero-preview__panel product-mock product-mock--rtw">
+                <div class="hero-preview__panel product-mock product-mock--rtw hero-preview__panel--mobile-only">
                   <div class="product-mock__bar"><span>Right to Work</span><strong class="text-ok">3 due this month</strong></div>
                   <div class="product-mock__row"><span>Passport (A. Patel)</span><span>Expires 14 Aug</span></div>
                   <div class="product-mock__row"><span>BRP (J. Okonkwo)</span><span>Verified</span></div>
                   <div class="product-mock__row product-mock__row--warn"><span>Share code (S. Ahmed)</span><span>Review</span></div>
                 </div>
 
-                <div class="hero-preview__panel product-mock product-mock--lifecycle">
+                <div class="hero-preview__panel product-mock product-mock--lifecycle hero-preview__panel--desktop-only">
                   <div class="product-mock__bar"><span>Employee lifecycle</span><strong>Step 4 of 10</strong></div>
                   <div class="product-mock__step product-mock__step--done">Recruitment</div>
                   <div class="product-mock__step product-mock__step--done">Offer &amp; contract</div>
@@ -129,7 +129,7 @@
                   <div class="product-mock__step">Payroll setup</div>
                 </div>
 
-                <div class="hero-preview__panel product-mock product-mock--audit">
+                <div class="hero-preview__panel product-mock product-mock--audit hero-preview__panel--desktop-only">
                   <div class="product-mock__bar"><span>Home Office audit pack</span><strong>Ready</strong></div>
                   <div class="product-mock__row"><span>Sponsored workers</span><span>12 records</span></div>
                   <div class="product-mock__row"><span>Absence alerts (day 9)</span><span>0 open</span></div>
@@ -164,38 +164,72 @@
           </div>
         </section>
 
-        <section id="product-showcase" class="product-showcase reveal" aria-label="Product preview">
-          <h2>See ShiftSwift HR in action</h2>
-          <p class="section-lead muted">Compliance, workforce records, and audit tooling for UK employers and sponsor licence holders.</p>
-          <div class="product-showcase-grid reveal-stagger">
-            <figure class="product-showcase-card">
-              <div class="product-mock product-mock--rtw" aria-hidden="true">
-                <div class="product-mock__bar"><span>Right to Work</span><strong class="text-ok">3 due this month</strong></div>
-                <div class="product-mock__row"><span>Passport (A. Patel)</span><span>Expires 14 Aug</span></div>
-                <div class="product-mock__row"><span>BRP (J. Okonkwo)</span><span>Verified</span></div>
-                <div class="product-mock__row product-mock__row--warn"><span>Share code (S. Ahmed)</span><span>Review</span></div>
+        <section id="document-samples" class="doc-samples section reveal" aria-labelledby="doc-samples-heading">
+          <h2 id="doc-samples-heading">Your compliance documents, organised</h2>
+          <p class="section-lead muted">Sample records stored in ShiftSwift HR: right-to-work evidence, contracts, and inspection-ready audit packs.</p>
+          <div class="doc-samples-grid reveal-stagger">
+            <article class="doc-sample">
+              <div class="doc-sample__visual doc-sample__visual--rtw" aria-hidden="true">
+                <div class="doc-sample__sheet">
+                  <div class="doc-sample__sheet-head">
+                    <span>Right to Work check</span>
+                    <span class="doc-sample__chip doc-sample__chip--ok">Verified</span>
+                  </div>
+                  <div class="doc-sample__id-row">
+                    <div class="doc-sample__photo"><span>Photo</span></div>
+                    <div class="doc-sample__id-meta">
+                      <div class="doc-sample__line doc-sample__line--short"></div>
+                      <div class="doc-sample__line"></div>
+                      <div class="doc-sample__line doc-sample__line--medium"></div>
+                    </div>
+                  </div>
+                  <div class="doc-sample__line"></div>
+                  <div class="doc-sample__line doc-sample__line--medium"></div>
+                  <p class="doc-sample__footnote">Expires 14 Aug 2026 · Checked 12 Jan 2026</p>
+                </div>
               </div>
-              <figcaption>Right-to-work dashboard with expiry alerts and document audit trail.</figcaption>
-            </figure>
-            <figure class="product-showcase-card">
-              <div class="product-mock product-mock--lifecycle" aria-hidden="true">
-                <div class="product-mock__bar"><span>Employee lifecycle</span><strong>Step 4 of 10</strong></div>
-                <div class="product-mock__step product-mock__step--done">Recruitment</div>
-                <div class="product-mock__step product-mock__step--done">Offer & contract</div>
-                <div class="product-mock__step product-mock__step--active">Right to work</div>
-                <div class="product-mock__step">Payroll setup</div>
+              <h3>Right-to-work evidence</h3>
+              <p>Passport, BRP, and share code uploads with expiry alerts and a timestamped audit trail.</p>
+            </article>
+            <article class="doc-sample">
+              <div class="doc-sample__visual doc-sample__visual--contract" aria-hidden="true">
+                <div class="doc-sample__sheet">
+                  <div class="doc-sample__sheet-head">
+                    <span>Employment contract</span>
+                    <span class="doc-sample__chip">Draft</span>
+                  </div>
+                  <div class="doc-sample__line doc-sample__line--wide"></div>
+                  <div class="doc-sample__line"></div>
+                  <div class="doc-sample__line"></div>
+                  <div class="doc-sample__line doc-sample__line--medium"></div>
+                  <div class="doc-sample__signature">
+                    <span class="doc-sample__sig-line"></span>
+                    <span>Signed · e-signature</span>
+                  </div>
+                </div>
               </div>
-              <figcaption>Guided onboarding from vacancy through RTW, payroll, and compliance.</figcaption>
-            </figure>
-            <figure class="product-showcase-card">
-              <div class="product-mock product-mock--audit" aria-hidden="true">
-                <div class="product-mock__bar"><span>Home Office audit pack</span><strong>Ready</strong></div>
-                <div class="product-mock__row"><span>Sponsored workers</span><span>12 records</span></div>
-                <div class="product-mock__row"><span>Absence alerts (day 9)</span><span>0 open</span></div>
-                <div class="product-mock__row"><span>Export</span><span>PDF · JSON</span></div>
+              <h3>Contracts &amp; offer letters</h3>
+              <p>HR templates with version history, ready to issue from the employee lifecycle workflow.</p>
+            </article>
+            <article class="doc-sample">
+              <div class="doc-sample__visual doc-sample__visual--audit" aria-hidden="true">
+                <div class="doc-sample__sheet doc-sample__sheet--folder">
+                  <div class="doc-sample__sheet-head">
+                    <span>Home Office audit pack</span>
+                    <span class="doc-sample__chip doc-sample__chip--ok">Ready</span>
+                  </div>
+                  <ul class="doc-sample__file-list">
+                    <li><span>RTW records</span><span>12 files</span></li>
+                    <li><span>Absence log (day 9)</span><span>PDF</span></li>
+                    <li><span>Sponsor duty checklist</span><span>PDF</span></li>
+                    <li><span>SMS change report</span><span>JSON</span></li>
+                  </ul>
+                  <div class="doc-sample__stamp">Inspection ready</div>
+                </div>
               </div>
-              <figcaption>One-click audit export for sponsor licence inspections.</figcaption>
-            </figure>
+              <h3>Audit export pack</h3>
+              <p>One-click PDF and JSON export for sponsor licence inspections and unexpected Home Office visits.</p>
+            </article>
           </div>
         </section>
 
@@ -248,10 +282,11 @@
           </div>
         </section>
 
-        <section id="compliance" class="section reveal">
+        <section id="compliance" class="section section--compact reveal">
           <div class="feature-card compliance-card feature-card--animated">
             <h3>UK compliance ready</h3>
             <p>ShiftSwift HR keeps your business aligned with HMRC RTI requirements and Home Office checks, with retention and audit tooling built in.</p>
+            <a class="btn ghost" href="#document-samples">See document samples</a>
           </div>
         </section>
 
@@ -376,7 +411,7 @@
         </section>
       </main>
 
-      <footer class="site-footer reveal">
+      <footer class="site-footer">
         <div class="site-footer__grid">
           <div>
             <strong>ShiftSwift HR</strong>
@@ -406,7 +441,7 @@
       </footer>
     </div>
     <script src="./landing-animations.js?v=1"></script>
-    <script src="./landing-faq.js?v=1"></script>
+    <script src="./landing-faq.js?v=2"></script>
     <script src="./brand-config.js?v=brand-v4"></script>
     <script src="./pricing.js?v=5"></script>
     <script>
