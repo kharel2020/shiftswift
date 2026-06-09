@@ -367,13 +367,21 @@
 
 .signup-layout {
   display: grid;
-  grid-template-columns: 1.35fr 0.85fr;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
   gap: 28px;
   align-items: start;
 }
 
-.signup-plans-panel,
-.signup-form-panel {
+.signup-form-panel,
+.signup-trust-panel {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-xl);
+  padding: 28px 32px;
+  box-shadow: var(--shadow-card);
+}
+
+.signup-plans-panel {
   background: var(--white);
   border: 1px solid var(--gray-200);
   border-radius: var(--radius-xl);
@@ -392,7 +400,74 @@
 }
 
 .signup-form-panel__lead {
-  margin: 0 0 4px;
+  margin: 0 0 12px;
+}
+
+.signup-trust-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8125rem;
+  font-weight: var(--text-support-weight);
+  color: var(--green-800);
+}
+
+.signup-trust-inline li::before {
+  content: "✓ ";
+  font-weight: 800;
+}
+
+.signup-trust-panel__title {
+  margin: 0 0 16px;
+  font-size: 1.05rem;
+  font-weight: var(--text-card-title-weight);
+  color: var(--gray-900);
+}
+
+.signup-trust-list {
+  margin: 0 0 16px;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 12px;
+  font-size: 0.9375rem;
+  color: var(--gray-700);
+}
+
+.signup-trust-list strong {
+  color: var(--gray-900);
+}
+
+.signup-trust-panel__note {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+}
+
+.signup-plan-compare {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--gray-200);
+}
+
+.signup-plan-compare summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--green-800);
+  margin-bottom: 16px;
+}
+
+.signup-plan-compare__grid {
+  margin-top: 12px;
+}
+
+.signup-summary-payroll {
+  font-size: 0.9375rem;
+  font-weight: var(--text-support-weight);
+  color: var(--gray-700);
+  margin-top: 4px;
 }
 
 .signup-plans-panel .pricing-grid {
@@ -499,7 +574,20 @@
   color: var(--gray-500);
 }
 
-.signup-field input {
+.signup-field__required {
+  font-weight: 600;
+  color: var(--green-800);
+}
+
+.signup-field__hint {
+  font-size: 0.8125rem;
+  font-weight: var(--text-support-weight);
+  color: var(--gray-500);
+  line-height: 1.45;
+}
+
+.signup-field input,
+.signup-field select {
   width: 100%;
   min-height: 48px;
   border: 1.5px solid var(--gray-200);
@@ -516,10 +604,48 @@
   color: var(--gray-400);
 }
 
-.signup-field input:focus {
+.signup-field input:focus,
+.signup-field select:focus {
   outline: none;
   border-color: var(--green-500);
   box-shadow: 0 0 0 3px rgba(15, 110, 86, 0.12);
+}
+
+.signup-form__toggle {
+  appearance: none;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--green-700);
+  cursor: pointer;
+  text-align: left;
+}
+
+.signup-form__toggle:hover {
+  text-decoration: underline;
+}
+
+.signup-form__collapse {
+  margin-top: 12px;
+}
+
+.signup-promo-details {
+  margin-top: 16px;
+}
+
+.signup-promo-details summary {
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--green-800);
+  margin-bottom: 12px;
+}
+
+.signup-promo-details[open] summary {
+  margin-bottom: 10px;
 }
 
 .signup-form__apply {
@@ -626,8 +752,8 @@
     grid-template-columns: 1fr;
   }
 
-  .signup-form-panel {
-    order: -1;
+  .signup-trust-panel {
+    order: 2;
   }
 
   .signup-plans-panel .pricing-grid {

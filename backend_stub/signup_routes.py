@@ -8,7 +8,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, EmailStr, Field
 
-from auth_service import AuthUser, create_token_pair, log_security_event
+from auth_service import AuthUser, create_token_pair, hash_password, log_security_event
 from billing_plans import get_plan
 from billing_promotions import validate_promotions
 from billing_stripe_service import provision_tenant_billing
@@ -23,6 +23,7 @@ router = APIRouter(prefix="/signup", tags=["Signup"])
 class SignupStartRequest(BaseModel):
     business_name: str = Field(min_length=2, max_length=200)
     billing_email: EmailStr
+    admin_password: str = Field(min_length=8, max_length=256)
     plan_id: str
     payroll_plan_id: str | None = Field(default=None, max_length=64)
     vat_number: str | None = Field(default=None, max_length=32)
@@ -52,6 +53,24 @@ def _db_conn() -> Any:
     if not url:
         raise HTTPException(status_code=503, detail="DATABASE_URL not configured")
     return psycopg2.connect(url)
+
+
+def _create_hr_admin_user(conn: Any, tenant_id: int, username: str, password: str) -> None:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO app_users (username, password_hash, role, tenant_id, login_portal)
+            VALUES (%s, %s, 'hr', %s, 'business')
+            ON CONFLICT (username) DO UPDATE SET
+              password_hash = EXCLUDED.password_hash,
+              role = EXCLUDED.role,
+              tenant_id = EXCLUDED.tenant_id,
+              login_portal = EXCLUDED.login_portal,
+              is_active = TRUE,
+              updated_at = NOW()
+            """,
+            (username.lower(), hash_password(password), tenant_id),
+        )
 
 
 @router.post("/start")
@@ -106,6 +125,9 @@ def signup_start(payload: SignupStartRequest, request: Request) -> dict[str, obj
             )
             tenant_id = int(cur.fetchone()[0])
 
+        admin_username = str(payload.billing_email).strip().lower()
+        _create_hr_admin_user(conn, tenant_id, admin_username, payload.admin_password)
+
         billing_info = provision_tenant_billing(
             conn=conn,
             tenant_id=tenant_id,
@@ -157,7 +179,7 @@ def signup_start(payload: SignupStartRequest, request: Request) -> dict[str, obj
     )
 
     trial_user = AuthUser(
-        username=payload.billing_email.split("@")[0][:32],
+        username=str(payload.billing_email).strip().lower(),
         role="hr",
         tenant_id=str(tenant_id),
     )

@@ -1,22 +1,33 @@
-const API_BASE = localStorage.getItem("apiBaseUrl") || "http://localhost:3000";
+const API_BASE =
+  (window.ShiftSwiftBrand?.resolveApiBase && window.ShiftSwiftBrand.resolveApiBase()) ||
+  localStorage.getItem("apiBaseUrl") ||
+  "http://localhost:3000";
 
 let currentPlanId = "site_starter_monthly";
 let currentPayrollPlanId = null;
+
+function parsePromoCode(raw) {
+  const code = String(raw || "").trim();
+  if (!code) return { discount_code: null, referral_code: null };
+  if (/^ref[-_]/i.test(code)) return { discount_code: null, referral_code: code };
+  return { discount_code: code, referral_code: null };
+}
 
 function readUrlPromos() {
   const params = new URLSearchParams(window.location.search);
   const discount = params.get("discount") || params.get("promo");
   const referral = params.get("ref") || params.get("referral");
-  if (discount) document.getElementById("discount-code").value = discount;
-  if (referral) document.getElementById("referral-code").value = referral;
+  const promoInput = document.getElementById("promo-code");
+  if (!promoInput) return;
+  if (discount) promoInput.value = discount;
+  else if (referral) promoInput.value = referral;
 }
 
 async function applyPromoCodes() {
   const planId = document.getElementById("selected-plan-id")?.value || currentPlanId;
-  const discount_code = document.getElementById("discount-code")?.value.trim() || null;
-  const referral_code = document.getElementById("referral-code")?.value.trim() || null;
+  const promoInput = document.getElementById("promo-code");
+  const { discount_code, referral_code } = parsePromoCode(promoInput?.value);
   const promoMessage = document.getElementById("promo-message");
-  const summaryPrice = document.querySelector(".signup-summary-price");
 
   if (!discount_code && !referral_code) {
     if (promoMessage) promoMessage.textContent = "";
@@ -24,7 +35,7 @@ async function applyPromoCodes() {
     return;
   }
 
-  if (promoMessage) promoMessage.textContent = "Checking codes…";
+  if (promoMessage) promoMessage.textContent = "Checking code…";
 
   try {
     const res = await fetch(`${API_BASE}/billing/validate-promo`, {
@@ -40,13 +51,12 @@ async function applyPromoCodes() {
       promoMessage.classList.remove("muted");
       promoMessage.classList.add("promo-success");
     }
-    if (summaryPrice && data.adjusted_price_gbp_ex_vat != null) {
-      summaryPrice.textContent = `£${data.adjusted_price_gbp_ex_vat} + VAT after discount · up to selected staff cap`;
+    const priceLine = document.getElementById("signup-summary-price");
+    if (priceLine && data.adjusted_price_gbp_ex_vat != null) {
+      priceLine.textContent = `£${data.adjusted_price_gbp_ex_vat} + VAT after discount · selected plan`;
     }
-    if (data.extra_trial_days) {
-      if (promoMessage) {
-        promoMessage.textContent += ` · +${data.extra_trial_days} extra trial days`;
-      }
+    if (data.extra_trial_days && promoMessage) {
+      promoMessage.textContent += ` · +${data.extra_trial_days} extra trial days`;
     }
   } catch (error) {
     if (promoMessage) {
@@ -57,16 +67,26 @@ async function applyPromoCodes() {
   }
 }
 
+function initSignupUi() {
+  const vatToggle = document.getElementById("vat-toggle");
+  const vatWrap = document.getElementById("vat-field-wrap");
+  vatToggle?.addEventListener("click", () => {
+    const open = vatWrap?.hidden !== false;
+    if (vatWrap) vatWrap.hidden = !open;
+    vatToggle.setAttribute("aria-expanded", open ? "true" : "false");
+    vatToggle.textContent = open ? "− Hide VAT number" : "+ Add VAT number";
+  });
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
+  initSignupUi();
   readUrlPromos();
   const result = await window.ShiftSwiftPricing?.initSignup("signup-pricing-plans", "signup-payroll-plans");
   if (result?.selectedPlanId) currentPlanId = result.selectedPlanId;
   if (result?.selectedPayrollPlanId) currentPayrollPlanId = result.selectedPayrollPlanId;
 
   document.getElementById("apply-promo-btn")?.addEventListener("click", applyPromoCodes);
-  if (document.getElementById("discount-code")?.value || document.getElementById("referral-code")?.value) {
-    applyPromoCodes();
-  }
+  if (document.getElementById("promo-code")?.value) applyPromoCodes();
 });
 
 document.getElementById("signup-form")?.addEventListener("submit", async (event) => {
@@ -75,23 +95,38 @@ document.getElementById("signup-form")?.addEventListener("submit", async (event)
   const form = event.currentTarget;
   const planId = document.getElementById("selected-plan-id")?.value || currentPlanId;
   const payrollPlanId = document.getElementById("selected-payroll-plan-id")?.value.trim() || null;
+
   if (!planId) {
-    if (status) status.textContent = "Please select a subscription plan.";
+    if (status) status.textContent = "Please select an HR plan.";
     return;
   }
+
+  const password = form.admin_password.value;
+  const confirm = form.admin_password_confirm.value;
+  if (password.length < 8) {
+    if (status) status.textContent = "Password must be at least 8 characters.";
+    return;
+  }
+  if (password !== confirm) {
+    if (status) status.textContent = "Passwords do not match.";
+    return;
+  }
+
+  const { discount_code, referral_code } = parsePromoCode(form.promo_code?.value);
 
   const payload = {
     business_name: form.business_name.value.trim(),
     billing_email: form.billing_email.value.trim(),
+    admin_password: password,
     plan_id: planId,
     payroll_plan_id: payrollPlanId || null,
-    vat_number: form.vat_number.value.trim() || null,
+    vat_number: form.vat_number?.value.trim() || null,
     start_trial: form.start_trial.checked,
-    discount_code: form.discount_code?.value.trim() || null,
-    referral_code: form.referral_code?.value.trim() || null,
+    discount_code,
+    referral_code,
   };
 
-  if (status) status.textContent = "Creating workspace and billing…";
+  if (status) status.textContent = "Creating your workspace…";
 
   try {
     const res = await fetch(`${API_BASE}/signup/start`, {

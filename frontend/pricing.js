@@ -203,6 +203,63 @@
     return match?.id || payrollPlans[payrollPlans.length - 1]?.id || null;
   }
 
+  function resolvePlanParam(raw, platformPlans) {
+    const monthly = platformPlans.filter((p) => p.billing_interval === "month");
+    const pool = monthly.length ? monthly : platformPlans;
+    if (!raw) return pool.find((p) => p.id === "site_starter_monthly")?.id || pool[0]?.id || "site_starter_monthly";
+
+    const key = String(raw).toLowerCase().trim();
+    const exact = pool.find((p) => p.id === key);
+    if (exact) return exact.id;
+
+    const slugMap = {
+      starter: "site_starter_monthly",
+      growth: "site_medium_monthly",
+      medium: "site_medium_monthly",
+      scale: "site_growth_monthly",
+    };
+    if (slugMap[key]) {
+      const slugMatch = pool.find((p) => p.id === slugMap[key]);
+      if (slugMatch) return slugMatch.id;
+    }
+
+    const byName = pool.find((p) => p.name.toLowerCase().includes(key));
+    if (byName) return byName.id;
+
+    return pool[0]?.id || "site_starter_monthly";
+  }
+
+  function planSelectLabel(plan) {
+    const interval = plan.billing_interval === "year" ? "/ year" : "/ month";
+    return `${plan.name} · £${formatMoney(plan.price_gbp_ex_vat)} + VAT ${interval} · up to ${plan.max_employees} staff`;
+  }
+
+  function populateSignupSelects(platformPlans, payrollPlans, selectedPlanId, selectedPayrollPlanId) {
+    const hrSelect = document.getElementById("signup-hr-plan-select");
+    const payrollSelect = document.getElementById("signup-payroll-plan-select");
+    const monthly = platformPlans.filter((p) => p.billing_interval === "month");
+
+    if (hrSelect) {
+      hrSelect.innerHTML = monthly
+        .map(
+          (plan) =>
+            `<option value="${plan.id}"${plan.id === selectedPlanId ? " selected" : ""}>${planSelectLabel(plan)}</option>`
+        )
+        .join("");
+    }
+
+    if (payrollSelect) {
+      payrollSelect.innerHTML =
+        `<option value="">HR only — no payroll add-on</option>` +
+        payrollPlans
+          .map(
+            (plan) =>
+              `<option value="${plan.id}"${plan.id === selectedPayrollPlanId ? " selected" : ""}>${plan.name} · £${formatMoney(plan.price_gbp_ex_vat)} + VAT / month · up to ${plan.max_employees} staff</option>`
+          )
+          .join("");
+    }
+  }
+
   async function fetchCatalog() {
     if (cachedCatalog) return cachedCatalog;
     try {
@@ -233,6 +290,13 @@
     return catalog.platform_plans;
   }
 
+  function planSignupParam(plan) {
+    if (plan.id === "site_starter_monthly") return "starter";
+    if (plan.id === "site_medium_monthly") return "growth";
+    if (plan.id === "site_growth_monthly") return "scale";
+    return plan.id;
+  }
+
   function planCardHtml(plan, options) {
     const mode = options.mode || "marketing";
     const cardType = options.cardType || "platform";
@@ -250,7 +314,7 @@
       const query =
         cardType === "payroll"
           ? `plan=${encodeURIComponent(options.platformPlanId || "site_starter_monthly")}&payroll=${encodeURIComponent(plan.id)}`
-          : `plan=${encodeURIComponent(plan.id)}`;
+          : `plan=${encodeURIComponent(planSignupParam(plan))}`;
       actions = `
         <div class="pricing-card-actions">
           <a class="btn" href="./signup.html?${query}">Start 14-day trial</a>
@@ -356,23 +420,39 @@
     const summary = document.getElementById("signup-plan-summary");
     if (!summary) return;
     const plan = platformPlans.find((p) => p.id === planId);
-    if (!plan) {
-      summary.hidden = true;
-      return;
-    }
-    summary.hidden = false;
-    summary.querySelector(".signup-summary-plan").textContent = plan.name;
-    const payroll = payrollPlanId ? payrollPlans.find((p) => p.id === payrollPlanId) : null;
-    let priceText = `£${formatMoney(plan.price_gbp_ex_vat)} + VAT (${intervalLabel(plan.billing_interval).trim()}) · up to ${plan.max_employees} staff`;
-    if (payroll) {
-      priceText += ` · + payroll £${formatMoney(payroll.price_gbp_ex_vat)} + VAT/mo`;
-    }
-    summary.querySelector(".signup-summary-price").textContent = priceText;
+    if (!plan) return;
 
+    const hrLine = document.getElementById("signup-summary-hr");
+    const payrollLine = document.getElementById("signup-summary-payroll");
+    const priceLine = document.getElementById("signup-summary-price");
+
+    const payroll = payrollPlanId ? payrollPlans.find((p) => p.id === payrollPlanId) : null;
+    const interval = intervalLabel(plan.billing_interval).trim();
+
+    if (hrLine) hrLine.textContent = `${plan.name} · HR platform`;
+    if (payrollLine) {
+      payrollLine.textContent = payroll
+        ? `${payroll.name} payroll · £${formatMoney(payroll.price_gbp_ex_vat)} + VAT / month`
+        : "No payroll add-on";
+    }
+    if (priceLine) {
+      let priceText = `£${formatMoney(plan.price_gbp_ex_vat)} + VAT ${interval} · up to ${plan.max_employees} staff`;
+      if (payroll) {
+        priceText += ` · + payroll £${formatMoney(payroll.price_gbp_ex_vat)} + VAT/mo`;
+      }
+      priceLine.textContent = priceText;
+    }
+
+    summary.hidden = false;
     const hiddenPlan = document.getElementById("selected-plan-id");
     if (hiddenPlan) hiddenPlan.value = plan.id;
     const hiddenPayroll = document.getElementById("selected-payroll-plan-id");
     if (hiddenPayroll) hiddenPayroll.value = payrollPlanId || "";
+
+    const hrSelect = document.getElementById("signup-hr-plan-select");
+    if (hrSelect && hrSelect.value !== plan.id) hrSelect.value = plan.id;
+    const payrollSelect = document.getElementById("signup-payroll-plan-select");
+    if (payrollSelect && payrollSelect.value !== (payrollPlanId || "")) payrollSelect.value = payrollPlanId || "";
   }
 
   async function initMarketing(platformContainerId, payrollContainerId) {
@@ -427,86 +507,64 @@
     const platformContainer = document.getElementById(platformContainerId);
     const payrollContainer = document.getElementById(payrollContainerId);
     const params = new URLSearchParams(window.location.search);
-    let selectedPlanId = params.get("plan") || "site_starter_monthly";
-    let selectedPayrollPlanId = params.get("payroll") || null;
     const catalog = await fetchCatalog();
-
-    if (!catalog.platform_plans.find((p) => p.id === selectedPlanId)) {
-      selectedPlanId = catalog.platform_plans[0]?.id || "site_starter_monthly";
-    }
+    let selectedPlanId = resolvePlanParam(params.get("plan"), catalog.platform_plans);
+    let selectedPayrollPlanId = params.get("payroll") || null;
     if (selectedPayrollPlanId && !catalog.payroll_plans.find((p) => p.id === selectedPayrollPlanId)) {
       selectedPayrollPlanId = null;
     }
 
-    if (platformContainer) {
-      platformContainer.innerHTML = '<div class="pricing-loading">Loading plans…</div>';
-      const platformMonthly = catalog.platform_plans.filter((p) => p.billing_interval === "month");
-      renderPlans(platformContainer, platformMonthly, {
-        mode: "selectable",
-        cardType: "platform",
-        selectedPlanId,
-        platformPlans: catalog.platform_plans,
-        payrollPlans: catalog.payroll_plans,
-        onSelect: (id) => {
-          currentSelectedPlan = id;
-          const url = new URL(window.location.href);
-          url.searchParams.set("plan", id);
-          window.history.replaceState({}, "", url);
-          if (selectedPayrollPlanId) {
-            const payroll = catalog.payroll_plans.find((p) => p.id === selectedPayrollPlanId);
-            const platform = catalog.platform_plans.find((p) => p.id === id);
-            if (payroll && platform && payroll.max_employees < platform.max_employees) {
-              selectedPayrollPlanId = suggestedPayrollPlan(id, catalog.payroll_plans);
-              currentSelectedPayroll = selectedPayrollPlanId;
-              url.searchParams.set("payroll", selectedPayrollPlanId || "");
-              window.history.replaceState({}, "", url);
-              renderPayrollPlans(payrollContainer, catalog.payroll_plans, {
-                mode: "selectable",
-                cardType: "payroll",
-                selectedPlanId: id,
-                selectedPayrollPlanId,
-                platformPlans: catalog.platform_plans,
-                payrollPlans: catalog.payroll_plans,
-                onPayrollSelect: (pid) => {
-                  currentSelectedPayroll = pid;
-                  const u = new URL(window.location.href);
-                  if (pid) u.searchParams.set("payroll", pid);
-                  else u.searchParams.delete("payroll");
-                  window.history.replaceState({}, "", u);
-                  updateSummary(id, catalog.platform_plans, pid, catalog.payroll_plans);
-                },
-              });
-            }
-          }
-          updateSummary(id, catalog.platform_plans, selectedPayrollPlanId, catalog.payroll_plans);
-        },
-      });
+    populateSignupSelects(catalog.platform_plans, catalog.payroll_plans, selectedPlanId, selectedPayrollPlanId);
+
+    function syncFromSelects() {
+      const hrSelect = document.getElementById("signup-hr-plan-select");
+      const payrollSelect = document.getElementById("signup-payroll-plan-select");
+      selectedPlanId = hrSelect?.value || selectedPlanId;
+      selectedPayrollPlanId = payrollSelect?.value || null;
+      currentSelectedPlan = selectedPlanId;
+      currentSelectedPayroll = selectedPayrollPlanId;
+      const url = new URL(window.location.href);
+      url.searchParams.set("plan", selectedPlanId);
+      if (selectedPayrollPlanId) url.searchParams.set("payroll", selectedPayrollPlanId);
+      else url.searchParams.delete("payroll");
+      window.history.replaceState({}, "", url);
+      updateSummary(selectedPlanId, catalog.platform_plans, selectedPayrollPlanId, catalog.payroll_plans);
+      if (platformContainer) {
+        renderPlans(platformContainer, catalog.platform_plans.filter((p) => p.billing_interval === "month"), {
+          mode: "selectable",
+          cardType: "platform",
+          selectedPlanId,
+          platformPlans: catalog.platform_plans,
+          payrollPlans: catalog.payroll_plans,
+          onSelect: (id) => {
+            selectedPlanId = id;
+            if (hrSelect) hrSelect.value = id;
+            syncFromSelects();
+          },
+        });
+      }
+      if (payrollContainer) {
+        renderPayrollPlans(payrollContainer, catalog.payroll_plans, {
+          mode: "selectable",
+          cardType: "payroll",
+          selectedPlanId,
+          selectedPayrollPlanId,
+          platformPlans: catalog.platform_plans,
+          payrollPlans: catalog.payroll_plans,
+          onPayrollSelect: (id) => {
+            selectedPayrollPlanId = id;
+            if (payrollSelect) payrollSelect.value = id || "";
+            syncFromSelects();
+          },
+        });
+      }
     }
 
-    if (payrollContainer) {
-      payrollContainer.innerHTML = '<div class="pricing-loading">Loading payroll…</div>';
-      renderPayrollPlans(payrollContainer, catalog.payroll_plans, {
-        mode: "selectable",
-        cardType: "payroll",
-        selectedPlanId,
-        selectedPayrollPlanId,
-        platformPlans: catalog.platform_plans,
-        payrollPlans: catalog.payroll_plans,
-        onPayrollSelect: (id) => {
-          currentSelectedPayroll = id;
-          const url = new URL(window.location.href);
-          if (id) url.searchParams.set("payroll", id);
-          else url.searchParams.delete("payroll");
-          window.history.replaceState({}, "", url);
-          selectedPayrollPlanId = id;
-          updateSummary(selectedPlanId, catalog.platform_plans, id, catalog.payroll_plans);
-        },
-      });
-    }
+    document.getElementById("signup-hr-plan-select")?.addEventListener("change", syncFromSelects);
+    document.getElementById("signup-payroll-plan-select")?.addEventListener("change", syncFromSelects);
 
-    currentSelectedPlan = selectedPlanId;
-    currentSelectedPayroll = selectedPayrollPlanId;
-    updateSummary(selectedPlanId, catalog.platform_plans, selectedPayrollPlanId, catalog.payroll_plans);
+    syncFromSelects();
+
     return {
       platformPlans: catalog.platform_plans,
       payrollPlans: catalog.payroll_plans,
