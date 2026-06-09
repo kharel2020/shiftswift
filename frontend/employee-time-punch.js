@@ -28,7 +28,7 @@
   }
 
   function formatTime(iso) {
-    if (!iso) return "—";
+    if (!iso) return "Not set";
     try {
       return new Date(iso).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" });
     } catch {
@@ -55,8 +55,8 @@
       if (sitesEl) {
         const sites = data.assigned_sites || [];
         sitesEl.innerHTML = sites.length
-          ? sites.map((s) => `<li>${s.name} — ${s.address} (${s.radius_meters}m radius)</li>`).join("")
-          : "<li>No punch sites configured — ask HR.</li>";
+          ? sites.map((s) => `<li>${s.name}: ${s.address} (${s.radius_meters}m radius)</li>`).join("")
+          : "<li>No punch sites configured. Ask HR.</li>";
       }
       if (clockInBtn) clockInBtn.disabled = Boolean(data.clocked_in);
       if (clockOutBtn) clockOutBtn.disabled = !data.clocked_in;

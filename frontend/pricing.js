@@ -63,8 +63,8 @@
     },
     {
       id: "site_starter_annual",
-      name: "Starter — annual",
-      description: "Up to 15 staff — save £58 vs monthly.",
+      name: "Starter (annual)",
+      description: "Up to 15 staff. Save £58 vs monthly.",
       billing_interval: "year",
       max_employees: 15,
       price_gbp_ex_vat: 290,
@@ -80,8 +80,8 @@
     },
     {
       id: "site_medium_annual",
-      name: "Growth — annual",
-      description: "Up to 40 staff — save £118 vs monthly.",
+      name: "Growth (annual)",
+      description: "Up to 40 staff. Save £118 vs monthly.",
       billing_interval: "year",
       max_employees: 40,
       price_gbp_ex_vat: 590,
@@ -97,8 +97,8 @@
     },
     {
       id: "site_growth_annual",
-      name: "Scale — annual",
-      description: "Up to 100 staff — save £198 vs monthly.",
+      name: "Scale (annual)",
+      description: "Up to 100 staff. Save £198 vs monthly.",
       billing_interval: "year",
       max_employees: 100,
       price_gbp_ex_vat: 990,
@@ -185,7 +185,7 @@
       return {
         ...plan,
         id: plan.id.replace("_monthly", "_annual"),
-        name: `${plan.name} — annual`,
+        name: `${plan.name} (annual)`,
         billing_interval: "year",
         price_gbp_ex_vat: annualPrice,
         price_gbp_inc_vat: Math.round(annualPrice * 1.2 * 100) / 100,

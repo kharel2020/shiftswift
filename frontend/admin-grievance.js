@@ -19,7 +19,7 @@
           { key: "employee_id", render: (r) => escapeHtml(r.employee_id) },
           { key: "allegation_type", render: (r) => escapeHtml(r.allegation_type) },
           { key: "status", render: (r) => statusPill(r.status) },
-          { key: "acas_deadline", render: (r) => escapeHtml(r.acas_deadline || "—") },
+          { key: "acas_deadline", render: (r) => escapeHtml(r.acas_deadline || "Not set") },
           {
             key: "actions",
             render: (r) =>
@@ -88,7 +88,7 @@
     panel.hidden = false;
     panel.querySelector("[data-case-ref]").textContent = caseData.case_reference;
     panel.querySelector("[data-case-status]").innerHTML = statusPill(caseData.status);
-    panel.querySelector("[data-case-deadline]").textContent = caseData.acas_deadline || "—";
+    panel.querySelector("[data-case-deadline]").textContent = caseData.acas_deadline || "Not set";
 
     const notesRes = await apiFetch(`/grievance/cases/${caseId}/notes`);
     const notesData = await notesRes.json();

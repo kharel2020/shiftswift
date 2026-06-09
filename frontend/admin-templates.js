@@ -178,7 +178,7 @@
           .map(
             (rev) =>
               `<li><strong>v${escapeHtml(rev.version)}</strong>${rev.published_at ? ` · ${escapeHtml(rev.published_at.slice(0, 10))}` : ""}
-              ${rev.change_summary ? ` — ${escapeHtml(rev.change_summary)}` : ""}</li>`
+              ${rev.change_summary ? `: ${escapeHtml(rev.change_summary)}` : ""}</li>`
           )
           .join("");
       } else {

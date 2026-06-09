@@ -76,7 +76,7 @@
       } else {
         banner.innerHTML = `
           <p><strong>${escapeHtml(days)} day${days === 1 ? "" : "s"} left</strong> on your 14-day free trial.
-          Upgrade anytime — we'll email you at 7, 3, and 1 day before trial ends.</p>
+          Upgrade anytime. We will email you at 7, 3, and 1 day before trial ends.</p>
           <button type="button" class="btn secondary" id="trial-upgrade-btn">View plans & upgrade</button>`;
       }
       document.getElementById("trial-upgrade-btn")?.addEventListener("click", startUpgrade);
@@ -136,7 +136,7 @@
           <p class="muted">Limit ${escapeHtml(data.max_employees)} on current plan</p>
         </article>
         <article class="metric-card">
-          <strong>${escapeHtml(data.subscription_status || "—")}</strong>
+          <strong>${escapeHtml(data.subscription_status || "Not set")}</strong>
           <span>Subscription</span>
           <p class="muted">${escapeHtml(data.plan_display_name || data.subscription_plan || "No plan")} plan</p>
         </article>
@@ -209,7 +209,7 @@
       const payrollPlan = (meta.payroll_plans || []).find((p) => p.value === status.payroll_plan_id);
       const platformPlan = (meta.platform_plans || []).find((p) => p.value === status.subscription_plan);
       const mandateLabel = status.direct_debit_active
-        ? `Active · ${status.mandate_sort_code || "—"} · ${status.mandate_account_last4 || "****"}`
+        ? `Active · ${status.mandate_sort_code || "Not set"} · ${status.mandate_account_last4 || "****"}`
         : status.direct_debit_pending
           ? "Pending confirmation (Bacs)"
           : status.mandate_status && status.mandate_status !== "none"
@@ -217,14 +217,14 @@
             : "Not set up";
       panel.innerHTML = `
         <div class="detail-grid">
-          <div><span class="muted">Platform plan</span><strong>${escapeHtml(platformPlan?.label || status.subscription_plan || "—")}</strong></div>
-          <div><span class="muted">Status</span><strong>${escapeHtml(status.subscription_status || "—")}</strong></div>
-          <div><span class="muted">Trial</span><strong>${status.days_remaining != null ? `${escapeHtml(status.days_remaining)} days left` : status.subscription_status === "active" ? "Subscribed" : "—"}</strong></div>
+          <div><span class="muted">Platform plan</span><strong>${escapeHtml(platformPlan?.label || status.subscription_plan || "Not set")}</strong></div>
+          <div><span class="muted">Status</span><strong>${escapeHtml(status.subscription_status || "Not set")}</strong></div>
+          <div><span class="muted">Trial</span><strong>${status.days_remaining != null ? `${escapeHtml(status.days_remaining)} days left` : status.subscription_status === "active" ? "Subscribed" : "Not set"}</strong></div>
           <div><span class="muted">Direct Debit</span><strong>${escapeHtml(mandateLabel)}</strong></div>
           <div><span class="muted">Employee band</span><strong>${escapeHtml(status.max_employees)} max</strong></div>
           <div><span class="muted">Payroll add-on</span><strong>${status.payroll_enabled ? "Enabled" : "Not enabled"}</strong></div>
-          <div><span class="muted">Payroll plan</span><strong>${escapeHtml(payrollPlan?.label || status.payroll_plan_id || "—")}</strong></div>
-          <div><span class="muted">Billing email</span><strong>${escapeHtml(status.billing_email || "—")}</strong></div>
+          <div><span class="muted">Payroll plan</span><strong>${escapeHtml(payrollPlan?.label || status.payroll_plan_id || "Not set")}</strong></div>
+          <div><span class="muted">Billing email</span><strong>${escapeHtml(status.billing_email || "Not set")}</strong></div>
         </div>
         <p class="link-row" style="margin-top:0.75rem;">
           <button type="button" class="btn" id="payroll-upgrade-btn">Upgrade subscription</button>

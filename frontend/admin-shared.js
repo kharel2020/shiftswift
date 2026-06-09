@@ -207,7 +207,7 @@ window.Admin = (() => {
     const data = await res.json();
     const options = (data.items || []).map((emp) => ({
       value: String(emp.id),
-      label: `${emp.first_name} ${emp.last_name}${emp.job_title ? ` — ${emp.job_title}` : ""}`,
+      label: `${emp.first_name} ${emp.last_name}${emp.job_title ? `, ${emp.job_title}` : ""}`,
     }));
     if (!formOptions) formOptions = {};
     formOptions.employees = options;
@@ -375,7 +375,7 @@ window.Admin = (() => {
         const cells = columns
           .map((col) => {
             const content = typeof col.render === "function" ? col.render(row) : escapeHtml(row[col.key]);
-            return `<td>${content ?? "—"}</td>`;
+            return `<td>${content ?? "Not set"}</td>`;
           })
           .join("");
         return `<tr>${cells}</tr>`;
@@ -552,7 +552,7 @@ window.Admin = (() => {
         { name: "employee_id", label: "Employee", type: "select", optionsKey: "employees", required: true },
         { name: "allegation_type", label: "Allegation type", type: "text", required: true, placeholder: "Harassment, pay dispute…" },
         { name: "assigned_investigator", label: "Investigator", type: "text", placeholder: "HR lead name" },
-        { name: "linked_absence_context", label: "Absence / dispute context", type: "textarea", span: 2, placeholder: "Optional — links to sponsor absence monitoring" },
+        { name: "linked_absence_context", label: "Absence / dispute context", type: "textarea", span: 2, placeholder: "Optional. Links to sponsor absence monitoring." },
         { name: "initial_note", label: "Initial investigation note", type: "textarea", span: 2 },
         { name: "is_anonymous_to_manager", label: "Anonymous to line manager", type: "checkbox" },
       ],
@@ -645,7 +645,7 @@ window.Admin = (() => {
     },
   };
 
-  document.title = `${businessName} — Admin Console`;
+  document.title = `${businessName} | Admin Console`;
 
   return {
     API_BASE,

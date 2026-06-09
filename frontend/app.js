@@ -9,13 +9,13 @@ function renderAbsenceStreaks(items) {
   }
   const atRisk = items.filter((item) => item.risk_level !== "clear");
   if (!atRisk.length) {
-    list.innerHTML = `<li class='muted'>All ${items.length} sponsored worker(s) clear — no unexcused streaks at day 7+.</li>`;
+    list.innerHTML = `<li class='muted'>All ${items.length} sponsored worker(s) clear. No unexcused streaks at day 7+.</li>`;
     return;
   }
   list.innerHTML = atRisk
     .map(
       (item) =>
-        `<li><strong>${escapeHtml(item.employee_name)}</strong> — ${escapeHtml(item.unexcused_streak)} unexcused working day(s) · paid leave ${escapeHtml(item.paid_leave_days)}d · unpaid auth. ${escapeHtml(item.unpaid_authorized_days)}d</li>`
+        `<li><strong>${escapeHtml(item.employee_name)}</strong>: ${escapeHtml(item.unexcused_streak)} unexcused working day(s) · paid leave ${escapeHtml(item.paid_leave_days)}d · unpaid auth. ${escapeHtml(item.unpaid_authorized_days)}d</li>`
     )
     .join("");
 }
@@ -30,7 +30,7 @@ function renderAbsenceAlerts(items) {
   list.innerHTML = items
     .map(
       (item) =>
-        `<li><strong>Employee #${escapeHtml(item.employee_id)}</strong> — ${escapeHtml(item.consecutive_working_days)} consecutive working days absent. Report by ${escapeHtml(item.home_office_report_required_by || "—")}.</li>`
+        `<li><strong>Employee #${escapeHtml(item.employee_id)}</strong>: ${escapeHtml(item.consecutive_working_days)} consecutive working days absent. Report by ${escapeHtml(item.home_office_report_required_by || "Not set")}.</li>`
     )
     .join("");
 }
@@ -45,7 +45,7 @@ function renderSmsChanges(items) {
   list.innerHTML = items
     .map(
       (item) =>
-        `<li><span class="status-pill ${statusClass(item.alert_status)}">${escapeHtml(item.alert_status)}</span> Employee #${escapeHtml(item.employee_id)}: <strong>${escapeHtml(item.field_name)}</strong> changed to "${escapeHtml(item.new_value || "")}" — SMS deadline ${escapeHtml(item.sms_reporting_deadline)}</li>`
+        `<li><span class="status-pill ${statusClass(item.alert_status)}">${escapeHtml(item.alert_status)}</span> Employee #${escapeHtml(item.employee_id)}: <strong>${escapeHtml(item.field_name)}</strong> changed to "${escapeHtml(item.new_value || "")}". SMS deadline ${escapeHtml(item.sms_reporting_deadline)}</li>`
     )
     .join("");
 }
@@ -74,7 +74,7 @@ function renderAdvertRecords(items) {
           `<strong>${escapeHtml(item.job_title)}</strong>${item.job_reference ? `<div class="muted">${escapeHtml(item.job_reference)}</div>` : ""}`,
       },
       { key: "platform", render: (item) => escapeHtml(item.platform) },
-      { key: "posted_date", render: (item) => escapeHtml(item.posted_date || "—") },
+      { key: "posted_date", render: (item) => escapeHtml(item.posted_date || "Not set") },
       {
         key: "advert_url",
         render: (item) => `<a href="${escapeHtml(item.advert_url)}" target="_blank" rel="noopener">Open advert</a>`,
@@ -83,7 +83,7 @@ function renderAdvertRecords(items) {
         key: "links",
         render: (item) => {
           const extra = [...(item.links || []), ...(item.additional_links || [])];
-          if (!extra.length) return "<span class='muted'>—</span>";
+          if (!extra.length) return "<span class='muted'>None</span>";
           return `<ul class="link-list">${extra
             .map((link) => {
               const url = link.url || link.link_url;
@@ -187,10 +187,10 @@ async function loadComplianceDashboard() {
       smsPill.className = `status-pill ${overdue ? "status-critical" : "status-warning"}`;
     }
   } catch {
-    document.getElementById("rtw-valid-count").textContent = "—";
-    document.getElementById("rtw-expired-count").textContent = "—";
-    document.getElementById("advert-active-count").textContent = "—";
-    document.getElementById("advert-sponsored-count").textContent = "—";
+    document.getElementById("rtw-valid-count").textContent = "0";
+    document.getElementById("rtw-expired-count").textContent = "0";
+    document.getElementById("advert-active-count").textContent = "0";
+    document.getElementById("advert-sponsored-count").textContent = "0";
     renderAbsenceAlerts([]);
     renderSmsChanges([]);
     renderAdvertRecords([]);

@@ -12,7 +12,7 @@
       if (!res.ok) throw new Error("Load failed");
       const data = await res.json();
       renderTableBody(tbody, {
-        emptyMessage: "No punch sites yet — sync from your business address.",
+        emptyMessage: "No punch sites yet. Sync from your business address.",
         columns: [
           { key: "name", render: (r) => `<strong>${escapeHtml(r.name)}</strong>` },
           { key: "address", render: (r) => escapeHtml(r.address) },
@@ -21,7 +21,7 @@
             render: (r) => `${Number(r.latitude).toFixed(5)}, ${Number(r.longitude).toFixed(5)}`,
           },
           { key: "radius_meters", render: (r) => `${r.radius_meters}m` },
-          { key: "is_primary", render: (r) => (r.is_primary ? "Primary" : "—") },
+          { key: "is_primary", render: (r) => (r.is_primary ? "Primary" : "Not set") },
           { key: "is_active", render: (r) => (r.is_active ? "Active" : "Inactive") },
         ],
         rows: data.items || [],
@@ -60,7 +60,7 @@
           { key: "site_name", render: (r) => escapeHtml(r.site_name) },
           {
             key: "distance_meters",
-            render: (r) => (r.distance_meters != null ? `${Math.round(r.distance_meters)}m` : "—"),
+            render: (r) => (r.distance_meters != null ? `${Math.round(r.distance_meters)}m` : "Not set"),
           },
         ],
         rows: data.items || [],

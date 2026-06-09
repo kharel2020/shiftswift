@@ -16,7 +16,7 @@
           { key: "employee_id", render: (r) => escapeHtml(r.employee_id) },
           { key: "reason", render: (r) => escapeHtml(r.reason) },
           { key: "status", render: (r) => statusPill(r.status) },
-          { key: "acas_appeal_deadline", render: (r) => escapeHtml(r.acas_appeal_deadline || "—") },
+          { key: "acas_appeal_deadline", render: (r) => escapeHtml(r.acas_appeal_deadline || "Not set") },
           {
             key: "cessation",
             render: (r) =>
@@ -24,7 +24,7 @@
                 ? r.sponsorship_cessation_reference
                   ? escapeHtml(r.sponsorship_cessation_reference)
                   : "<span class='muted'>Required</span>"
-                : "—",
+                : "Not set",
           },
           {
             key: "actions",

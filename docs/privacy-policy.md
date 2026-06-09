@@ -1,4 +1,4 @@
-# Privacy Policy — ShiftSwift HR
+# Privacy Policy | ShiftSwift HR
 
 **Last updated:** 9 June 2026  
 **Applies to:** ShiftSwift HR (https://www.shiftswifthr.co.uk) and the ShiftSwift HR admin application (https://app.shiftswifthr.co.uk)
@@ -37,7 +37,7 @@ It does not cover third-party websites linked from our site.
 | Sign-up | Business name, billing email, VAT number | Create your workspace and billing account |
 | Admin users | Name, email, role, sign-in logs | Authentication, audit, support |
 | Employee records | Identity, employment, RTW documents, absence data | HR administration for your organisation (processor role) |
-| Billing | Stripe customer ID, payment method metadata | Subscriptions and invoices — not full card numbers |
+| Billing | Stripe customer ID, payment method metadata | Subscriptions and invoices (not full card numbers) |
 
 We do not sell personal data.
 
@@ -47,10 +47,10 @@ We do not sell personal data.
 
 Depending on the activity, we rely on:
 
-- **Contract** — providing the service you signed up for  
-- **Legitimate interests** — security, fraud prevention, product improvement  
-- **Legal obligation** — tax and accounting records  
-- **Consent** — where required (e.g. non-essential cookies)
+- **Contract:** providing the service you signed up for  
+- **Legitimate interests:** security, fraud prevention, product improvement  
+- **Legal obligation:** tax and accounting records  
+- **Consent:** where required (e.g. non-essential cookies)
 
 Employers determine the legal basis for employee HR data in the platform.
 
@@ -91,7 +91,7 @@ We aim to keep HR data in the UK/EEA. If data is transferred outside the UK, we 
 
 If we process your data as **controller** (e.g. your sign-up details), you may request access, correction, erasure, restriction, or portability where applicable. Contact legal@datasoftwareanalytics.co.uk.
 
-For **employee HR data**, contact your employer first — they are the controller.
+For **employee HR data**, contact your employer first. They are the controller.
 
 You may complain to the **Information Commissioner's Office (ICO)**: https://ico.org.uk
 

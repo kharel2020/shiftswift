@@ -35,7 +35,7 @@ document.getElementById("sign-form")?.addEventListener("submit", async (event) =
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || "Signing failed");
-    status.textContent = `Signed successfully — ref ${data.contract_number}. You may close this page.`;
+    status.textContent = `Signed successfully. Reference ${data.contract_number}. You may close this page.`;
     form.querySelector("button").disabled = true;
   } catch (error) {
     status.textContent = error.message;

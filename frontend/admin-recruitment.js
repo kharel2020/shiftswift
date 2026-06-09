@@ -263,11 +263,11 @@
       emptyMessage: "No adverts linked yet. Add your first posting above.",
       columns: [
         { key: "platform", render: (row) => escapeHtml(row.platform) },
-        { key: "posted_date", render: (row) => escapeHtml(row.posted_date || "—") },
+        { key: "posted_date", render: (row) => escapeHtml(row.posted_date || "Not set") },
         {
           key: "url",
           render: (row) =>
-            row.advert_url ? `<a href="${escapeHtml(row.advert_url)}" target="_blank" rel="noopener">Open</a>` : "—",
+            row.advert_url ? `<a href="${escapeHtml(row.advert_url)}" target="_blank" rel="noopener">Open</a>` : "Not set",
         },
       ],
       rows: workspace.adverts || [],
@@ -279,8 +279,8 @@
     if (vacancy.employee_id) {
       container.innerHTML = `
         <div class="employee-section-intro">
-          <h4>Offer accepted — onboarding started</h4>
-          <span class="lifecycle-tag">Recruitment analytics — time-to-hire</span>
+          <h4>Offer accepted: onboarding started</h4>
+          <span class="lifecycle-tag">Recruitment analytics · time-to-hire</span>
           <p class="muted">This candidate is now an employee. Continue the employee lifecycle from on-boarding.</p>
           <p class="link-row">
             <a class="btn" href="#employees/${vacancy.employee_id}/onboarding">Continue onboarding</a>
@@ -408,7 +408,7 @@
         emptyMessage: "No vacancies yet. Create your first role above.",
         columns: [
           { key: "title", render: (row) => `<strong>${escapeHtml(row.job_title)}</strong>` },
-          { key: "dept", render: (row) => escapeHtml(row.department || "—") },
+          { key: "dept", render: (row) => escapeHtml(row.department || "Not set") },
           { key: "status", render: (row) => escapeHtml(row.status || "open") },
           {
             key: "progress",

@@ -21,7 +21,7 @@ async function loadContracts() {
         {
           key: "signed_at",
           render: (c) =>
-            c.signed_at ? escapeHtml(new Date(c.signed_at).toLocaleDateString()) : c.sent_at ? "Sent" : "—",
+            c.signed_at ? escapeHtml(new Date(c.signed_at).toLocaleDateString()) : c.sent_at ? "Sent" : "Not set",
         },
         {
           key: "actions",

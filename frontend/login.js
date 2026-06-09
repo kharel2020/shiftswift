@@ -19,7 +19,7 @@ const LOGIN_MODES = {
   employee: {
     endpoint: "/auth/employee-login",
     redirect: "./employee.html",
-    lead: "Sign in with your username and password — your business is linked automatically.",
+    lead: "Sign in with your username and password. Your business is linked automatically.",
     submit: "Open employee portal",
     usernamePlaceholder: "employee@shiftswifthr.co.uk",
   },

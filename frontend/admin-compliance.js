@@ -18,7 +18,7 @@
       if (!res.ok) throw new Error("Load failed");
       const data = await res.json();
       renderTableBody(tbody, {
-        emptyMessage: "No sponsored workers — mark employees as sponsored to track absences.",
+        emptyMessage: "No sponsored workers. Mark employees as sponsored to track absences.",
         columns: [
           {
             key: "employee_name",
@@ -108,7 +108,7 @@
       if (!res.ok) throw new Error("Load failed");
       const data = await res.json();
       renderTableBody(tbody, {
-        emptyMessage: "No custom calendar entries — all weekdays count as working days.",
+        emptyMessage: "No custom calendar entries. All weekdays count as working days.",
         columns: [
           { key: "calendar_date", render: (r) => escapeHtml(r.calendar_date) },
           { key: "label", render: (r) => escapeHtml(r.label) },
@@ -204,7 +204,7 @@
           { key: "trigger_type", render: (r) => `<strong>${escapeHtml(r.trigger_type)}</strong>` },
           { key: "employee_id", render: (r) => escapeHtml(r.employee_id) },
           { key: "description", render: (r) => escapeHtml(r.description) },
-          { key: "deadline_date", render: (r) => escapeHtml(r.deadline_date || "—") },
+          { key: "deadline_date", render: (r) => escapeHtml(r.deadline_date || "Not set") },
           {
             key: "actions",
             render: (r) =>
@@ -262,7 +262,7 @@
         const panel = document.getElementById("share-code-result");
         if (panel) {
           panel.hidden = false;
-          panel.innerHTML = `<p class="promo-result-message promo-result-message--ok">${escapeHtml(data.message || "Verified")} · RTW: ${escapeHtml(data.rtw_status)} · Expiry: ${escapeHtml(data.expiry_date || "—")} · Mode: ${escapeHtml(data.mode)}</p>`;
+          panel.innerHTML = `<p class="promo-result-message promo-result-message--ok">${escapeHtml(data.message || "Verified")} · RTW: ${escapeHtml(data.rtw_status)} · Expiry: ${escapeHtml(data.expiry_date || "Not set")} · Mode: ${escapeHtml(data.mode)}</p>`;
         }
       },
     });

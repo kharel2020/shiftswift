@@ -116,11 +116,11 @@
               render: (row) =>
                 row.document_url
                   ? `<a href="${escapeHtml(row.document_url)}" target="_blank" rel="noopener">Open</a>`
-                  : "<span class='muted'>—</span>",
+                  : "<span class='muted'>None</span>",
             },
             {
               key: "expires_at",
-              render: (row) => escapeHtml((row.expires_at || "").slice(0, 10) || "—"),
+              render: (row) => escapeHtml((row.expires_at || "").slice(0, 10) || "Not set"),
             },
             { key: "created_at", render: (row) => escapeHtml((row.created_at || "").slice(0, 10)) },
             {

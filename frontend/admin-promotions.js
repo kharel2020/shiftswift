@@ -119,7 +119,7 @@
         emptyMessage: "No discount codes configured. Seed the billing catalog.",
         columns: [
           { key: "code", render: (row) => `<strong>${escapeHtml(row.code)}</strong>` },
-          { key: "label", render: (row) => escapeHtml(row.label || "—") },
+          { key: "label", render: (row) => escapeHtml(row.label || "Not set") },
           { key: "discount", render: (row) => escapeHtml(formatDiscount(row)) },
           {
             key: "plans",

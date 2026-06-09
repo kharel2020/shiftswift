@@ -121,7 +121,7 @@
     id: "employee-quick-add",
     columns: 2,
     submitLabel: "Create employee",
-    successMessage: "Employee created — continue the lifecycle from step 1.",
+    successMessage: "Employee created. Continue the lifecycle from step 1.",
     fields: [
       { name: "first_name", label: "First name", type: "text", required: true },
       { name: "last_name", label: "Last name", type: "text", required: true },
@@ -345,8 +345,8 @@
       columns: [
         { key: "title", render: (row) => `<strong>${escapeHtml(row.title)}</strong>` },
         { key: "category", render: (row) => escapeHtml(categoryLabel(row.category)) },
-        { key: "expires_at", render: (row) => escapeHtml((row.expires_at || "").slice(0, 10) || "—") },
-        { key: "created_at", render: (row) => escapeHtml((row.created_at || "").slice(0, 10) || "—") },
+        { key: "expires_at", render: (row) => escapeHtml((row.expires_at || "").slice(0, 10) || "Not set") },
+        { key: "created_at", render: (row) => escapeHtml((row.created_at || "").slice(0, 10) || "Not set") },
         {
           key: "actions",
           render: (row) =>
@@ -396,7 +396,7 @@
       intro += `<p class="employee-section-hint">${hint}</p>`;
     }
     if (section.key === "job_performance" && !workspace.payroll_enabled) {
-      intro += `<p class="employee-section-hint employee-section-hint--warn">Payroll add-on is not active — this step is hidden until payroll is enabled.</p>`;
+      intro += `<p class="employee-section-hint employee-section-hint--warn">Payroll add-on is not active. This step is hidden until payroll is enabled.</p>`;
     }
     return intro;
   }
@@ -511,7 +511,7 @@
             render: (row) =>
               `<strong>${escapeHtml(row.first_name)} ${escapeHtml(row.last_name)}</strong>${row.job_title ? `<div class="muted">${escapeHtml(row.job_title)}</div>` : ""}`,
           },
-          { key: "department", render: (row) => escapeHtml(row.department || "—") },
+          { key: "department", render: (row) => escapeHtml(row.department || "Not set") },
           { key: "status", render: (row) => statusPill(row.status) },
           {
             key: "profile",

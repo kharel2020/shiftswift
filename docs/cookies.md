@@ -1,4 +1,4 @@
-# Cookie Policy — ShiftSwift HR
+# Cookie Policy | ShiftSwift HR
 
 **Last updated:** 9 June 2026  
 **Applies to:** https://www.shiftswifthr.co.uk and https://app.shiftswifthr.co.uk

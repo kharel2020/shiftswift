@@ -72,7 +72,7 @@ PLANS: tuple[SubscriptionPlan, ...] = (
     ),
     SubscriptionPlan(
         id="site_starter_annual",
-        name="Starter — annual",
+        name="Starter (annual)",
         description="Up to 15 staff, billed annually (2 months free).",
         stripe_price_id_env="STRIPE_PRICE_SITE_STARTER_ANNUAL",
         billing_interval="year",
@@ -89,7 +89,7 @@ PLANS: tuple[SubscriptionPlan, ...] = (
     ),
     SubscriptionPlan(
         id="site_medium_annual",
-        name="Growth — annual",
+        name="Growth (annual)",
         description="Up to 40 staff, billed annually (2 months free).",
         stripe_price_id_env="STRIPE_PRICE_SITE_MEDIUM_ANNUAL",
         billing_interval="year",
@@ -106,7 +106,7 @@ PLANS: tuple[SubscriptionPlan, ...] = (
     ),
     SubscriptionPlan(
         id="site_growth_annual",
-        name="Scale — annual",
+        name="Scale (annual)",
         description="Up to 100 staff, billed annually (2 months free).",
         stripe_price_id_env="STRIPE_PRICE_SITE_GROWTH_ANNUAL",
         billing_interval="year",
@@ -167,7 +167,7 @@ def plan_catalog() -> list[dict[str, object]]:
     items.append(
         {
             "billing_model": "flat_per_site",
-            "note": "UK B2B SaaS — VAT at 20% added at checkout via Stripe Tax when enabled.",
+            "note": "UK B2B SaaS. VAT at 20% is added at checkout via Stripe Tax when enabled.",
             "stripe_configured": settings["configured"],
             "stripe_tax_enabled": settings["tax_enabled"],
         }
