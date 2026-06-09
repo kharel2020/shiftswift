@@ -869,6 +869,18 @@ textarea:focus {
 .admin-section { display: grid; gap: 18px; }
 .admin-section[hidden] { display: none !important; }
 
+.feature-upgrade-notice {
+  margin: 0;
+}
+
+.feature-gated-panel--locked {
+  opacity: 0.72;
+}
+
+.feature-gated-panel--locked .btn:not(:disabled) {
+  pointer-events: none;
+}
+
 .section-header {
   display: flex;
   align-items: center;

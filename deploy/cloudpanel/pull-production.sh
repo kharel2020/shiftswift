@@ -46,6 +46,10 @@ if [ -f backend_stub/.env ]; then
   set +a
   echo "==> migrations"
   bash scripts/run_migrations.sh
+  if [ -f scripts/seed_billing_catalog.py ]; then
+    echo "==> seed billing catalog"
+    python scripts/seed_billing_catalog.py
+  fi
 else
   echo "WARNING: backend_stub/.env missing — skipped migrations"
 fi

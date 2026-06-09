@@ -1111,11 +1111,107 @@ a { color: inherit; text-decoration: none; }
   font-weight: var(--text-caption-weight);
 }
 
+/* Product showcase (marketing) */
+.product-showcase {
+  margin: 56px 0;
+}
+
+.product-showcase h2 {
+  text-align: center;
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.product-showcase .section-lead {
+  text-align: center;
+  max-width: 560px;
+  margin: 0 auto 28px;
+}
+
+.product-showcase-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.product-showcase-card {
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.product-showcase-card figcaption {
+  font-size: 0.9rem;
+  color: var(--gray-500);
+  line-height: 1.45;
+}
+
+.product-mock {
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, #fff 0%, var(--green-50) 100%);
+  padding: 14px;
+  box-shadow: var(--shadow-sm);
+  min-height: 168px;
+}
+
+.product-mock__bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--green-800);
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.product-mock__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.75rem;
+  padding: 6px 0;
+  color: var(--gray-600);
+}
+
+.product-mock__row--warn span:last-child { color: #b45309; font-weight: 600; }
+
+.product-mock__step {
+  font-size: 0.75rem;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 6px;
+  background: var(--gray-100);
+  color: var(--gray-500);
+}
+
+.product-mock__step--done {
+  background: rgba(93, 202, 165, 0.2);
+  color: var(--green-800);
+}
+
+.product-mock__step--active {
+  background: var(--green-700);
+  color: #fff;
+  font-weight: 600;
+}
+
+.site-footer--compact {
+  margin-top: 40px;
+  padding-top: 32px;
+  border-top: 1px solid var(--gray-200);
+}
+
 @media (max-width: 900px) {
   .hero,
   .section-grid,
   .section-grid--features,
   .social-proof-grid,
+  .product-showcase-grid,
   .site-footer__grid {
     grid-template-columns: 1fr;
   }

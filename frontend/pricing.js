@@ -2,7 +2,13 @@
  * Shared subscription pricing — platform HR + optional payroll add-ons
  */
 (function () {
-  const API_BASE = localStorage.getItem("apiBaseUrl") || "http://localhost:3000";
+  function resolveApiBase() {
+    if (window.ShiftSwiftBrand?.resolveApiBase) return window.ShiftSwiftBrand.resolveApiBase();
+    if (window.ShiftSwiftBrand?.getApiBase) return window.ShiftSwiftBrand.getApiBase();
+    return localStorage.getItem("apiBaseUrl") || "http://localhost:3000";
+  }
+
+  const API_BASE = resolveApiBase();
 
   const FALLBACK_PLATFORM_PLANS = [
     {

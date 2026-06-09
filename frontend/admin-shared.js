@@ -44,6 +44,30 @@ window.Admin = (() => {
   let tenantFeatures = {
     payroll_enabled: false,
     sponsor_compliance_enabled: false,
+    grievance_enabled: false,
+    audit_export_enabled: false,
+    multi_site_enabled: false,
+    api_access_enabled: false,
+    plan_display_name: "Starter",
+    plan_tier: "starter",
+  };
+
+  const FEATURE_FLAG_KEYS = {
+    payroll: "payroll_enabled",
+    "sponsor-compliance": "sponsor_compliance_enabled",
+    grievance: "grievance_enabled",
+    "audit-export": "audit_export_enabled",
+    "multi-site": "multi_site_enabled",
+    "api-access": "api_access_enabled",
+  };
+
+  const FEATURE_UPGRADE_LABELS = {
+    payroll: "Payroll is an optional add-on.",
+    "sponsor-compliance": "Sponsor licence compliance is included on Growth and Scale plans.",
+    grievance: "Grievance workflows are included on Growth and Scale plans.",
+    "audit-export": "Home Office audit export is included on Growth and Scale plans.",
+    "multi-site": "Multi-site dashboard is included on Scale plans.",
+    "api-access": "API access is included on Scale plans.",
   };
 
   function authHeaders(json = true) {
@@ -82,6 +106,12 @@ window.Admin = (() => {
       tenantFeatures = {
         payroll_enabled: Boolean(data.payroll_enabled),
         sponsor_compliance_enabled: Boolean(data.sponsor_compliance_enabled),
+        grievance_enabled: Boolean(data.grievance_enabled),
+        audit_export_enabled: Boolean(data.audit_export_enabled),
+        multi_site_enabled: Boolean(data.multi_site_enabled),
+        api_access_enabled: Boolean(data.api_access_enabled),
+        plan_display_name: data.plan_display_name || "Starter",
+        plan_tier: data.plan_tier || "starter",
         sponsored_employees: Number(data.sponsored_employees || 0),
       };
     } catch {
@@ -91,9 +121,25 @@ window.Admin = (() => {
   }
 
   function isFeatureEnabled(feature) {
-    if (feature === "payroll") return tenantFeatures.payroll_enabled;
-    if (feature === "sponsor-compliance") return tenantFeatures.sponsor_compliance_enabled;
+    const key = FEATURE_FLAG_KEYS[feature];
+    if (key) return Boolean(tenantFeatures[key]);
     return true;
+  }
+
+  function ensureFeatureUpgradeNotice(section, feature, enabled) {
+    let notice = section.querySelector(".feature-upgrade-notice");
+    if (enabled) {
+      if (notice) notice.hidden = true;
+      return;
+    }
+    if (!notice) {
+      notice = document.createElement("div");
+      notice.className = "feature-upgrade-notice promo-result";
+      notice.innerHTML = `<p><strong>${escapeHtml(FEATURE_UPGRADE_LABELS[feature] || "Upgrade your plan to unlock this feature.")}</strong> <a href="#payroll">View plans &amp; upgrade</a></p>`;
+      const header = section.querySelector(".section-header");
+      section.insertBefore(notice, header ? header.nextSibling : section.firstChild);
+    }
+    notice.hidden = false;
   }
 
   function applyFeatureGates() {
@@ -106,6 +152,27 @@ window.Admin = (() => {
       }
       if (el.matches(".admin-section")) {
         el.dataset.featureDisabled = enabled ? "false" : "true";
+        ensureFeatureUpgradeNotice(el, feature, enabled);
+        return;
+      }
+      if (el.matches(".feature-gated-panel")) {
+        el.classList.toggle("feature-gated-panel--locked", !enabled);
+        el.querySelectorAll("button, input, select, textarea").forEach((control) => {
+          control.disabled = !enabled;
+        });
+        let notice = el.querySelector(".feature-upgrade-notice");
+        if (!enabled) {
+          if (!notice) {
+            notice = document.createElement("p");
+            notice.className = "feature-upgrade-notice muted";
+            notice.textContent =
+              FEATURE_UPGRADE_LABELS[feature] || "Upgrade your plan to unlock this feature.";
+            el.insertBefore(notice, el.firstChild);
+          }
+          notice.hidden = false;
+        } else if (notice) {
+          notice.hidden = true;
+        }
       }
     });
     window.dispatchEvent(new CustomEvent("admin:features", { detail: tenantFeatures }));

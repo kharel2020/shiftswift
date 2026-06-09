@@ -449,6 +449,8 @@ def delete_document(
 
 
 def admin_overview(*, tenant_id: int, conn: Any) -> dict[str, Any]:
+    from plan_features import features_for_plan
+
     profile = get_tenant_profile(tenant_id=tenant_id, conn=conn)
     with conn.cursor() as cur:
         cur.execute(
@@ -463,15 +465,19 @@ def admin_overview(*, tenant_id: int, conn: Any) -> dict[str, Any]:
             (tenant_id,),
         )
         sponsored_employees = int(cur.fetchone()[0])
+
+    plan_flags = features_for_plan(
+        profile["subscription_plan"],
+        payroll_enabled=bool(profile["payroll_enabled"]),
+        sponsored_employees=sponsored_employees,
+    )
     return {
         "tenant_name": profile["name"],
         "subscription_plan": profile["subscription_plan"],
         "subscription_status": profile["subscription_status"],
         "max_employees": profile["max_employees"],
         "active_employees": active_employees,
-        "sponsored_employees": sponsored_employees,
         "document_count": document_count,
-        "payroll_enabled": profile["payroll_enabled"],
         "payroll_plan_id": profile["payroll_plan_id"],
-        "sponsor_compliance_enabled": sponsored_employees > 0,
+        **plan_flags,
     }

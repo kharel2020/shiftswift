@@ -138,7 +138,7 @@
         <article class="metric-card">
           <strong>${escapeHtml(data.subscription_status || "—")}</strong>
           <span>Subscription</span>
-          <p class="muted">${escapeHtml(data.subscription_plan || "No plan")}</p>
+          <p class="muted">${escapeHtml(data.plan_display_name || data.subscription_plan || "No plan")} plan</p>
         </article>
         <article class="metric-card">
           <strong>${escapeHtml(data.document_count)}</strong>

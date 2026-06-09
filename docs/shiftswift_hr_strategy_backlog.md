@@ -27,7 +27,7 @@ Use this file as the **working note** — the docx stays the copy/design source;
 |------|---------------------|---------------|
 | Trading name footer | Full block with Co. 14568900 + address | `frontend/index.html` — **partial** (update to match docx verbatim incl. `legal@datasoftwareanalytics.co.uk`) |
 | Provider on contracts | Datasoftware Analytics Ltd trading as ShiftSwift HR | `contracts_service.py`, templates — **done** |
-| Privacy / cookies URLs | `/docs/privacy-policy`, `/docs/cookies` | **TODO** — pages or links only to markdown today |
+| Privacy / cookies URLs | `/docs/privacy-policy`, `/docs/cookies` | **Done** — `docs/privacy-policy.md`, `docs/cookies.md` + footer links |
 | DineSwift footer parity | Same parent, different product email | Separate site — not in this repo |
 
 **Docx footer (ShiftSwift HR — use verbatim on www):**
@@ -78,9 +78,8 @@ Strategy tiers (per **site**, ex VAT):
 | Task | Where | Status |
 |------|-------|--------|
 | Align DB plan catalog with strategy names/prices | `scripts/seed_billing_catalog.py`, `billing_config.py` | **Review** — current IDs like `site_medium_monthly` may not match Starter/Growth/Scale |
-| Feature gates per tier | `license_service.py`, `admin_service.py`, tenant plan | **TODO** — Growth features (day-9, audit export) gated by plan |
-| Pricing UI toggle + table | `frontend/pricing.js`, `pricing.css` | **TODO** — strategy says prices missing on live site |
-| Stripe Price IDs | `.env` + `subscription_plans` table | **TODO** — create in Stripe Dashboard to match |
+| Feature gates per tier | `plan_features.py`, `admin_service.py`, `admin-shared.js` | **Done** — Growth: sponsor, grievance, audit export; Scale: multi-site, API |
+| Stripe Price IDs | `.env` + `subscription_plans` table | **TODO on server** — create in Stripe Dashboard; env vars documented |
 
 ---
 
@@ -95,10 +94,10 @@ What the strategy **claims** vs what the **app already has**:
 | HMRC RTI / payroll | Payroll add-on | Payroll module / export | Verify RTI wording vs actual Stripe add-on |
 | Rota builder | Drag-and-drop | Check if rota exists or roadmap | **Clarify** — may be aspirational |
 | Employee lifecycle | Offer → leaver | `admin-employees.js` 10-step flow | **Built** — accordion UI recently updated |
-| Audit export | One-click Home Office pack | `audit_export.py` | **Built** — tie to Growth tier |
-| Multi-site dashboard | Scale plan | Tenant model | **TODO** if not built |
-| Grievance | Growth plan | `admin-grievance.js` | **Built** |
-| API access | Scale plan | Admin API exists | Document / gate by plan |
+| Audit export | One-click Home Office pack | `audit_export.py` | **Built** — gated to Growth+ |
+| Multi-site dashboard | Scale plan | Settings panel + plan gate | **Partial** — contact support to add sites |
+| Grievance | Growth plan | `admin-grievance.js` | **Built** — gated to Growth+ |
+| API access | Scale plan | Settings panel + plan gate | **Partial** — keys issued on Scale activation |
 
 ---
 
@@ -109,7 +108,9 @@ What the strategy **claims** vs what the **app already has**:
 - [x] **Footer** — full trading-name block
 - [x] **Social proof** — 3 strategy quotes (template — replace with real customers when available)
 - [x] **Hero meta** title + description from strategy
-- [ ] **Screenshots** — at least 3 product images (admin lifecycle, compliance, documents)
+- [x] **Screenshots** — product showcase section with UI mocks (replace with real captures when ready)
+- [x] **Signup page** — strategy copy + legal footer
+- [x] **Deploy script** — `pull-production.sh` runs `seed_billing_catalog.py`
 
 ---
 

@@ -506,6 +506,15 @@ def audit_export(
     tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
     conn = _db_conn()
     try:
+        from admin_service import get_tenant_profile
+        from plan_features import assert_plan_feature
+
+        profile = get_tenant_profile(tenant_id=tenant_id, conn=conn)
+        assert_plan_feature(
+            profile["subscription_plan"],
+            "audit_export",
+            payroll_enabled=bool(profile["payroll_enabled"]),
+        )
         if format.lower() == "pdf":
             pdf_bytes = audit_export_pdf_bytes(
                 tenant_id=tenant_id, employee_id=employee_id, conn=conn

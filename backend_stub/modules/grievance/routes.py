@@ -14,8 +14,34 @@ from core.permissions import check_permission
 from deps import client_ip, get_hr_user, resolve_tenant_id
 from modules.grievance import service as grievance_service
 
-router = APIRouter(prefix="/grievance", tags=["Grievance Case Management"])
 settings = load_settings()
+
+
+def _require_grievance_plan(
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> None:
+    from admin_service import get_tenant_profile
+    from plan_features import assert_plan_feature
+
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = get_connection()
+    try:
+        profile = get_tenant_profile(tenant_id=tenant_id, conn=conn)
+        assert_plan_feature(
+            profile["subscription_plan"],
+            "grievance",
+            payroll_enabled=bool(profile["payroll_enabled"]),
+        )
+    finally:
+        conn.close()
+
+
+router = APIRouter(
+    prefix="/grievance",
+    tags=["Grievance Case Management"],
+    dependencies=[Depends(_require_grievance_plan)],
+)
 
 
 class CaseCreate(BaseModel):

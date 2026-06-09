@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon.png?v=brandkit-v1" />
     <link rel="icon" type="image/svg+xml" href="./assets/shiftswift-hr-icon.svg?v=brandkit-v1" />
     <link rel="apple-touch-icon" href="./assets/shiftswift-hr-icon.png?v=brandkit-v1" />
-    <link rel="stylesheet" href="./styles.css?v=admin-v5" />
+    <link rel="stylesheet" href="./styles.css?v=admin-v6" />
   </head>
   <body>
     <div id="sidebar-overlay" class="sidebar-overlay" aria-hidden="true"></div>
@@ -23,7 +23,7 @@
           <a class="nav-link" href="#overview" data-section="overview">Overview</a>
           <a class="nav-link" href="#employees" data-section="employees">Employees</a>
           <a class="nav-link" href="#recruitment" data-section="recruitment">Recruitment</a>
-          <a class="nav-link" href="#grievance" data-section="grievance">Grievance</a>
+          <a class="nav-link" href="#grievance" data-section="grievance" data-feature="grievance">Grievance</a>
           <a class="nav-link" href="#offboarding" data-section="offboarding">Offboarding</a>
           <a class="nav-link" href="#payroll" data-section="payroll" data-feature="payroll">Payroll</a>
           <a class="nav-link" href="#promotions" data-section="promotions">Promotions</a>
@@ -165,7 +165,7 @@
           </div>
         </section>
 
-        <section id="grievance" class="admin-section" hidden>
+        <section id="grievance" class="admin-section" data-feature="grievance" hidden>
           <header class="section-header">
             <div>
               <h2>Grievance cases</h2>
@@ -544,7 +544,7 @@
             <div id="share-code-result" class="promo-result" hidden></div>
           </article>
 
-          <article class="card edit-panel">
+          <article class="card edit-panel feature-gated-panel" data-feature="audit-export">
             <header class="section-header section-header--compact">
               <div>
                 <h3>Home Office audit export</h3>
@@ -716,6 +716,18 @@
               <p class="muted">Business information and document store for your organisation.</p>
             </div>
           </header>
+
+          <article class="card edit-panel feature-gated-panel" data-feature="multi-site">
+            <h3>Multi-site dashboard</h3>
+            <p class="muted">Manage staff records and compliance across multiple sites from one workspace. Included on Scale plans.</p>
+            <p class="muted">Contact <a href="mailto:support@shiftswifthr.co.uk">support@shiftswifthr.co.uk</a> to add additional sites after upgrading.</p>
+          </article>
+
+          <article class="card edit-panel feature-gated-panel" data-feature="api-access">
+            <h3>API access</h3>
+            <p class="muted">Integrate ShiftSwift HR with your payroll bureau, BI tools, or internal systems. Included on Scale plans.</p>
+            <p class="muted">API keys and documentation are issued after Scale activation — email <a href="mailto:support@shiftswifthr.co.uk">support@shiftswifthr.co.uk</a>.</p>
+          </article>
 
           <article class="card edit-panel">
             <h3>Business information</h3>
