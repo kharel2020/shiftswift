@@ -12,14 +12,14 @@ const LOGIN_MODES = {
   business: {
     endpoint: "/auth/business-login",
     redirect: "./admin.html",
-    lead: "Welcome back. Enter your HR admin username and password.",
+    lead: "Sign in to your ShiftSwift HR account.",
     submit: "Open HR dashboard",
     usernamePlaceholder: "hr@shiftswifthr.co.uk",
   },
   employee: {
     endpoint: "/auth/employee-login",
     redirect: "./employee.html",
-    lead: "Sign in with your username and password. Your business is linked automatically.",
+    lead: "Sign in to view payslips, documents, and your shift schedule.",
     submit: "Open employee portal",
     usernamePlaceholder: "employee@shiftswifthr.co.uk",
   },

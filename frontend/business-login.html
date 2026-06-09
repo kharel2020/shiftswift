@@ -3,11 +3,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ShiftSwift HR | Business Sign In</title>
+    <title>ShiftSwift HR | HR Admin &amp; Employee Portal</title>
     <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon.png?v=brandkit-v1" />
     <link rel="icon" type="image/svg+xml" href="./assets/shiftswift-hr-icon.svg?v=brandkit-v1" />
     <link rel="apple-touch-icon" href="./assets/shiftswift-hr-icon.png?v=brandkit-v1" />
-    <link rel="stylesheet" href="./styles.css?v=brandkit-v3" />
+    <link rel="stylesheet" href="./styles.css?v=brandkit-v4" />
   </head>
   <body class="portal-login-page">
     <div class="portal-login-shell">
@@ -33,7 +33,7 @@
         <div id="login-shell" class="portal-login-card-body">
           <div class="portal-login-card-head">
             <h1>Sign in</h1>
-            <p class="portal-login-card-lead" id="login-lead">Welcome back. Enter your HR admin credentials.</p>
+            <p class="portal-login-card-lead" id="login-lead">Sign in to your ShiftSwift HR account.</p>
           </div>
 
             <form id="portal-login-form" class="portal-login-form">
@@ -41,9 +41,22 @@
               Username
               <input name="username" required autocomplete="username" placeholder="hr@shiftswifthr.co.uk" />
             </label>
-            <label>
-              Password
-              <input name="password" type="password" required autocomplete="current-password" placeholder="Enter password" />
+            <label class="portal-login-password-field">
+              <span class="portal-login-password-label">
+                <span id="password-label">Password</span>
+                <a
+                  class="portal-login-inline-link portal-login-forgot"
+                  href="mailto:support@shiftswifthr.co.uk?subject=ShiftSwift%20HR%20password%20reset%20request"
+                >Forgot password?</a>
+              </span>
+              <input
+                name="password"
+                type="password"
+                required
+                autocomplete="current-password"
+                placeholder="Enter password"
+                aria-labelledby="password-label"
+              />
             </label>
 
             <p id="login-status" class="form-error-message" hidden></p>
@@ -58,8 +71,8 @@
           </form>
 
           <p class="portal-login-alt-note">
-            Platform master?
-            <a class="portal-login-inline-link" href="./master-login.html">Master admin sign in</a>
+            No account yet?
+            <a class="portal-login-inline-link" href="./signup.html">Start your free 14-day trial</a>
           </p>
         </div>
 
@@ -110,6 +123,6 @@
       </section>
     </div>
     <script src="./brand-config.js?v=brand-v4"></script>
-    <script src="./login.js?v=brandkit-v5"></script>
+    <script src="./login.js?v=brandkit-v6"></script>
   </body>
 </html>
