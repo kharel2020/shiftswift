@@ -18,48 +18,107 @@ class SubscriptionPlan:
     features: tuple[str, ...]
 
 
-# Flat per-site pricing with employee bands (UK restaurants, cafés, pubs).
-# Create matching Products/Prices in Stripe Dashboard, then set env vars below.
+# Per-site flat pricing — strategy doc (ShiftSwift HR, 2026).
 PLANS: tuple[SubscriptionPlan, ...] = (
     SubscriptionPlan(
         id="site_starter_monthly",
         name="Starter",
-        description="Up to 10 employees at one restaurant, café, or pub.",
+        description="Up to 15 staff at one site.",
         stripe_price_id_env="STRIPE_PRICE_SITE_STARTER_MONTHLY",
         billing_interval="month",
-        max_employees=10,
-        price_gbp_ex_vat=18.95,
-        features=("Core HR", "Rota basics", "Sponsor compliance module"),
+        max_employees=15,
+        price_gbp_ex_vat=29.0,
+        features=(
+            "Employee records",
+            "Right-to-work checks",
+            "Document storage",
+            "Rota builder",
+            "Self-service portal",
+            "Email support",
+        ),
     ),
     SubscriptionPlan(
         id="site_medium_monthly",
-        name="Medium",
-        description="Up to 25 employees at one site.",
+        name="Growth",
+        description="Up to 40 staff at one site.",
         stripe_price_id_env="STRIPE_PRICE_SITE_MEDIUM_MONTHLY",
         billing_interval="month",
-        max_employees=25,
-        price_gbp_ex_vat=49.0,
-        features=("Everything in Starter", "Advanced rota rules", "Extended compliance"),
+        max_employees=40,
+        price_gbp_ex_vat=59.0,
+        features=(
+            "Everything in Starter",
+            "Day-9 absence alerts",
+            "Sponsor licence compliance",
+            "Home Office audit export",
+            "Grievance workflows",
+            "SMS alerts · Priority support",
+        ),
     ),
     SubscriptionPlan(
         id="site_growth_monthly",
-        name="Growth",
-        description="Up to 50 employees at one site.",
+        name="Scale",
+        description="Up to 100 staff at one site.",
         stripe_price_id_env="STRIPE_PRICE_SITE_GROWTH_MONTHLY",
         billing_interval="month",
-        max_employees=50,
-        price_gbp_ex_vat=79.0,
-        features=("Everything in Medium", "Priority support", "Multi-role RBAC"),
+        max_employees=100,
+        price_gbp_ex_vat=99.0,
+        features=(
+            "Everything in Growth",
+            "Multi-site dashboard",
+            "Custom onboarding workflows",
+            "API access",
+            "Dedicated account manager",
+        ),
     ),
     SubscriptionPlan(
         id="site_starter_annual",
         name="Starter — annual",
-        description="Up to 10 employees, billed annually (2 months free vs monthly).",
+        description="Up to 15 staff, billed annually (2 months free).",
         stripe_price_id_env="STRIPE_PRICE_SITE_STARTER_ANNUAL",
         billing_interval="year",
-        max_employees=10,
-        price_gbp_ex_vat=189.50,
-        features=("Core HR", "Rota basics", "Sponsor compliance module"),
+        max_employees=15,
+        price_gbp_ex_vat=290.0,
+        features=(
+            "Employee records",
+            "Right-to-work checks",
+            "Document storage",
+            "Rota builder",
+            "Self-service portal",
+            "Email support",
+        ),
+    ),
+    SubscriptionPlan(
+        id="site_medium_annual",
+        name="Growth — annual",
+        description="Up to 40 staff, billed annually (2 months free).",
+        stripe_price_id_env="STRIPE_PRICE_SITE_MEDIUM_ANNUAL",
+        billing_interval="year",
+        max_employees=40,
+        price_gbp_ex_vat=590.0,
+        features=(
+            "Everything in Starter",
+            "Day-9 absence alerts",
+            "Sponsor licence compliance",
+            "Home Office audit export",
+            "Grievance workflows",
+            "SMS alerts · Priority support",
+        ),
+    ),
+    SubscriptionPlan(
+        id="site_growth_annual",
+        name="Scale — annual",
+        description="Up to 100 staff, billed annually (2 months free).",
+        stripe_price_id_env="STRIPE_PRICE_SITE_GROWTH_ANNUAL",
+        billing_interval="year",
+        max_employees=100,
+        price_gbp_ex_vat=990.0,
+        features=(
+            "Everything in Growth",
+            "Multi-site dashboard",
+            "Custom onboarding workflows",
+            "API access",
+            "Dedicated account manager",
+        ),
     ),
 )
 
@@ -70,7 +129,7 @@ def get_plan(plan_id: str) -> SubscriptionPlan | None:
 
 def stripe_payment_method_types() -> list[str]:
     """UK B2B default: Bacs Direct Debit + card backup."""
-    raw = os.getenv("STRIPE_PAYMENT_METHODS", "bacs_debit,card")
+    raw = os.getenv("STRIPE_PAYMENT_METHOD_TYPES", os.getenv("STRIPE_PAYMENT_METHODS", "bacs_debit,card"))
     methods = [part.strip() for part in raw.split(",") if part.strip()]
     return methods or ["bacs_debit", "card"]
 

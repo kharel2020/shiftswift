@@ -273,6 +273,13 @@
 
 .pricing-grid--payroll {
   margin-top: 20px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.pricing-card--enterprise {
+  max-width: 420px;
+  margin: 20px auto 0;
+  text-align: center;
 }
 
 .pricing-card--payroll {

@@ -17,38 +17,47 @@ class PayrollPlan:
     features: tuple[str, ...]
 
 
-# Flat per-site payroll add-on with employee bands (matches platform tiers).
-# HMRC RTI, payslips, and statutory reporting — billed as a second Stripe subscription item.
+# Payroll add-on bands — strategy doc (billed separately from HR platform).
 PAYROLL_PLANS: tuple[PayrollPlan, ...] = (
     PayrollPlan(
         id="payroll_starter_monthly",
-        name="Payroll — Starter",
-        description="Full UK payroll for up to 10 employees at one site.",
+        name="1–10 employees",
+        description="Pay cycles, payslips, HMRC RTI, P60/P45 generation.",
         stripe_price_id_env="STRIPE_PRICE_PAYROLL_STARTER_MONTHLY",
         billing_interval="month",
         max_employees=10,
-        price_gbp_ex_vat=24.95,
-        features=("HMRC RTI submissions", "Payslips & P60s", "Pension auto-enrolment export"),
+        price_gbp_ex_vat=19.0,
+        features=("HMRC RTI submissions", "Payslips & P60s", "P45 generation"),
     ),
     PayrollPlan(
         id="payroll_standard_monthly",
-        name="Payroll — Standard",
-        description="Full UK payroll for up to 25 employees at one site.",
+        name="11–25 employees",
+        description="All Starter features plus auto-enrolment pension reporting.",
         stripe_price_id_env="STRIPE_PRICE_PAYROLL_STANDARD_MONTHLY",
         billing_interval="month",
         max_employees=25,
-        price_gbp_ex_vat=49.0,
-        features=("Everything in Payroll Starter", "Multi-rate pay rules", "Tips & tronc allocation export"),
+        price_gbp_ex_vat=35.0,
+        features=("Everything in 1–10 band", "Auto-enrolment pension reporting"),
     ),
     PayrollPlan(
         id="payroll_growth_monthly",
-        name="Payroll — Growth",
-        description="Full UK payroll for up to 50 employees at one site.",
+        name="26–50 employees",
+        description="All Standard features plus multi-site payroll runs.",
         stripe_price_id_env="STRIPE_PRICE_PAYROLL_GROWTH_MONTHLY",
         billing_interval="month",
         max_employees=50,
-        price_gbp_ex_vat=69.0,
-        features=("Everything in Payroll Standard", "Priority payroll support", "Year-end filing pack"),
+        price_gbp_ex_vat=55.0,
+        features=("Everything in 11–25 band", "Multi-site payroll runs"),
+    ),
+    PayrollPlan(
+        id="payroll_scale_monthly",
+        name="51–100 employees",
+        description="All Growth features plus dedicated payroll support line.",
+        stripe_price_id_env="STRIPE_PRICE_PAYROLL_SCALE_MONTHLY",
+        billing_interval="month",
+        max_employees=100,
+        price_gbp_ex_vat=85.0,
+        features=("Everything in 26–50 band", "Dedicated payroll support line"),
     ),
 )
 
