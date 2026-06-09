@@ -11,7 +11,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon.png?v=brandkit-v2" />
     <link rel="icon" type="image/svg+xml" href="./assets/shiftswift-hr-icon.svg?v=brandkit-v2" />
     <link rel="apple-touch-icon" href="./assets/shiftswift-hr-icon.png?v=brandkit-v2" />
-    <link rel="stylesheet" href="./landing.css?v=brandkit-v9" />
+    <link rel="stylesheet" href="./landing.css?v=brandkit-v10" />
     <link rel="stylesheet" href="./pricing.css?v=4" />
   </head>
   <body>
@@ -73,13 +73,13 @@
         <section class="hero hero--animated">
           <div class="hero-copy">
             <div class="badge badge--pulse hero-in hero-in--1">UK HR & Compliance Software · HMRC RTI Ready · Home Office Audit Exports</div>
-            <h1 class="hero-in hero-in--2">HR software that keeps you compliant, without the paperwork headache.</h1>
-            <p class="hero-in hero-in--3">
+            <h1 class="hero-in hero-in--2">HR software that keeps you compliant — without the paperwork headache.</h1>
+            <p class="hero-in hero-in--3 hero-lead">
               ShiftSwift HR automates right-to-work checks, day-9 absence reporting, HMRC RTI submissions, and sponsor
               licence compliance, so your team can focus on running the business rather than chasing documents.
             </p>
             <div class="hero-actions hero-in hero-in--4">
-              <a class="btn" href="./signup.html">Start free 14-day trial (no card required)</a>
+              <a class="btn" href="./signup.html">Start free 14-day trial — no card required</a>
               <a class="btn ghost" href="mailto:hello@shiftswifthr.co.uk?subject=ShiftSwift%20HR%20demo">Book a 20-minute demo</a>
             </div>
             <ul class="hero-trust hero-in hero-in--5" aria-label="Trust highlights">
@@ -91,30 +91,49 @@
             </ul>
           </div>
           <div class="hero-visual hero-visual--pulse hero-in hero-in--6" aria-hidden="true">
-            <div class="dashboard-mock dashboard-mock--pulse dashboard-mock--float">
+            <div class="hero-preview dashboard-mock--pulse dashboard-mock--float">
               <div class="dashboard-mock__bar">
                 <span class="dashboard-mock__dot"></span>
                 <span class="dashboard-mock__dot"></span>
                 <span class="dashboard-mock__dot"></span>
-                <span class="dashboard-mock__title">ShiftSwift HR | Demo business</span>
+                <span class="dashboard-mock__title">ShiftSwift HR · Demo business</span>
               </div>
-              <div class="dashboard-mock__body">
-                <div class="dashboard-stat dashboard-stat--enter" style="--enter-i: 0">
-                  <div class="dashboard-stat__label">Staff on rota</div>
-                  <div class="dashboard-stat__value" data-count-up="18">18</div>
+              <div class="hero-preview__body">
+                <div class="hero-preview__stats">
+                  <div class="dashboard-stat dashboard-stat--enter" style="--enter-i: 0">
+                    <div class="dashboard-stat__label">Staff on rota</div>
+                    <div class="dashboard-stat__value">18</div>
+                  </div>
+                  <div class="dashboard-stat dashboard-stat--pulse dashboard-stat--enter" style="--enter-i: 1">
+                    <div class="dashboard-stat__label">RTW due</div>
+                    <div class="dashboard-stat__value dashboard-stat__value--warn">3</div>
+                  </div>
+                  <div class="dashboard-stat dashboard-stat--enter" style="--enter-i: 2">
+                    <div class="dashboard-stat__label">Day-9 alerts</div>
+                    <div class="dashboard-stat__value dashboard-stat__value--ok">Clear</div>
+                  </div>
                 </div>
-                <div class="dashboard-stat dashboard-stat--pulse dashboard-stat--enter" style="--enter-i: 1">
-                  <div class="dashboard-stat__label">RTW checks due</div>
-                  <div class="dashboard-stat__value dashboard-stat__value--warn">2</div>
+
+                <div class="hero-preview__panel product-mock product-mock--rtw">
+                  <div class="product-mock__bar"><span>Right to Work</span><strong class="text-ok">3 due this month</strong></div>
+                  <div class="product-mock__row"><span>Passport (A. Patel)</span><span>Expires 14 Aug</span></div>
+                  <div class="product-mock__row"><span>BRP (J. Okonkwo)</span><span>Verified</span></div>
+                  <div class="product-mock__row product-mock__row--warn"><span>Share code (S. Ahmed)</span><span>Review</span></div>
                 </div>
-                <div class="dashboard-stat dashboard-stat--enter" style="--enter-i: 2">
-                  <div class="dashboard-stat__label">Payroll run</div>
-                  <div class="dashboard-stat__value dashboard-stat__value--ok">Ready</div>
+
+                <div class="hero-preview__panel product-mock product-mock--lifecycle">
+                  <div class="product-mock__bar"><span>Employee lifecycle</span><strong>Step 4 of 10</strong></div>
+                  <div class="product-mock__step product-mock__step--done">Recruitment</div>
+                  <div class="product-mock__step product-mock__step--done">Offer &amp; contract</div>
+                  <div class="product-mock__step product-mock__step--active">Right to work</div>
+                  <div class="product-mock__step">Payroll setup</div>
                 </div>
-                <div class="dashboard-list">
-                  <div class="dashboard-list__row dashboard-list__row--enter" style="--enter-i: 0"><span>Mon shift coverage</span><strong>100%</strong></div>
-                  <div class="dashboard-list__row dashboard-list__row--enter" style="--enter-i: 1"><span>HMRC RTI submission</span><strong>Submitted</strong></div>
-                  <div class="dashboard-list__row dashboard-list__row--enter" style="--enter-i: 2"><span>Sponsor day-9 alert</span><strong class="text-ok">Clear</strong></div>
+
+                <div class="hero-preview__panel product-mock product-mock--audit">
+                  <div class="product-mock__bar"><span>Home Office audit pack</span><strong>Ready</strong></div>
+                  <div class="product-mock__row"><span>Sponsored workers</span><span>12 records</span></div>
+                  <div class="product-mock__row"><span>Absence alerts (day 9)</span><span>0 open</span></div>
+                  <div class="product-mock__row"><span>Export</span><span>PDF · JSON</span></div>
                 </div>
               </div>
             </div>
