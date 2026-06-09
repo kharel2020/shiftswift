@@ -1182,10 +1182,26 @@ body.is-loading .page {
   font-weight: var(--text-support-weight);
 }
 
+/* Post-pricing blocks must stay visible on mobile (tall pricing breaks scroll-reveal). */
+.compare-section,
+.faq-section,
+.pricing-footnote {
+  opacity: 1 !important;
+  transform: none !important;
+}
+
 .compare-section,
 .faq-section {
   max-width: 960px;
-  margin: 48px auto 0;
+  margin: 0 auto;
+}
+
+.compare-section {
+  padding-top: 16px;
+}
+
+.faq-section {
+  padding-top: 8px;
 }
 
 .compare-section h2,
@@ -1775,7 +1791,15 @@ body.is-loading .page {
 
   .compare-section,
   .faq-section {
-    margin-top: 32px;
+    padding-top: 0;
+  }
+
+  .compare-section {
+    padding-bottom: 8px;
+  }
+
+  .faq-section {
+    padding-top: 4px;
   }
 
   .compare-table th:first-child,

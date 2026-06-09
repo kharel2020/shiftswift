@@ -24,7 +24,7 @@
           observer.unobserve(entry.target);
         });
       },
-      { root: null, rootMargin: "0px 0px -8% 0px", threshold: 0.12 }
+      { root: null, rootMargin: "0px 0px -4% 0px", threshold: 0 }
     );
 
     revealRoots.forEach((node) => observer.observe(node));

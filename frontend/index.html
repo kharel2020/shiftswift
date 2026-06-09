@@ -11,7 +11,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon.png?v=brandkit-v2" />
     <link rel="icon" type="image/svg+xml" href="./assets/shiftswift-hr-icon.svg?v=brandkit-v2" />
     <link rel="apple-touch-icon" href="./assets/shiftswift-hr-icon.png?v=brandkit-v2" />
-    <link rel="stylesheet" href="./landing.css?v=brandkit-v14" />
+    <link rel="stylesheet" href="./landing.css?v=brandkit-v16" />
     <link rel="stylesheet" href="./pricing.css?v=7" />
   </head>
   <body>
@@ -323,7 +323,7 @@
           </div>
         </section>
 
-        <section id="pricing" class="section pricing-section reveal">
+        <section id="pricing" class="section pricing-section">
           <div class="pricing-intro">
             <div class="badge">Per-site pricing for UK businesses</div>
             <h2>Simple, predictable pricing. No per-seat surprises.</h2>
@@ -339,7 +339,7 @@
             </div>
           </div>
           <div id="pricing-plans" class="pricing-grid pricing-grid--platform"></div>
-          <article class="pricing-card pricing-card--enterprise reveal">
+          <article class="pricing-card pricing-card--enterprise">
             <div class="pricing-card-head">
               <div class="pricing-plan-name">Enterprise</div>
               <p class="pricing-plan-desc">100+ staff per site · bespoke setup, SLA, and procurement support.</p>
@@ -361,8 +361,9 @@
             </p>
             <div id="pricing-payroll-plans" class="pricing-grid pricing-grid--payroll"></div>
           </div>
+        </section>
 
-          <section class="compare-section reveal" aria-labelledby="compare-heading">
+        <section class="section compare-section" aria-labelledby="compare-heading">
             <h2 id="compare-heading">ShiftSwift HR vs spreadsheets and guesswork</h2>
             <div class="compare-table-wrap">
               <table class="compare-table">
@@ -389,9 +390,9 @@
                 </tbody>
               </table>
             </div>
-          </section>
+        </section>
 
-          <section id="faq" class="faq-section" aria-labelledby="faq-heading">
+        <section id="faq" class="section faq-section" aria-labelledby="faq-heading">
             <h2 id="faq-heading">Frequently asked questions</h2>
             <details class="faq-item">
               <summary>Is HMRC RTI included in all plans?</summary>
@@ -435,13 +436,12 @@
                 <p>Yes. Plans are priced per site, so you add a plan for each location. A multi-site dashboard is available on Scale and Enterprise plans, giving you a consolidated view across all sites.</p>
               </div>
             </details>
-          </section>
-
-          <p class="pricing-footnote">
-            Prices exclude UK VAT. Annual plans are non-refundable. Monthly plans cancel at end of billing period. Payroll is billed as a separate add-on.
-            <span class="pricing-footnote__link"><a href="../docs/b2b_payment_terms.md" target="_blank" rel="noopener">Payment terms</a></span>
-          </p>
         </section>
+
+        <p class="pricing-footnote">
+          Prices exclude UK VAT. Annual plans are non-refundable. Monthly plans cancel at end of billing period. Payroll is billed as a separate add-on.
+          <span class="pricing-footnote__link"><a href="../docs/b2b_payment_terms.md" target="_blank" rel="noopener">Payment terms</a></span>
+        </p>
       </main>
 
       <footer class="site-footer">
@@ -473,7 +473,7 @@
         <p class="site-footer__copy">© 2026 Datasoftware Analytics Ltd. All rights reserved.</p>
       </footer>
     </div>
-    <script src="./landing-animations.js?v=2"></script>
+    <script src="./landing-animations.js?v=3"></script>
     <script src="./landing-faq.js?v=2"></script>
     <script src="./brand-config.js?v=brand-v4"></script>
     <script src="./pricing.js?v=5"></script>
