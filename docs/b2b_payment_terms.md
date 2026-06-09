@@ -46,4 +46,4 @@ Exceptions only where:
 
 ## Contact
 
-Billing queries: [billing@yourdomain.com]
+Billing queries: support@shiftswifthr.co.uk
