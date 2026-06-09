@@ -1,0 +1,446 @@
+/* Subscription pricing — marketing & signup (shared with landing.css) */
+
+.pricing-section {
+  padding: 64px 0 80px;
+}
+
+.pricing-intro {
+  text-align: center;
+  max-width: 720px;
+  margin: 0 auto 40px;
+}
+
+.pricing-intro h2 {
+  font-size: var(--text-section-size);
+  font-weight: var(--text-section-weight);
+  letter-spacing: var(--text-section-tracking);
+  color: var(--gray-900);
+}
+
+.pricing-intro p {
+  font-size: var(--text-body-size-lg);
+  font-weight: var(--text-support-weight);
+}
+
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+  align-items: stretch;
+}
+
+.pricing-grid--platform {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.pricing-billing-toggle {
+  display: inline-flex;
+  margin-top: 20px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  box-shadow: var(--shadow-card);
+}
+
+.pricing-billing-toggle button {
+  border: none;
+  background: transparent;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: var(--text-label-weight);
+  color: var(--gray-500);
+  cursor: pointer;
+}
+
+.pricing-billing-toggle button.is-active {
+  background: var(--green-700);
+  color: var(--white);
+}
+
+.pricing-billing-toggle .save-tag {
+  font-size: var(--text-label-size);
+  font-weight: var(--text-label-weight);
+  letter-spacing: var(--text-label-tracking);
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+.pricing-link-cta {
+  display: block;
+  text-align: center;
+  font-size: var(--text-caption-size);
+  font-weight: var(--text-support-weight);
+  color: var(--green-700);
+  padding: 4px 0;
+}
+
+.pricing-link-cta:hover {
+  text-decoration: underline;
+}
+
+.pricing-card {
+  background: var(--white);
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius-xl);
+  padding: 28px 24px 24px;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 100%;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.pricing-card:hover {
+  border-color: var(--green-500);
+  box-shadow: var(--shadow-soft);
+}
+
+.pricing-card.is-featured {
+  border-color: var(--green-700);
+  box-shadow: 0 12px 40px rgba(15, 110, 86, 0.12);
+  transform: translateY(-4px);
+}
+
+.pricing-card.is-selected {
+  border-color: var(--green-700);
+  background: linear-gradient(180deg, var(--white) 0%, var(--green-100) 100%);
+  box-shadow: 0 0 0 3px rgba(15, 110, 86, 0.15);
+}
+
+.pricing-card-head {
+  display: grid;
+  gap: 8px;
+}
+
+.pricing-plan-name {
+  font-family: var(--font-heading);
+  font-size: 1.375rem;
+  font-weight: var(--text-card-title-weight);
+  color: var(--green-800);
+  letter-spacing: var(--text-card-title-tracking);
+}
+
+.pricing-plan-desc {
+  margin: 0;
+  font-size: var(--text-body-size);
+  font-weight: var(--text-support-weight);
+  line-height: 1.5;
+  min-height: 42px;
+}
+
+.pricing-badge {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--green-100);
+  color: var(--green-800);
+  font-size: var(--text-label-size);
+  font-weight: var(--text-label-weight);
+  letter-spacing: var(--text-label-tracking);
+  text-transform: uppercase;
+}
+
+.pricing-badge--muted {
+  background: var(--gray-100, #f0efeb);
+  color: var(--gray-700);
+}
+
+.pricing-amount {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.pricing-amount .currency {
+  font-size: 1.125rem;
+  font-weight: var(--text-price-weight);
+  letter-spacing: var(--text-price-tracking);
+  color: var(--gray-900);
+}
+
+.pricing-amount .value {
+  font-family: var(--font-heading);
+  font-size: var(--text-price-size);
+  font-weight: var(--text-price-weight);
+  line-height: 1;
+  color: var(--gray-900);
+  letter-spacing: var(--text-price-tracking);
+}
+
+.pricing-amount .interval {
+  font-size: var(--text-body-size);
+  font-weight: var(--text-support-weight);
+  color: var(--gray-500);
+}
+
+.pricing-vat {
+  margin: 0;
+  font-size: var(--text-caption-size);
+  font-weight: var(--text-caption-weight);
+  color: var(--gray-500);
+}
+
+.pricing-vat strong {
+  color: var(--green-700);
+  font-weight: var(--text-label-weight);
+}
+
+.pricing-staff-cap {
+  margin: 0;
+  font-size: var(--text-caption-size);
+  font-weight: var(--text-label-weight);
+  color: var(--gray-700);
+}
+
+.pricing-features {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  flex: 1;
+}
+
+.pricing-features li {
+  position: relative;
+  padding-left: 22px;
+  font-size: var(--text-caption-size);
+  font-weight: var(--text-support-weight);
+  color: var(--gray-700);
+  line-height: 1.45;
+}
+
+.pricing-features li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: var(--green-700);
+  font-weight: 800;
+}
+
+.pricing-card-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+.pricing-card-actions .btn {
+  width: 100%;
+}
+
+.pricing-card-actions .btn.ghost {
+  font-size: 12px;
+  padding: 8px 16px;
+}
+
+.pricing-badge--payroll {
+  background: #e8f4f0;
+  color: var(--brand-700, #0f6e56);
+}
+
+.pricing-subsection {
+  margin-top: 48px;
+}
+
+.pricing-subsection h3 {
+  text-align: center;
+  margin: 0 0 8px;
+  font-size: var(--text-card-title-size);
+  font-weight: var(--text-card-title-weight);
+  letter-spacing: var(--text-card-title-tracking);
+}
+
+.pricing-model-tag {
+  display: inline-block;
+  font-size: var(--text-label-size);
+  font-weight: var(--text-label-weight);
+  text-transform: uppercase;
+  letter-spacing: var(--text-label-tracking);
+  padding: 3px 8px;
+  margin-left: 8px;
+  border-radius: 999px;
+  background: var(--gray-100, #f3f4f6);
+  color: var(--gray-600, #4b5563);
+  vertical-align: middle;
+}
+
+.pricing-grid--payroll {
+  margin-top: 20px;
+}
+
+.pricing-card--payroll {
+  border-style: dashed;
+}
+
+.pricing-card--skip .pricing-amount .value {
+  color: var(--gray-500);
+}
+
+.signup-payroll-heading {
+  margin: 28px 0 8px;
+  font-size: 1.1rem;
+}
+
+.pricing-footnote {
+  text-align: center;
+  margin: 28px 0 0;
+  font-size: var(--text-caption-size);
+  font-weight: var(--text-caption-weight);
+  color: var(--gray-400);
+}
+
+.pricing-loading,
+.pricing-error {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--gray-500);
+}
+
+/* Signup page — room for plan picker + form */
+.signup-page {
+  min-height: 100vh;
+  padding: 32px 24px 64px;
+  background: var(--page-bg);
+}
+
+.signup-page-inner {
+  max-width: 1320px;
+  margin: 0 auto;
+}
+
+.signup-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+
+.signup-layout {
+  display: grid;
+  grid-template-columns: 1.35fr 0.85fr;
+  gap: 28px;
+  align-items: start;
+}
+
+.signup-plans-panel,
+.signup-form-panel {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-xl);
+  padding: 28px 32px;
+  box-shadow: var(--shadow-card);
+}
+
+.signup-plans-panel h2,
+.signup-form-panel h2 {
+  margin: 0 0 8px;
+  font-family: var(--font-heading);
+  font-size: var(--text-section-size);
+  font-weight: var(--text-section-weight);
+  letter-spacing: var(--text-section-tracking);
+  color: var(--gray-900);
+}
+
+.signup-plans-panel .pricing-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 20px;
+}
+
+.signup-summary {
+  margin-top: 20px;
+  padding: 16px 18px;
+  border-radius: var(--radius-md);
+  background: var(--green-100);
+  border: 1px solid var(--card-border);
+}
+
+.signup-summary-label {
+  font-size: var(--text-label-size);
+  font-weight: var(--text-label-weight);
+  letter-spacing: var(--text-label-tracking);
+  text-transform: uppercase;
+  color: var(--green-800);
+  margin-bottom: 6px;
+}
+
+.signup-summary-plan {
+  font-size: 1.125rem;
+  font-weight: var(--text-card-title-weight);
+  letter-spacing: var(--text-card-title-tracking);
+  color: var(--gray-900);
+}
+
+.signup-summary-price {
+  font-size: var(--text-body-size);
+  font-weight: var(--text-support-weight);
+  color: var(--gray-700);
+  margin-top: 4px;
+}
+
+#signup-status {
+  min-height: 1.25em;
+  font-size: var(--text-caption-size);
+  color: var(--green-800);
+  font-weight: var(--text-support-weight);
+}
+
+.promo-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.promo-message {
+  margin: 0;
+  font-size: var(--text-caption-size);
+  font-weight: var(--text-caption-weight);
+}
+
+.promo-message.promo-success {
+  color: var(--green-800);
+  font-weight: var(--text-support-weight);
+}
+
+@media (max-width: 640px) {
+  .promo-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1100px) {
+  .pricing-grid,
+  .pricing-grid--platform {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .signup-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .signup-plans-panel .pricing-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .pricing-grid,
+  .pricing-grid--platform,
+  .signup-plans-panel .pricing-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .signup-plans-panel,
+  .signup-form-panel {
+    padding: 20px;
+  }
+}

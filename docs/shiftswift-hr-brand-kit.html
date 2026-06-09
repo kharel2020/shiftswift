@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ShiftSwift HR — Brand Kit</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green-900: #04342C;
+    --green-800: #085041;
+    --green-700: #0F6E56;
+    --green-500: #1D9E75;
+    --green-300: #5DCAA5;
+    --green-200: #9FE1CB;
+    --green-100: #E1F5EE;
+
+    --gray-900: #111111;
+    --gray-700: #2C2C2A;
+    --gray-500: #5F5E5A;
+    --gray-400: #888780;
+    --gray-200: #D3D1C7;
+    --gray-100: #F1EFE8;
+    --white:    #FFFFFF;
+
+    --font: 'Plus Jakarta Sans', sans-serif;
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+  }
+
+  body {
+    font-family: var(--font);
+    background: #F5F4F0;
+    color: var(--gray-900);
+    line-height: 1.6;
+  }
+
+  /* ── PAGE HEADER ── */
+  .page-header {
+    background: var(--green-700);
+    color: var(--white);
+    padding: 64px 80px 56px;
+  }
+  .page-header .eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--green-200);
+    margin-bottom: 16px;
+  }
+  .page-header h1 {
+    font-size: 52px;
+    font-weight: 800;
+    letter-spacing: -2px;
+    line-height: 1.05;
+    margin-bottom: 12px;
+  }
+  .page-header h1 span { color: var(--green-300); }
+  .page-header p {
+    font-size: 15px;
+    color: var(--green-200);
+    font-weight: 500;
+  }
+
+  /* ── LAYOUT ── */
+  .content { padding: 64px 80px; max-width: 1100px; }
+
+  .section { margin-bottom: 72px; }
+  .section-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gray-400);
+    margin-bottom: 24px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--gray-200);
+  }
+
+  /* ── LOGO SECTION ── */
+  .logo-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .logo-box {
+    border-radius: var(--radius-lg);
+    padding: 40px 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 160px;
+  }
+  .logo-box.light { background: var(--white); border: 1px solid var(--gray-200); }
+  .logo-box.dark  { background: var(--green-900); }
+  .logo-box.mid   { background: var(--green-700); }
+  .logo-box.gray  { background: var(--gray-100); border: 1px solid var(--gray-200); }
+
+  .logo-caption {
+    font-size: 11px;
+    color: var(--gray-400);
+    text-align: center;
+    margin-top: 10px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+  }
+  .logo-wrap { display: flex; flex-direction: column; }
+
+  /* ── COLOURS ── */
+  .color-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .swatch-group { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 80px; }
+  .swatch {
+    height: 64px;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(0,0,0,0.06);
+  }
+  .swatch-label { font-size: 11px; font-weight: 600; color: var(--gray-700); }
+  .swatch-hex   { font-size: 10px; color: var(--gray-400); font-weight: 500; font-family: monospace; }
+
+  /* ── TYPOGRAPHY ── */
+  .type-row { display: flex; flex-direction: column; gap: 20px; }
+  .type-specimen {
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    padding: 28px 32px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 24px;
+  }
+  .type-specimen .sample { font-family: var(--font); color: var(--gray-900); }
+  .type-meta { font-size: 11px; color: var(--gray-400); font-weight: 500; white-space: nowrap; text-align: right; line-height: 1.8; }
+
+  /* ── ICON GRID ── */
+  .icon-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+  .icon-box {
+    border-radius: var(--radius-lg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 28px 16px;
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+  }
+  .icon-box .icon-caption {
+    font-size: 11px;
+    color: var(--gray-400);
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-align: center;
+  }
+
+  /* ── BADGES ── */
+  .badge-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .badge {
+    font-family: var(--font);
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
+    text-transform: uppercase;
+  }
+  .badge.primary   { background: var(--green-700); color: var(--white); }
+  .badge.secondary { background: var(--green-100); color: var(--green-800); }
+  .badge.outline   { background: transparent; color: var(--green-700); border: 1.5px solid var(--green-700); }
+  .badge.dark      { background: var(--green-900); color: var(--green-200); }
+  .badge.neutral   { background: var(--gray-100); color: var(--gray-700); }
+  .badge.pill      { border-radius: 999px; background: var(--green-300); color: var(--green-900); }
+
+  /* ── UI COMPONENTS ── */
+  .ui-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .ui-card {
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    padding: 24px 28px;
+  }
+  .ui-card h4 { font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--gray-400); margin-bottom: 20px; }
+
+  /* buttons */
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .btn {
+    font-family: var(--font);
+    font-weight: 700;
+    font-size: 13px;
+    padding: 10px 22px;
+    border-radius: var(--radius-sm);
+    border: none;
+    cursor: pointer;
+    letter-spacing: 0.2px;
+  }
+  .btn-primary   { background: var(--green-700); color: var(--white); }
+  .btn-secondary { background: var(--green-100); color: var(--green-800); }
+  .btn-ghost     { background: transparent; color: var(--green-700); border: 1.5px solid var(--green-700); }
+  .btn-dark      { background: var(--green-900); color: var(--green-200); }
+
+  /* status chips */
+  .chip-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip {
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 999px;
+    letter-spacing: 0.3px;
+  }
+  .chip-active    { background: var(--green-100); color: var(--green-800); }
+  .chip-pending   { background: #FFF3CD; color: #856404; }
+  .chip-onleave   { background: #E8EAF6; color: #3949AB; }
+  .chip-inactive  { background: var(--gray-100); color: var(--gray-500); }
+  .chip-offboarding { background: #FDECEA; color: #C62828; }
+
+  /* input */
+  .input-demo { display: flex; flex-direction: column; gap: 10px; }
+  .input-demo label { font-size: 12px; font-weight: 700; color: var(--gray-700); letter-spacing: 0.3px; }
+  .input-demo input, .input-demo select {
+    font-family: var(--font);
+    font-size: 13px;
+    padding: 9px 14px;
+    border: 1.5px solid var(--gray-200);
+    border-radius: var(--radius-sm);
+    color: var(--gray-900);
+    background: var(--white);
+    outline: none;
+  }
+  .input-demo input:focus { border-color: var(--green-500); }
+
+  /* ── SAMPLE CARD ── */
+  .employee-card {
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    max-width: 480px;
+  }
+  .avatar {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    background: var(--green-100);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 800; color: var(--green-700);
+    flex-shrink: 0;
+  }
+  .emp-name { font-size: 16px; font-weight: 800; color: var(--gray-900); margin-bottom: 2px; }
+  .emp-role { font-size: 13px; color: var(--gray-400); font-weight: 500; margin-bottom: 10px; }
+  .emp-tags { display: flex; gap: 6px; }
+
+  /* ── SPACING ── */
+  .spacing-row { display: flex; align-items: flex-end; gap: 16px; }
+  .sp-block { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .sp-vis { background: var(--green-300); border-radius: 3px; width: 32px; }
+  .sp-label { font-size: 10px; color: var(--gray-400); font-weight: 700; letter-spacing: 0.5px; }
+
+  /* ── DARK PANEL ── */
+  .dark-panel {
+    background: var(--green-900);
+    border-radius: var(--radius-xl);
+    padding: 48px 56px;
+    margin-bottom: 72px;
+  }
+  .dark-panel .section-label { color: var(--green-300); border-color: var(--green-800); }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 1px solid var(--gray-200);
+    padding: 32px 80px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  footer p { font-size: 12px; color: var(--gray-400); font-weight: 500; }
+</style>
+</head>
+<body>
+
+<!-- PAGE HEADER -->
+<div class="page-header">
+  <p class="eyebrow">Brand Identity System</p>
+  <h1><span>Shift</span>Swift HR</h1>
+  <p>People &amp; workforce platform — Brand Kit v1.0</p>
+</div>
+
+<div class="content">
+
+  <!-- ── LOGO VARIANTS ── -->
+  <div class="section">
+    <p class="section-label">01 — Logo variants</p>
+    <div class="logo-grid">
+
+      <div class="logo-wrap">
+        <div class="logo-box light">
+          <svg width="320" height="80" viewBox="0 0 580 140" xmlns="http://www.w3.org/2000/svg">
+            <rect x="16" y="16" width="108" height="108" rx="22" fill="#0F6E56"/>
+            <rect x="34" y="34" width="42" height="8" rx="4" fill="#5DCAA5"/>
+            <rect x="34" y="48" width="30" height="8" rx="4" fill="#9FE1CB"/>
+            <rect x="34" y="62" width="38" height="8" rx="4" fill="#5DCAA5"/>
+            <line x1="34" y1="97" x2="90" y2="97" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round"/>
+            <polyline points="74,86 90,97 74,108" fill="none" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <text x="142" y="90" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-weight="800" font-size="52" letter-spacing="-1.5">
+              <tspan fill="#111111">Shift</tspan><tspan fill="#0F6E56">Swift</tspan>
+            </text>
+            <rect x="142" y="103" width="36" height="20" rx="5" fill="#0F6E56"/>
+            <text x="160" y="117" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="11" font-weight="800" fill="#ffffff" text-anchor="middle" letter-spacing="1.5">HR</text>
+            <text x="186" y="117" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="13" fill="#888780" letter-spacing="0.1">People &amp; workforce platform</text>
+          </svg>
+        </div>
+        <p class="logo-caption">Primary — light background</p>
+      </div>
+
+      <div class="logo-wrap">
+        <div class="logo-box dark">
+          <svg width="320" height="80" viewBox="0 0 580 140" xmlns="http://www.w3.org/2000/svg">
+            <rect x="16" y="16" width="108" height="108" rx="22" fill="#1D9E75"/>
+            <rect x="34" y="34" width="42" height="8" rx="4" fill="#9FE1CB"/>
+            <rect x="34" y="48" width="30" height="8" rx="4" fill="#E1F5EE"/>
+            <rect x="34" y="62" width="38" height="8" rx="4" fill="#9FE1CB"/>
+            <line x1="34" y1="97" x2="90" y2="97" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round"/>
+            <polyline points="74,86 90,97 74,108" fill="none" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <text x="142" y="90" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-weight="800" font-size="52" letter-spacing="-1.5">
+              <tspan fill="#ffffff">Shift</tspan><tspan fill="#5DCAA5">Swift</tspan>
+            </text>
+            <rect x="142" y="103" width="36" height="20" rx="5" fill="#1D9E75"/>
+            <text x="160" y="117" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="11" font-weight="800" fill="#ffffff" text-anchor="middle" letter-spacing="1.5">HR</text>
+            <text x="186" y="117" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="13" fill="#5DCAA5" letter-spacing="0.1">People &amp; workforce platform</text>
+          </svg>
+        </div>
+        <p class="logo-caption">Reversed — dark background</p>
+      </div>
+
+      <div class="logo-wrap">
+        <div class="logo-box mid">
+          <svg width="320" height="80" viewBox="0 0 580 140" xmlns="http://www.w3.org/2000/svg">
+            <rect x="16" y="16" width="108" height="108" rx="22" fill="#085041"/>
+            <rect x="34" y="34" width="42" height="8" rx="4" fill="#9FE1CB"/>
+            <rect x="34" y="48" width="30" height="8" rx="4" fill="#E1F5EE"/>
+            <rect x="34" y="62" width="38" height="8" rx="4" fill="#9FE1CB"/>
+            <line x1="34" y1="97" x2="90" y2="97" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round"/>
+            <polyline points="74,86 90,97 74,108" fill="none" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <text x="142" y="90" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-weight="800" font-size="52" letter-spacing="-1.5">
+              <tspan fill="#ffffff">Shift</tspan><tspan fill="#9FE1CB">Swift</tspan>
+            </text>
+            <rect x="142" y="103" width="36" height="20" rx="5" fill="#085041"/>
+            <text x="160" y="117" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="11" font-weight="800" fill="#9FE1CB" text-anchor="middle" letter-spacing="1.5">HR</text>
+            <text x="186" y="117" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="13" fill="#9FE1CB" letter-spacing="0.1">People &amp; workforce platform</text>
+          </svg>
+        </div>
+        <p class="logo-caption">On brand green</p>
+      </div>
+
+      <div class="logo-wrap">
+        <div class="logo-box gray">
+          <!-- Icon only -->
+          <svg width="108" height="108" viewBox="0 0 108 108" xmlns="http://www.w3.org/2000/svg">
+            <rect width="108" height="108" rx="22" fill="#0F6E56"/>
+            <rect x="18" y="18" width="42" height="8" rx="4" fill="#5DCAA5"/>
+            <rect x="18" y="32" width="30" height="8" rx="4" fill="#9FE1CB"/>
+            <rect x="18" y="46" width="38" height="8" rx="4" fill="#5DCAA5"/>
+            <line x1="18" y1="74" x2="90" y2="74" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round"/>
+            <polyline points="72,63 90,74 72,85" fill="none" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <p class="logo-caption">Icon only — app / favicon</p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── COLOUR PALETTE ── -->
+  <div class="section">
+    <p class="section-label">02 — Colour palette</p>
+
+    <div style="margin-bottom: 20px;">
+      <p style="font-size:11px; font-weight:700; color:var(--gray-500); letter-spacing:1px; text-transform:uppercase; margin-bottom:12px;">Brand greens</p>
+      <div class="color-row">
+        <div class="swatch-group"><div class="swatch" style="background:#04342C;"></div><p class="swatch-label">Forest</p><p class="swatch-hex">#04342C</p></div>
+        <div class="swatch-group"><div class="swatch" style="background:#085041;"></div><p class="swatch-label">Deep</p><p class="swatch-hex">#085041</p></div>
+        <div class="swatch-group"><div class="swatch" style="background:#0F6E56;"></div><p class="swatch-label">Primary</p><p class="swatch-hex">#0F6E56</p></div>
+        <div class="swatch-group"><div class="swatch" style="background:#1D9E75;"></div><p class="swatch-label">Mid</p><p class="swatch-hex">#1D9E75</p></div>
+        <div class="swatch-group"><div class="swatch" style="background:#5DCAA5;"></div><p class="swatch-label">Light</p><p class="swatch-hex">#5DCAA5</p></div>
+        <div class="swatch-group"><div class="swatch" style="background:#9FE1CB;"></div><p class="swatch-label">Pale</p><p class="swatch-hex">#9FE1CB</p></div>
+        <div class="swatch-group"><div class="swatch" style="background:#E1F5EE; border:1px solid #D3D1C7;"></div><p class="swatch-label">Tint</p><p class="swatch-hex">#E1F5EE</p></div>
+      </div>
+    </div>
+
+    <div>
+      <p style="font-size:11px; font-weight:700; color:var(--gray-500); letter-spacing:1px; text-transform:uppercase; margin-bottom:12px;">Neutrals</p>
+      <div class="color-row">
+        <div class="swatch-group"><div class="swatch" style="background:#111111;"></div><p class="swatch-label">Ink</p><p class="swatch-hex">#111111</p></div>
+        <div class="swatch-group"><div class="swatch" style="background:#2C2C2A;"></div><p class="swatch-label">Dark</p><p class="swatch-hex">#2C2C2A</p></div>
+        <div class="swatch-group"><div class="swatch" style="background:#5F5E5A;"></div><p class="swatch-label">Mid</p><p class="swatch-hex">#5F5E5A</p></div>
+        <div class="swatch-group"><div class="swatch" style="background:#888780;"></div><p class="swatch-label">Muted</p><p class="swatch-hex">#888780</p></div>
+        <div class="swatch-group"><div class="swatch" style="background:#D3D1C7;"></div><p class="swatch-label">Border</p><p class="swatch-hex">#D3D1C7</p></div>
+        <div class="swatch-group"><div class="swatch" style="background:#F1EFE8; border:1px solid #D3D1C7;"></div><p class="swatch-label">Surface</p><p class="swatch-hex">#F1EFE8</p></div>
+        <div class="swatch-group"><div class="swatch" style="background:#FFFFFF; border:1px solid #D3D1C7;"></div><p class="swatch-label">White</p><p class="swatch-hex">#FFFFFF</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TYPOGRAPHY ── -->
+  <div class="section">
+    <p class="section-label">03 — Typography — Plus Jakarta Sans</p>
+    <div class="type-row">
+      <div class="type-specimen">
+        <p class="sample" style="font-size:48px; font-weight:800; letter-spacing:-2px; line-height:1;">ShiftSwift HR</p>
+        <div class="type-meta">Display / H1<br>800 · 48px · −2 tracking</div>
+      </div>
+      <div class="type-specimen">
+        <p class="sample" style="font-size:32px; font-weight:800; letter-spacing:-1px;">People &amp; workforce platform</p>
+        <div class="type-meta">H2 Heading<br>800 · 32px · −1 tracking</div>
+      </div>
+      <div class="type-specimen">
+        <p class="sample" style="font-size:20px; font-weight:700;">Manage your team, smarter.</p>
+        <div class="type-meta">H3 Subheading<br>700 · 20px</div>
+      </div>
+      <div class="type-specimen">
+        <p class="sample" style="font-size:15px; font-weight:500; color:var(--gray-500); line-height:1.7;">ShiftSwift HR helps growing teams manage rosters, payroll, leave, and performance in one unified platform. Built for speed, designed for people.</p>
+        <div class="type-meta">Body<br>500 · 15px · 1.7 lh</div>
+      </div>
+      <div class="type-specimen">
+        <p class="sample" style="font-size:12px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--gray-400);">Section label · UI label · Caption</p>
+        <div class="type-meta">Label / Caption<br>700 · 12px · +2 tracking · UC</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ICON SIZES ── -->
+  <div class="section">
+    <p class="section-label">04 — Icon sizes</p>
+    <div class="icon-grid">
+
+      <div class="icon-box">
+        <svg width="96" height="96" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
+          <rect width="96" height="96" rx="20" fill="#0F6E56"/>
+          <rect x="16" y="16" width="36" height="7" rx="3.5" fill="#5DCAA5"/>
+          <rect x="16" y="29" width="26" height="7" rx="3.5" fill="#9FE1CB"/>
+          <rect x="16" y="42" width="32" height="7" rx="3.5" fill="#5DCAA5"/>
+          <line x1="16" y1="65" x2="80" y2="65" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+          <polyline points="63,55 80,65 63,75" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <p class="icon-caption">96px<br>App icon</p>
+      </div>
+
+      <div class="icon-box">
+        <svg width="64" height="64" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
+          <rect width="96" height="96" rx="20" fill="#0F6E56"/>
+          <rect x="16" y="16" width="36" height="7" rx="3.5" fill="#5DCAA5"/>
+          <rect x="16" y="29" width="26" height="7" rx="3.5" fill="#9FE1CB"/>
+          <rect x="16" y="42" width="32" height="7" rx="3.5" fill="#5DCAA5"/>
+          <line x1="16" y1="65" x2="80" y2="65" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+          <polyline points="63,55 80,65 63,75" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <p class="icon-caption">64px<br>Nav / header</p>
+      </div>
+
+      <div class="icon-box">
+        <svg width="40" height="40" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
+          <rect width="96" height="96" rx="20" fill="#0F6E56"/>
+          <rect x="16" y="16" width="36" height="7" rx="3.5" fill="#5DCAA5"/>
+          <rect x="16" y="29" width="26" height="7" rx="3.5" fill="#9FE1CB"/>
+          <rect x="16" y="42" width="32" height="7" rx="3.5" fill="#5DCAA5"/>
+          <line x1="16" y1="65" x2="80" y2="65" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+          <polyline points="63,55 80,65 63,75" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <p class="icon-caption">40px<br>Sidebar</p>
+      </div>
+
+      <div class="icon-box">
+        <svg width="24" height="24" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
+          <rect width="96" height="96" rx="20" fill="#0F6E56"/>
+          <rect x="16" y="16" width="36" height="7" rx="3.5" fill="#5DCAA5"/>
+          <rect x="16" y="29" width="26" height="7" rx="3.5" fill="#9FE1CB"/>
+          <rect x="16" y="42" width="32" height="7" rx="3.5" fill="#5DCAA5"/>
+          <line x1="16" y1="65" x2="80" y2="65" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+          <polyline points="63,55 80,65 63,75" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <p class="icon-caption">24px<br>Favicon</p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── BADGES & LABELS ── -->
+  <div class="section">
+    <p class="section-label">05 — Badges &amp; labels</p>
+    <div class="badge-row" style="margin-bottom:16px;">
+      <span class="badge primary">HR</span>
+      <span class="badge secondary">HR</span>
+      <span class="badge outline">HR</span>
+      <span class="badge dark">HR</span>
+      <span class="badge neutral">HR</span>
+      <span class="badge pill">HR</span>
+    </div>
+    <p style="font-size:11px; color:var(--gray-400); font-weight:500;">Primary · Secondary · Outline · Dark · Neutral · Pill</p>
+  </div>
+
+  <!-- ── UI COMPONENTS ── -->
+  <div class="section">
+    <p class="section-label">06 — UI components</p>
+    <div class="ui-grid">
+
+      <div class="ui-card">
+        <h4>Buttons</h4>
+        <div class="btn-row">
+          <button class="btn btn-primary">Add employee</button>
+          <button class="btn btn-secondary">Export</button>
+          <button class="btn btn-ghost">Cancel</button>
+        </div>
+      </div>
+
+      <div class="ui-card">
+        <h4>Employee status</h4>
+        <div class="chip-row">
+          <span class="chip chip-active">Active</span>
+          <span class="chip chip-pending">Pending</span>
+          <span class="chip chip-onleave">On leave</span>
+          <span class="chip chip-inactive">Inactive</span>
+          <span class="chip chip-offboarding">Offboarding</span>
+        </div>
+      </div>
+
+      <div class="ui-card">
+        <h4>Form inputs</h4>
+        <div class="input-demo">
+          <label>Full name</label>
+          <input type="text" placeholder="e.g. Priya Sharma"/>
+          <label>Department</label>
+          <select>
+            <option>Engineering</option>
+            <option>HR &amp; People</option>
+            <option>Finance</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="ui-card">
+        <h4>Employee card</h4>
+        <div class="employee-card">
+          <div class="avatar">PS</div>
+          <div>
+            <p class="emp-name">Priya Sharma</p>
+            <p class="emp-role">Senior HR Manager</p>
+            <div class="emp-tags">
+              <span class="chip chip-active">Active</span>
+              <span class="badge secondary" style="font-size:10px; padding:3px 8px;">HR</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── DARK PANEL ── -->
+  <div class="dark-panel">
+    <p class="section-label">07 — Dark theme usage</p>
+    <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start;">
+
+      <div style="background:#085041; border-radius:var(--radius-lg); padding:24px 28px; flex:1; min-width:220px;">
+        <p style="font-size:10px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:#5DCAA5; margin-bottom:8px;">Total employees</p>
+        <p style="font-size:40px; font-weight:800; color:#ffffff; letter-spacing:-1.5px; line-height:1;">284</p>
+        <p style="font-size:12px; color:#5DCAA5; margin-top:6px; font-weight:500;">↑ 12 this month</p>
+      </div>
+
+      <div style="background:#085041; border-radius:var(--radius-lg); padding:24px 28px; flex:1; min-width:220px;">
+        <p style="font-size:10px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:#5DCAA5; margin-bottom:8px;">On leave today</p>
+        <p style="font-size:40px; font-weight:800; color:#ffffff; letter-spacing:-1.5px; line-height:1;">18</p>
+        <p style="font-size:12px; color:#9FE1CB; margin-top:6px; font-weight:500;">6.3% of workforce</p>
+      </div>
+
+      <div style="background:#085041; border-radius:var(--radius-lg); padding:24px 28px; flex:1; min-width:220px;">
+        <p style="font-size:10px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:#5DCAA5; margin-bottom:8px;">Open positions</p>
+        <p style="font-size:40px; font-weight:800; color:#ffffff; letter-spacing:-1.5px; line-height:1;">7</p>
+        <p style="font-size:12px; color:#9FE1CB; margin-top:6px; font-weight:500;">Across 4 departments</p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── SPACING ── -->
+  <div class="section">
+    <p class="section-label">08 — Spacing scale</p>
+    <div class="spacing-row">
+      <div class="sp-block"><div class="sp-vis" style="height:4px;"></div><p class="sp-label">4</p></div>
+      <div class="sp-block"><div class="sp-vis" style="height:8px;"></div><p class="sp-label">8</p></div>
+      <div class="sp-block"><div class="sp-vis" style="height:12px;"></div><p class="sp-label">12</p></div>
+      <div class="sp-block"><div class="sp-vis" style="height:16px;"></div><p class="sp-label">16</p></div>
+      <div class="sp-block"><div class="sp-vis" style="height:24px;"></div><p class="sp-label">24</p></div>
+      <div class="sp-block"><div class="sp-vis" style="height:32px;"></div><p class="sp-label">32</p></div>
+      <div class="sp-block"><div class="sp-vis" style="height:48px;"></div><p class="sp-label">48</p></div>
+      <div class="sp-block"><div class="sp-vis" style="height:64px;"></div><p class="sp-label">64</p></div>
+    </div>
+  </div>
+
+  <!-- ── BORDER RADIUS ── -->
+  <div class="section">
+    <p class="section-label">09 — Border radius</p>
+    <div style="display:flex; gap:20px; flex-wrap:wrap; align-items:center;">
+      <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+        <div style="width:64px; height:64px; background:var(--green-300); border-radius:6px;"></div>
+        <p style="font-size:11px; color:var(--gray-400); font-weight:700;">6px<br>sm</p>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+        <div style="width:64px; height:64px; background:var(--green-300); border-radius:10px;"></div>
+        <p style="font-size:11px; color:var(--gray-400); font-weight:700;">10px<br>md</p>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+        <div style="width:64px; height:64px; background:var(--green-300); border-radius:16px;"></div>
+        <p style="font-size:11px; color:var(--gray-400); font-weight:700;">16px<br>lg</p>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+        <div style="width:64px; height:64px; background:var(--green-300); border-radius:22px;"></div>
+        <p style="font-size:11px; color:var(--gray-400); font-weight:700;">22px<br>xl</p>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+        <div style="width:64px; height:64px; background:var(--green-300); border-radius:999px;"></div>
+        <p style="font-size:11px; color:var(--gray-400); font-weight:700;">999px<br>pill</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <div style="display:flex; align-items:center; gap:12px;">
+    <svg width="28" height="28" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
+      <rect width="96" height="96" rx="18" fill="#0F6E56"/>
+      <rect x="16" y="16" width="36" height="7" rx="3.5" fill="#5DCAA5"/>
+      <rect x="16" y="29" width="26" height="7" rx="3.5" fill="#9FE1CB"/>
+      <rect x="16" y="42" width="32" height="7" rx="3.5" fill="#5DCAA5"/>
+      <line x1="16" y1="65" x2="80" y2="65" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+      <polyline points="63,55 80,65 63,75" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <p style="font-weight:800; font-size:14px; color:var(--gray-700);">ShiftSwift <span style="color:#0F6E56;">HR</span></p>
+  </div>
+  <p>Brand Kit v1.0 · Confidential · Plus Jakarta Sans</p>
+</footer>
+
+</body>
+</html>

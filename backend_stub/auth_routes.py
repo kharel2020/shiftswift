@@ -1,0 +1,350 @@
+"""Authentication routes — separate Master / Business login with optional TOTP 2FA."""
+
+from __future__ import annotations
+
+from typing import Annotated, Literal
+
+from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel, Field
+
+from auth_mfa import (
+    begin_mfa_setup,
+    confirm_mfa_setup,
+    create_mfa_challenge_token,
+    decode_mfa_challenge_token,
+    disable_mfa,
+    fetch_user_mfa,
+    portal_allows_user,
+    verify_user_mfa_code,
+)
+from auth_service import (
+    AuthUser,
+    authenticate_user,
+    clear_login_attempts,
+    create_token_pair,
+    decode_token,
+    is_login_rate_limited,
+    log_security_event,
+    record_login_attempt,
+)
+from config import load_settings
+from deps import client_ip, get_current_user
+
+router = APIRouter(prefix="/auth", tags=["Authentication"])
+settings = load_settings()
+
+
+class LoginRequest(BaseModel):
+    username: str = Field(min_length=1, max_length=128)
+    password: str = Field(min_length=1, max_length=256)
+    tenant_id: str | None = Field(default=None, max_length=32)
+    email: str | None = None
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
+
+class MfaVerifyRequest(BaseModel):
+    challenge_token: str = Field(min_length=10)
+    code: str = Field(min_length=6, max_length=8)
+
+
+class MfaEnableRequest(BaseModel):
+    code: str = Field(min_length=6, max_length=8)
+
+
+class MfaDisableRequest(BaseModel):
+    password: str = Field(min_length=1, max_length=256)
+    code: str = Field(min_length=6, max_length=8)
+
+
+def _db_conn():
+    import os
+
+    import psycopg2
+
+    url = os.getenv("DATABASE_URL")
+    if not url:
+        raise HTTPException(status_code=503, detail="DATABASE_URL not configured")
+    return psycopg2.connect(url)
+
+
+def _login_response(
+    request: Request,
+    payload: LoginRequest,
+    *,
+    portal: Literal["master", "business"],
+    business_role: Literal["hr", "employee"] | None = None,
+) -> dict[str, object]:
+    ip = client_ip(request)
+    user_agent = request.headers.get("User-Agent")
+    require_admin = portal == "master"
+    require_role: str | None = "admin" if require_admin else business_role
+
+    if is_login_rate_limited(settings, ip, payload.username):
+        log_security_event(
+            settings,
+            event_type="login_rate_limited",
+            username=payload.username,
+            tenant_id=payload.tenant_id,
+            ip_address=ip,
+            user_agent=user_agent,
+            success=False,
+            detail=f"portal={portal}",
+        )
+        raise HTTPException(status_code=429, detail="Too many login attempts. Try again later.")
+
+    user = authenticate_user(
+        settings,
+        payload.username,
+        payload.password,
+        require_role=require_role,
+        portal=portal,
+    )
+    if not user:
+        record_login_attempt(settings, ip, payload.username)
+        log_security_event(
+            settings,
+            event_type="login_failed",
+            username=payload.username,
+            tenant_id=payload.tenant_id,
+            ip_address=ip,
+            user_agent=user_agent,
+            success=False,
+            detail=f"portal={portal}",
+        )
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid credentials for this login type",
+        )
+
+    if portal == "business":
+        tenant_id = str(user.tenant_id)
+    else:
+        tenant_id = str(payload.tenant_id or user.tenant_id)
+
+    mfa_required = False
+    if settings.use_db and settings.database_url:
+        conn = _db_conn()
+        try:
+            with conn.cursor() as cur:
+                row = fetch_user_mfa(cur, user.username)
+            mfa_required = bool(row and row.get("mfa_enabled"))
+        finally:
+            conn.close()
+
+    if mfa_required:
+        challenge = create_mfa_challenge_token(
+            settings,
+            username=user.username,
+            role=user.role,
+            tenant_id=tenant_id,
+            portal=portal,
+        )
+        log_security_event(
+            settings,
+            event_type="mfa_challenge_issued",
+            username=user.username,
+            tenant_id=tenant_id,
+            ip_address=ip,
+            user_agent=user_agent,
+            success=True,
+            detail=f"portal={portal}",
+        )
+        return {
+            "mfa_required": True,
+            "challenge_token": challenge,
+            "portal": portal,
+            "username": user.username,
+            "tenant_id": tenant_id,
+            "message": "Enter the 6-digit code from your authenticator app.",
+        }
+
+    clear_login_attempts(ip, payload.username)
+    tokens = create_token_pair(settings, AuthUser(user.username, user.role, tenant_id))
+    log_security_event(
+        settings,
+        event_type="login_success",
+        username=user.username,
+        tenant_id=tenant_id,
+        ip_address=ip,
+        user_agent=user_agent,
+        success=True,
+        detail=f"portal={portal}",
+    )
+    return {**tokens.__dict__, "portal": portal, "role": user.role, "mfa_required": False}
+
+
+@router.post("/login")
+def auth_login(request: Request, payload: LoginRequest) -> dict[str, object]:
+    return _login_response(request, payload, portal="business", business_role="hr")
+
+
+@router.post("/tenant-login")
+def tenant_login(request: Request, payload: LoginRequest) -> dict[str, object]:
+    """Business HR login — legacy alias for /auth/business-login."""
+    return _login_response(request, payload, portal="business", business_role="hr")
+
+
+@router.post("/business-login")
+def business_login(request: Request, payload: LoginRequest) -> dict[str, object]:
+    """Business HR login — same as tenant-login."""
+    return _login_response(request, payload, portal="business", business_role="hr")
+
+
+@router.post("/employee-login")
+def employee_login(request: Request, payload: LoginRequest) -> dict[str, object]:
+    """Employee self-service login — not for HR or master admins."""
+    return _login_response(request, payload, portal="business", business_role="employee")
+
+
+@router.post("/master-login")
+def master_login(request: Request, payload: LoginRequest) -> dict[str, object]:
+    """Master platform admin login — isolated from business accounts."""
+    return _login_response(request, payload, portal="master")
+
+
+@router.post("/mfa/verify")
+def verify_mfa_login(request: Request, payload: MfaVerifyRequest) -> dict[str, object]:
+    ip = client_ip(request)
+    user_agent = request.headers.get("User-Agent")
+    try:
+        challenge = decode_mfa_challenge_token(settings, payload.challenge_token)
+    except ValueError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+
+    if not settings.use_db or not settings.database_url:
+        raise HTTPException(status_code=503, detail="MFA requires database")
+
+    conn = _db_conn()
+    try:
+        if not verify_user_mfa_code(conn=conn, username=challenge["sub"], code=payload.code):
+            log_security_event(
+                settings,
+                event_type="mfa_verify_failed",
+                username=challenge["sub"],
+                tenant_id=challenge["tenant_id"],
+                ip_address=ip,
+                user_agent=user_agent,
+                success=False,
+            )
+            raise HTTPException(status_code=401, detail="Invalid authentication code")
+
+        with conn.cursor() as cur:
+            user = fetch_user_mfa(cur, challenge["sub"])
+        if not user or not portal_allows_user(
+            portal=challenge["portal"],
+            role=user["role"],
+            login_portal=user.get("login_portal"),
+        ):
+            raise HTTPException(status_code=403, detail="Portal access denied")
+    finally:
+        conn.close()
+
+    clear_login_attempts(ip, challenge["sub"])
+    user_obj = AuthUser(
+        username=challenge["sub"],
+        role=challenge["role"],
+        tenant_id=str(challenge["tenant_id"]),
+    )
+    tokens = create_token_pair(settings, user_obj)
+    log_security_event(
+        settings,
+        event_type="login_success",
+        username=user_obj.username,
+        tenant_id=user_obj.tenant_id,
+        ip_address=ip,
+        user_agent=user_agent,
+        success=True,
+        detail=f"portal={challenge['portal']};mfa=1",
+    )
+    return {**tokens.__dict__, "portal": challenge["portal"], "mfa_required": False}
+
+
+@router.post("/mfa/setup")
+def mfa_setup(current_user: Annotated[AuthUser, Depends(get_current_user)]) -> dict[str, object]:
+    conn = _db_conn()
+    try:
+        result = begin_mfa_setup(conn=conn, username=current_user.username)
+    finally:
+        conn.close()
+    return {
+        "otpauth_uri": result["otpauth_uri"],
+        "portal": result["portal"],
+        "manual_secret": result["secret"],
+        "message": "Scan the URI in Google Authenticator, Authy, or Microsoft Authenticator, then confirm with a code.",
+    }
+
+
+@router.post("/mfa/enable")
+def mfa_enable(
+    payload: MfaEnableRequest,
+    current_user: Annotated[AuthUser, Depends(get_current_user)],
+) -> dict[str, str]:
+    conn = _db_conn()
+    try:
+        confirm_mfa_setup(conn=conn, username=current_user.username, code=payload.code)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    finally:
+        conn.close()
+    return {"status": "enabled", "message": "Two-factor authentication is now active on your account."}
+
+
+@router.post("/mfa/disable")
+def mfa_disable(
+    payload: MfaDisableRequest,
+    current_user: Annotated[AuthUser, Depends(get_current_user)],
+) -> dict[str, str]:
+    user = authenticate_user(settings, current_user.username, payload.password)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid password")
+    conn = _db_conn()
+    try:
+        if not verify_user_mfa_code(conn=conn, username=current_user.username, code=payload.code):
+            raise HTTPException(status_code=401, detail="Invalid authentication code")
+        disable_mfa(conn=conn, username=current_user.username)
+    finally:
+        conn.close()
+    return {"status": "disabled", "message": "Two-factor authentication has been turned off."}
+
+
+@router.get("/mfa/status")
+def mfa_status(current_user: Annotated[AuthUser, Depends(get_current_user)]) -> dict[str, object]:
+    conn = _db_conn()
+    try:
+        with conn.cursor() as cur:
+            user = fetch_user_mfa(cur, current_user.username)
+    finally:
+        conn.close()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {
+        "username": user["username"],
+        "portal": user.get("login_portal"),
+        "mfa_enabled": bool(user.get("mfa_enabled")),
+        "role": user["role"],
+    }
+
+
+@router.post("/refresh")
+def refresh_token(payload: RefreshRequest) -> dict[str, object]:
+    try:
+        user = decode_token(settings, payload.refresh_token, expected_type="refresh")
+    except ValueError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+    tokens = create_token_pair(settings, user)
+    return tokens.__dict__
+
+
+@router.get("/verify")
+def verify_auth(current_user: Annotated[AuthUser, Depends(get_current_user)]) -> dict[str, str]:
+    return {
+        "status": "ok",
+        "username": current_user.username,
+        "role": current_user.role,
+        "tenant_id": current_user.tenant_id,
+    }

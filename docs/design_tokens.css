@@ -1,0 +1,14 @@
+:root {
+  --color-bg: #f5f4f0;
+  --color-surface: #ffffff;
+  --color-text: #111111;
+  --color-muted: #888780;
+  --color-accent: #0f6e56;
+  --radius-card: 16px;
+  --radius-btn: 6px;
+  --space-1: 8px;
+  --space-2: 12px;
+  --space-3: 16px;
+  --shadow-1: 0 10px 20px rgba(15, 110, 86, 0.08);
+  --font-body: "Plus Jakarta Sans", sans-serif;
+}

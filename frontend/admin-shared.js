@@ -1,0 +1,613 @@
+/** Shared admin workspace — API, navigation, forms, tables. */
+window.Admin = (() => {
+  function getApiBase() {
+    if (window.ShiftSwiftBrand?.getApiBase) return window.ShiftSwiftBrand.getApiBase();
+    if (window.ShiftSwiftBrand?.resolveApiBase) return window.ShiftSwiftBrand.resolveApiBase();
+    return localStorage.getItem("apiBaseUrl") || "http://localhost:3000";
+  }
+
+  function resolveWorkspaceTenantId() {
+    const stored = localStorage.getItem("tenantId") || "";
+    const role = localStorage.getItem("userRole") || "";
+    const masterId = localStorage.getItem("masterTenantId") || "999";
+    // Platform master (tenant 999) manages the demo business workspace locally.
+    if (role === "admin" && stored === masterId) {
+      return "1";
+    }
+    return stored;
+  }
+
+  const TOKEN = localStorage.getItem("token") || "";
+  const TENANT_ID = resolveWorkspaceTenantId();
+  const API_BASE = getApiBase();
+  const businessName = localStorage.getItem("businessName") || window.ShiftSwiftBrand?.appName || "ShiftSwift HR";
+
+  async function ensureHrPortal() {
+    if (!TOKEN) return;
+    try {
+      const response = await fetch(`${getApiBase()}/auth/verify`, {
+        headers: { Authorization: `Bearer ${TOKEN}` },
+      });
+      if (!response.ok) return;
+      const user = await response.json();
+      if (user.role === "employee") {
+        window.location.replace("./employee.html");
+      }
+    } catch {
+      /* ignore — apiFetch will handle auth errors */
+    }
+  }
+
+  void ensureHrPortal();
+
+  let formOptions = null;
+  let tenantFeatures = {
+    payroll_enabled: false,
+    sponsor_compliance_enabled: false,
+  };
+
+  function authHeaders(json = true) {
+    const headers = {
+      Authorization: TOKEN ? `Bearer ${TOKEN}` : "",
+      "X-Tenant-Id": TENANT_ID,
+    };
+    if (json) headers["Content-Type"] = "application/json";
+    return headers;
+  }
+
+  async function apiFetch(path, options = {}) {
+    if (!TENANT_ID) {
+      throw new Error("Business not set. Sign in again.");
+    }
+    const response = await fetch(`${getApiBase()}${path}`, {
+      ...options,
+      headers: {
+        ...authHeaders(!(options.body instanceof FormData)),
+        ...(options.headers || {}),
+      },
+    });
+    if (response.status === 401) {
+      localStorage.removeItem("token");
+      window.location.href = "./business-login.html";
+      throw new Error("Session expired. Please sign in again.");
+    }
+    return response;
+  }
+
+  async function loadTenantFeatures() {
+    try {
+      const res = await apiFetch("/admin/overview");
+      if (!res.ok) return tenantFeatures;
+      const data = await res.json();
+      tenantFeatures = {
+        payroll_enabled: Boolean(data.payroll_enabled),
+        sponsor_compliance_enabled: Boolean(data.sponsor_compliance_enabled),
+        sponsored_employees: Number(data.sponsored_employees || 0),
+      };
+    } catch {
+      /* keep previous values */
+    }
+    return tenantFeatures;
+  }
+
+  function isFeatureEnabled(feature) {
+    if (feature === "payroll") return tenantFeatures.payroll_enabled;
+    if (feature === "sponsor-compliance") return tenantFeatures.sponsor_compliance_enabled;
+    return true;
+  }
+
+  function applyFeatureGates() {
+    document.querySelectorAll("[data-feature]").forEach((el) => {
+      const feature = el.dataset.feature;
+      const enabled = isFeatureEnabled(feature);
+      if (el.matches(".nav-link")) {
+        el.hidden = !enabled;
+        return;
+      }
+      if (el.matches(".admin-section")) {
+        el.dataset.featureDisabled = enabled ? "false" : "true";
+      }
+    });
+    window.dispatchEvent(new CustomEvent("admin:features", { detail: tenantFeatures }));
+  }
+
+  function parseHashPath(rawHash) {
+    const path = rawHash.replace("#", "") || "overview";
+    const baseSection = path.split("/")[0] || "overview";
+    return { path, baseSection };
+  }
+
+  function parseHashBaseSection(rawHash) {
+    return parseHashPath(rawHash).baseSection;
+  }
+
+  function resolveSectionFromHash(rawHash) {
+    const { baseSection } = parseHashPath(rawHash);
+    const featureMap = {
+      payroll: "payroll",
+      compliance: "sponsor-compliance",
+    };
+    const feature = featureMap[baseSection];
+    if (feature && !isFeatureEnabled(feature)) {
+      return "overview";
+    }
+    return baseSection;
+  }
+
+  async function loadEmployees() {
+    const res = await apiFetch("/admin/employees");
+    if (!res.ok) throw new Error("Could not load employees");
+    const data = await res.json();
+    const options = (data.items || []).map((emp) => ({
+      value: String(emp.id),
+      label: `${emp.first_name} ${emp.last_name}${emp.job_title ? ` — ${emp.job_title}` : ""}`,
+    }));
+    if (!formOptions) formOptions = {};
+    formOptions.employees = options;
+    return options;
+  }
+
+  async function downloadAuthenticated(path, filename) {
+    const res = await apiFetch(path);
+    if (!res.ok) throw new Error("Download failed");
+    let name = filename;
+    const disposition = res.headers.get("Content-Disposition") || "";
+    const match = disposition.match(/filename="([^"]+)"/);
+    if (match) name = match[1];
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = name;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function loadFormOptions() {
+    if (formOptions) return formOptions;
+    const res = await apiFetch("/admin/metadata");
+    if (!res.ok) throw new Error("Could not load form options");
+    formOptions = await res.json();
+    try {
+      await loadEmployees();
+    } catch {
+      formOptions.employees = [];
+    }
+    return formOptions;
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function statusClass(status) {
+    if (status === "overdue" || status === "pending" || status === "sent" || status === "draft") {
+      return "status-critical";
+    }
+    if (status === "due_soon" || status === "open" || status === "generated" || status === "inactive") {
+      return "status-warning";
+    }
+    return "status-ok";
+  }
+
+  function statusPill(status) {
+    return `<span class="status-pill ${statusClass(status)}">${escapeHtml(status)}</span>`;
+  }
+
+  function resolveOptions(field, options) {
+    if (field.optionsKey && options?.[field.optionsKey]) {
+      return options[field.optionsKey];
+    }
+    if (field.options) return field.options;
+    return [];
+  }
+
+  function renderField(field, values, options) {
+    const name = field.name;
+    const value = values?.[name] ?? field.defaultValue ?? "";
+    const required = field.required ? " required" : "";
+    const id = field.id || `field-${name}`;
+    const label = `<span class="edit-label">${escapeHtml(field.label)}</span>`;
+
+    if (field.type === "checkbox") {
+      const checked = value === true || value === "true" || field.defaultChecked ? " checked" : "";
+      return `<label class="edit-field edit-field--checkbox" data-span="${field.span || 1}">
+        <input type="checkbox" id="${id}" name="${name}"${checked} />
+        ${label}
+      </label>`;
+    }
+
+    if (field.type === "select") {
+      const opts = resolveOptions(field, options)
+        .map(
+          (opt) =>
+            `<option value="${escapeHtml(opt.value)}"${String(opt.value) === String(value) ? " selected" : ""}>${escapeHtml(opt.label)}</option>`
+        )
+        .join("");
+      return `<label class="edit-field" data-span="${field.span || 1}">
+        ${label}
+        <select id="${id}" name="${name}"${required}>${opts}</select>
+      </label>`;
+    }
+
+    if (field.type === "textarea") {
+      return `<label class="edit-field" data-span="${field.span || 2}">
+        ${label}
+        <textarea id="${id}" name="${name}" rows="${field.rows || 3}" placeholder="${escapeHtml(field.placeholder || "")}"${required}>${escapeHtml(value)}</textarea>
+      </label>`;
+    }
+
+    const inputType = field.type || "text";
+    return `<label class="edit-field" data-span="${field.span || 1}">
+      ${label}
+      <input id="${id}" name="${name}" type="${inputType}" value="${escapeHtml(value)}" placeholder="${escapeHtml(field.placeholder || "")}"${required} />
+    </label>`;
+  }
+
+  /**
+   * Mount a schema-driven edit form into container.
+   * schema: { id, fields, submitLabel, columns }
+   */
+  function mountEditForm(container, schema, { values = {}, onSubmit, statusEl } = {}) {
+    if (!container) return null;
+    const columns = schema.columns || 2;
+    const fieldsHtml = schema.fields.map((field) => renderField(field, values, formOptions)).join("");
+    container.innerHTML = `
+      <form class="edit-form edit-form--cols-${columns}" data-form-id="${escapeHtml(schema.id)}">
+        ${fieldsHtml}
+        <div class="edit-form-actions" data-span="2">
+          <button class="btn" type="submit">${escapeHtml(schema.submitLabel || "Save")}</button>
+          ${schema.secondaryAction ? `<button class="btn ghost" type="button" data-secondary>${escapeHtml(schema.secondaryAction.label)}</button>` : ""}
+          <p class="edit-form-status muted" ${statusEl ? "" : 'data-status'}></p>
+        </div>
+      </form>`;
+
+    const form = container.querySelector("form");
+    const status = statusEl || container.querySelector("[data-status]");
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (status) status.textContent = "Saving…";
+      const payload = readFormPayload(form);
+      try {
+        await onSubmit(payload, form);
+        if (status) status.textContent = schema.successMessage || "Saved.";
+      } catch (error) {
+        if (status) status.textContent = error.message || "Save failed.";
+      }
+    });
+
+    const secondary = form.querySelector("[data-secondary]");
+    if (secondary && schema.secondaryAction?.onClick) {
+      secondary.addEventListener("click", () => schema.secondaryAction.onClick(form));
+    }
+
+    return form;
+  }
+
+  function readFormPayload(form) {
+    const data = Object.fromEntries(new FormData(form).entries());
+    form.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+      data[input.name] = input.checked;
+    });
+    return data;
+  }
+
+  function renderTableBody(tbody, { columns, rows, emptyMessage = "No records yet." }) {
+    if (!tbody) return;
+    if (!rows?.length) {
+      tbody.innerHTML = `<tr><td colspan="${columns.length}" class="muted">${escapeHtml(emptyMessage)}</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = rows
+      .map((row) => {
+        const cells = columns
+          .map((col) => {
+            const content = typeof col.render === "function" ? col.render(row) : escapeHtml(row[col.key]);
+            return `<td>${content ?? "—"}</td>`;
+          })
+          .join("");
+        return `<tr>${cells}</tr>`;
+      })
+      .join("");
+  }
+
+  function initNavigation() {
+    const sections = [...document.querySelectorAll(".admin-section")];
+    const links = [...document.querySelectorAll(".nav-link[data-section]")];
+    const toggle = document.getElementById("sidebar-toggle");
+    const closeBtn = document.getElementById("sidebar-close");
+    const sidebar = document.querySelector(".sidebar");
+    const overlay = document.getElementById("sidebar-overlay");
+
+    function showSection(sectionId) {
+      sections.forEach((section) => {
+        const active = section.id === sectionId;
+        section.hidden = !active;
+        section.classList.toggle("admin-section--active", active);
+      });
+      links.forEach((link) => {
+        link.classList.toggle("active", link.dataset.section === sectionId);
+      });
+      if (sidebar?.classList.contains("sidebar--open")) {
+        closeSidebar();
+      }
+    }
+
+    function closeSidebar() {
+      sidebar?.classList.remove("sidebar--open");
+      overlay?.classList.remove("sidebar-overlay--visible");
+      document.body.classList.remove("no-scroll");
+    }
+
+    function openSidebar() {
+      sidebar?.classList.add("sidebar--open");
+      overlay?.classList.add("sidebar-overlay--visible");
+      document.body.classList.add("no-scroll");
+    }
+
+    function routeFromHash() {
+      const { path } = parseHashPath(window.location.hash);
+      const sectionId = resolveSectionFromHash(window.location.hash);
+      const exists = sections.some((s) => s.id === sectionId && s.dataset.featureDisabled !== "true");
+      const targetSection = exists ? sectionId : "overview";
+      const isDeepLink = path.includes("/");
+
+      if (!exists) {
+        if (!isDeepLink && path !== targetSection) {
+          window.location.hash = targetSection;
+          return;
+        }
+        if (isDeepLink) {
+          window.location.hash = "overview";
+          return;
+        }
+      } else if (!isDeepLink && path !== targetSection) {
+        window.location.hash = targetSection;
+        return;
+      }
+
+      showSection(targetSection);
+      window.dispatchEvent(new CustomEvent("admin:section", { detail: { section: targetSection } }));
+    }
+
+    links.forEach((link) => {
+      link.addEventListener("click", (event) => {
+        event.preventDefault();
+        const target = link.dataset.section;
+        const feature = link.dataset.feature;
+        if (feature && !isFeatureEnabled(feature)) return;
+        window.location.hash = target;
+      });
+    });
+
+    toggle?.addEventListener("click", () => {
+      if (sidebar?.classList.contains("sidebar--open")) closeSidebar();
+      else openSidebar();
+    });
+    closeBtn?.addEventListener("click", closeSidebar);
+    overlay?.addEventListener("click", closeSidebar);
+
+    window.addEventListener("hashchange", routeFromHash);
+    routeFromHash();
+  }
+
+  const FORM_SCHEMAS = {
+    tenantProfile: {
+      id: "tenant-profile",
+      columns: 2,
+      submitLabel: "Save business details",
+      successMessage: "Business information updated.",
+      fields: [
+        { name: "name", label: "Legal company name", type: "text", required: true },
+        { name: "trading_name", label: "Trading name", type: "text" },
+        { name: "company_number", label: "Company number", type: "text" },
+        { name: "vat_number", label: "VAT number", type: "text" },
+        { name: "registered_address", label: "Registered address", type: "textarea", span: 2 },
+        { name: "phone", label: "Phone", type: "tel" },
+        { name: "billing_email", label: "Billing email", type: "email" },
+        { name: "signatory_name", label: "Signatory name", type: "text" },
+        { name: "signatory_title", label: "Signatory title", type: "text", defaultValue: "Director" },
+        { name: "signatory_email", label: "Signatory email", type: "email" },
+      ],
+    },
+    employee: {
+      id: "employee",
+      columns: 2,
+      submitLabel: "Add employee",
+      successMessage: "Employee saved.",
+      fields: [
+        { name: "first_name", label: "First name", type: "text", required: true },
+        { name: "last_name", label: "Last name", type: "text", required: true },
+        { name: "email", label: "Work email", type: "email" },
+        { name: "job_title", label: "Job title", type: "text" },
+        { name: "salary", label: "Annual salary (£)", type: "number", placeholder: "28000" },
+        { name: "work_location", label: "Work location", type: "text", placeholder: "London site" },
+        { name: "start_date", label: "Start date", type: "date" },
+        { name: "status", label: "Status", type: "select", optionsKey: "employee_statuses", defaultValue: "active" },
+        { name: "is_sponsored", label: "Sponsored worker", type: "checkbox" },
+      ],
+    },
+    shareCodeVerify: {
+      id: "share-code-verify",
+      columns: 2,
+      submitLabel: "Verify eVisa share code",
+      successMessage: "Share code verified.",
+      fields: [
+        { name: "employee_id", label: "Employee", type: "select", optionsKey: "employees", required: true },
+        { name: "share_code", label: "GOV.UK share code", type: "text", required: true, placeholder: "ABC123XYZ" },
+        { name: "date_of_birth", label: "Date of birth", type: "date", required: true },
+      ],
+    },
+    absenceDay: {
+      id: "absence-day",
+      columns: 2,
+      submitLabel: "Record absence day",
+      successMessage: "Absence day saved.",
+      fields: [
+        { name: "employee_id", label: "Sponsored employee", type: "select", optionsKey: "employees", required: true },
+        { name: "absence_date", label: "Absence date", type: "date", required: true },
+        {
+          name: "excuse_type",
+          label: "Absence type",
+          type: "select",
+          optionsKey: "absence_excuse_types",
+          defaultValue: "unauthorized",
+          required: true,
+        },
+      ],
+    },
+    workingCalendar: {
+      id: "working-calendar",
+      columns: 2,
+      submitLabel: "Save calendar day",
+      successMessage: "Calendar updated.",
+      fields: [
+        { name: "calendar_date", label: "Date", type: "date", required: true },
+        {
+          name: "is_non_working",
+          label: "Non-working day (bank holiday / site closed)",
+          type: "checkbox",
+          defaultChecked: true,
+        },
+      ],
+    },
+    grievanceCase: {
+      id: "grievance-case",
+      columns: 2,
+      submitLabel: "Open grievance case",
+      successMessage: "Case opened.",
+      fields: [
+        { name: "employee_id", label: "Employee", type: "select", optionsKey: "employees", required: true },
+        { name: "allegation_type", label: "Allegation type", type: "text", required: true, placeholder: "Harassment, pay dispute…" },
+        { name: "assigned_investigator", label: "Investigator", type: "text", placeholder: "HR lead name" },
+        { name: "linked_absence_context", label: "Absence / dispute context", type: "textarea", span: 2, placeholder: "Optional — links to sponsor absence monitoring" },
+        { name: "initial_note", label: "Initial investigation note", type: "textarea", span: 2 },
+        { name: "is_anonymous_to_manager", label: "Anonymous to line manager", type: "checkbox" },
+      ],
+    },
+    grievanceNote: {
+      id: "grievance-note",
+      columns: 2,
+      submitLabel: "Add encrypted note",
+      successMessage: "Note saved.",
+      fields: [
+        { name: "body", label: "Note", type: "textarea", span: 2, required: true, rows: 5 },
+        {
+          name: "note_type",
+          label: "Type",
+          type: "select",
+          options: [
+            { value: "investigation", label: "Investigation" },
+            { value: "hearing", label: "Hearing" },
+            { value: "appeal", label: "Appeal" },
+          ],
+          defaultValue: "investigation",
+        },
+      ],
+    },
+    document: {
+      id: "document",
+      columns: 2,
+      submitLabel: "Add document",
+      successMessage: "Document saved.",
+      fields: [
+        { name: "title", label: "Title", type: "text", required: true },
+        { name: "category", label: "Category", type: "select", optionsKey: "document_categories", defaultValue: "general" },
+        {
+          name: "lifecycle_stage",
+          label: "Lifecycle stage",
+          type: "select",
+          optionsKey: "document_lifecycle_stages",
+          defaultValue: "general",
+        },
+        { name: "document_url", label: "Document URL", type: "url", placeholder: "https://..." },
+        { name: "expires_at", label: "Expiry date", type: "date" },
+        { name: "notes", label: "Notes", type: "textarea", span: 2 },
+      ],
+    },
+    advert: {
+      id: "advert",
+      columns: 2,
+      submitLabel: "Save advert record",
+      successMessage: "Advert record saved.",
+      fields: [
+        { name: "job_title", label: "Job title", type: "text", required: true, placeholder: "e.g. Sous Chef" },
+        { name: "platform", label: "Platform", type: "select", optionsKey: "advert_platforms", required: true },
+        { name: "advert_url", label: "Primary advert URL", type: "url", required: true, placeholder: "https://..." },
+        { name: "posted_date", label: "Posted date", type: "date", required: true },
+        { name: "closing_date", label: "Closing date", type: "date" },
+        { name: "job_reference", label: "Job reference", type: "text", placeholder: "VAC-2026-001" },
+        { name: "extra_link_label", label: "Extra link label", type: "text", placeholder: "Archive / screenshot link" },
+        { name: "extra_link_url", label: "Extra link URL", type: "url", placeholder: "https://..." },
+        { name: "is_sponsored_vacancy", label: "Sponsored vacancy", type: "checkbox", defaultChecked: true },
+      ],
+    },
+    contract: {
+      id: "contract",
+      columns: 2,
+      submitLabel: "Generate contracts",
+      successMessage: "Contracts generated.",
+      fields: [
+        { name: "customer_legal_name", label: "Legal company name", type: "text", required: true },
+        { name: "customer_trading_name", label: "Trading name", type: "text" },
+        { name: "company_number", label: "Company number", type: "text" },
+        { name: "vat_number", label: "VAT number", type: "text" },
+        { name: "registered_address", label: "Registered address", type: "text" },
+        { name: "signatory_email", label: "Signatory email", type: "email", required: true },
+        { name: "signatory_name", label: "Signatory name", type: "text" },
+        { name: "signatory_title", label: "Signatory title", type: "text", defaultValue: "Director" },
+        { name: "plan_id", label: "Plan", type: "select", optionsKey: "platform_plans" },
+        { name: "template_id", label: "Template", type: "select", optionsKey: "contract_templates", defaultValue: "pack" },
+      ],
+    },
+    promoValidate: {
+      id: "promo-validate",
+      columns: 2,
+      submitLabel: "Validate billing codes",
+      successMessage: "Codes validated.",
+      fields: [
+        { name: "plan_id", label: "Platform plan", type: "select", optionsKey: "platform_plans", required: true },
+        { name: "discount_code", label: "Discount code", type: "text", placeholder: "e.g. LAUNCH20" },
+        { name: "referral_code", label: "Referral code", type: "text", placeholder: "e.g. REF-PUB" },
+      ],
+    },
+  };
+
+  document.title = `${businessName} — Admin Console`;
+
+  return {
+    API_BASE,
+    TOKEN,
+    TENANT_ID,
+    businessName,
+    get formOptions() {
+      return formOptions;
+    },
+    get tenantFeatures() {
+      return tenantFeatures;
+    },
+    FORM_SCHEMAS,
+    authHeaders,
+    apiFetch,
+    loadFormOptions,
+    loadTenantFeatures,
+    applyFeatureGates,
+    isFeatureEnabled,
+    loadEmployees,
+    downloadAuthenticated,
+    escapeHtml,
+    statusClass,
+    statusPill,
+    mountEditForm,
+    readFormPayload,
+    renderTableBody,
+    initNavigation,
+    parseHashBaseSection,
+    resolveSectionFromHash,
+  };
+})();

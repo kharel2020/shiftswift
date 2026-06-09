@@ -1,0 +1,339 @@
+"""Deliver queued notifications via SMTP, webhook HTTP, or log fallback."""
+
+from __future__ import annotations
+
+import json
+import os
+import re
+import smtplib
+from email.message import EmailMessage
+from typing import Any, Literal
+
+import httpx
+
+EmailPurpose = Literal["billing", "contract", "compliance", "general"]
+
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def smtp_configured() -> bool:
+    return bool(os.getenv("SMTP_HOST") and os.getenv("SMTP_FROM"))
+
+
+def _looks_like_email(value: str | None) -> bool:
+    if not value:
+        return False
+    cleaned = str(value).strip()
+    return bool(_EMAIL_RE.match(cleaned))
+
+
+def fetch_tenant_contacts(*, tenant_id: int, conn: Any) -> dict[str, str | None]:
+    """Load tenant addresses used for outbound notification routing."""
+    billing_email = signatory_email = tenant_name = hr_username = None
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT billing_email, signatory_email, name
+            FROM tenants
+            WHERE id = %s
+            """,
+            (tenant_id,),
+        )
+        row = cur.fetchone()
+        if row:
+            billing_email, signatory_email, tenant_name = row[0], row[1], row[2]
+        cur.execute(
+            """
+            SELECT username
+            FROM app_users
+            WHERE tenant_id = %s
+              AND role = 'hr'
+              AND is_active = TRUE
+              AND COALESCE(login_portal, 'business') = 'business'
+            ORDER BY id ASC
+            LIMIT 1
+            """,
+            (tenant_id,),
+        )
+        hr_row = cur.fetchone()
+        if hr_row:
+            hr_username = hr_row[0]
+    hr_email = str(hr_username).strip() if hr_username and _looks_like_email(hr_username) else None
+    return {
+        "billing_email": (billing_email or "").strip() or None,
+        "signatory_email": (signatory_email or "").strip() or None,
+        "tenant_name": tenant_name,
+        "hr_email": hr_email,
+    }
+
+
+def resolve_email_recipient(
+    *,
+    purpose: EmailPurpose | str,
+    contacts: dict[str, str | None],
+    explicit: str | None = None,
+) -> str | None:
+    """Pick the best tenant recipient for a notification purpose."""
+    if explicit and _looks_like_email(explicit):
+        return explicit.strip()
+    if purpose == "billing":
+        return contacts.get("billing_email")
+    if purpose == "contract":
+        return contacts.get("signatory_email") or contacts.get("billing_email")
+    if purpose in {"compliance", "hr", "general"}:
+        return (
+            contacts.get("billing_email")
+            or contacts.get("hr_email")
+            or contacts.get("signatory_email")
+        )
+    return contacts.get("billing_email") or contacts.get("signatory_email")
+
+
+def build_email_payload(
+    *,
+    tenant_id: int,
+    conn: Any,
+    purpose: EmailPurpose | str = "general",
+    payload: dict[str, Any] | None = None,
+    to: str | None = None,
+) -> dict[str, Any]:
+    contacts = fetch_tenant_contacts(tenant_id=tenant_id, conn=conn)
+    merged: dict[str, Any] = dict(payload or {})
+    merged["purpose"] = purpose
+    recipient = resolve_email_recipient(purpose=purpose, contacts=contacts, explicit=to or merged.get("to"))
+    if recipient:
+        merged["to"] = recipient
+    if purpose == "contract" and contacts.get("billing_email"):
+        merged.setdefault("reply_to", contacts["billing_email"])
+    return merged
+
+
+def queue_email_notification(
+    *,
+    conn: Any,
+    tenant_id: int,
+    subject: str,
+    body: str,
+    purpose: EmailPurpose | str = "general",
+    payload: dict[str, Any] | None = None,
+    to: str | None = None,
+    commit: bool = True,
+) -> dict[str, Any]:
+    """Queue an email notification with tenant-aware recipient routing."""
+    payload_out = build_email_payload(
+        tenant_id=tenant_id,
+        conn=conn,
+        purpose=purpose,
+        payload=payload,
+        to=to,
+    )
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO notifications (tenant_id, channel, subject, body, payload, status)
+            VALUES (%s, 'email', %s, %s, %s::jsonb, 'queued')
+            """,
+            (tenant_id, subject, body, json.dumps(payload_out)),
+        )
+    if commit:
+        conn.commit()
+    return payload_out
+
+
+def queue_notification(
+    *,
+    conn: Any,
+    tenant_id: int,
+    channel: str,
+    subject: str,
+    body: str,
+    payload: dict[str, Any] | None = None,
+    purpose: EmailPurpose | str = "general",
+    to: str | None = None,
+    commit: bool = True,
+) -> dict[str, Any]:
+    """Queue any notification; email channels get tenant recipient routing."""
+    payload_out = dict(payload or {})
+    if channel == "email":
+        payload_out = build_email_payload(
+            tenant_id=tenant_id,
+            conn=conn,
+            purpose=purpose,
+            payload=payload_out,
+            to=to,
+        )
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO notifications (tenant_id, channel, subject, body, payload, status)
+            VALUES (%s, %s, %s, %s, %s::jsonb, 'queued')
+            """,
+            (tenant_id, channel, subject, body, json.dumps(payload_out)),
+        )
+    if commit:
+        conn.commit()
+    return payload_out
+
+
+def process_queued_notifications(*, conn: Any, limit: int = 50) -> dict[str, int]:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT id, tenant_id, channel, subject, body, payload
+            FROM notifications
+            WHERE status = 'queued'
+            ORDER BY created_at
+            LIMIT %s
+            FOR UPDATE SKIP LOCKED
+            """,
+            (limit,),
+        )
+        rows = cur.fetchall()
+
+    sent = failed = 0
+    for row in rows:
+        if deliver_notification(conn=conn, row=row):
+            sent += 1
+        else:
+            failed += 1
+    return {"sent": sent, "failed": failed, "processed": sent + failed}
+
+
+def deliver_notification(*, conn: Any, row: tuple[Any, ...]) -> bool:
+    notif_id, tenant_id, channel, subject, body, payload_raw = row[:6]
+    payload = payload_raw if isinstance(payload_raw, dict) else json.loads(payload_raw or "{}")
+
+    try:
+        if channel == "email":
+            _send_email(conn=conn, tenant_id=tenant_id, subject=subject, body=body, payload=payload)
+        elif channel == "webhook":
+            _send_webhook(conn=conn, payload=payload)
+        elif channel == "sms":
+            _log_channel("sms", subject, body, payload)
+        else:
+            _send_email(conn=conn, tenant_id=tenant_id, subject=subject, body=body, payload=payload)
+        _mark_sent(conn, notif_id)
+        return True
+    except Exception as exc:
+        _mark_failed(conn, notif_id, str(exc))
+        return False
+
+
+def _resolve_delivery_recipient(
+    *,
+    conn: Any,
+    tenant_id: int | None,
+    payload: dict[str, Any],
+) -> str | None:
+    explicit = payload.get("to")
+    if explicit and _looks_like_email(str(explicit)):
+        return str(explicit).strip()
+    if tenant_id:
+        contacts = fetch_tenant_contacts(tenant_id=tenant_id, conn=conn)
+        purpose = payload.get("purpose", "general")
+        resolved = resolve_email_recipient(purpose=purpose, contacts=contacts, explicit=None)
+        if resolved:
+            return resolved
+    return os.getenv("COMPLIANCE_ALERT_EMAIL") or os.getenv("SMTP_TO")
+
+
+def _send_email(
+    *,
+    conn: Any,
+    tenant_id: int | None,
+    subject: str,
+    body: str,
+    payload: dict[str, Any],
+) -> None:
+    to_addr = _resolve_delivery_recipient(conn=conn, tenant_id=tenant_id, payload=payload)
+    if not smtp_configured():
+        _log_channel("email", subject, body, {"to": to_addr, **payload})
+        return
+    if not to_addr:
+        raise RuntimeError(
+            "No recipient — set tenant billing/signatory email or COMPLIANCE_ALERT_EMAIL / SMTP_TO"
+        )
+
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = os.getenv("SMTP_FROM", "")
+    msg["To"] = to_addr
+    reply_to = payload.get("reply_to")
+    if reply_to and _looks_like_email(str(reply_to)):
+        msg["Reply-To"] = str(reply_to).strip()
+    msg.set_content(body)
+
+    host = os.getenv("SMTP_HOST", "")
+    port = int(os.getenv("SMTP_PORT", "587"))
+    user = os.getenv("SMTP_USER", "")
+    password = os.getenv("SMTP_PASSWORD", "")
+    use_tls = os.getenv("SMTP_USE_TLS", "1").strip().lower() in {"1", "true", "yes"}
+
+    with smtplib.SMTP(host, port, timeout=30) as server:
+        if use_tls:
+            server.starttls()
+        if user and password:
+            server.login(user, password)
+        server.send_message(msg)
+
+
+def _send_webhook(*, conn: Any, payload: dict[str, Any]) -> None:
+    subscription_id = payload.get("subscription_id")
+    url = payload.get("target_url")
+    secret = payload.get("secret")
+    if not url and subscription_id:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT target_url, secret FROM webhook_subscriptions WHERE id = %s",
+                (subscription_id,),
+            )
+            row = cur.fetchone()
+        if not row:
+            raise RuntimeError(f"Webhook subscription {subscription_id} not found")
+        url, secret = row[0], row[1]
+    if not url:
+        raise RuntimeError("Webhook URL missing")
+
+    headers = {"Content-Type": "application/json"}
+    if secret:
+        headers["X-ShiftSwift-Signature"] = secret
+    httpx.post(
+        url,
+        json={"event_type": payload.get("event_type"), "payload": payload.get("payload", {})},
+        headers=headers,
+        timeout=15.0,
+    ).raise_for_status()
+
+
+def _log_channel(channel: str, subject: str, body: str, payload: dict[str, Any]) -> None:
+    print(
+        json.dumps(
+            {
+                "channel": channel,
+                "status": "logged",
+                "subject": subject,
+                "body_preview": body[:160],
+                "payload": payload,
+            }
+        )
+    )
+
+
+def _mark_sent(conn: Any, notif_id: int) -> None:
+    with conn.cursor() as cur:
+        cur.execute("UPDATE notifications SET status = 'sent' WHERE id = %s", (notif_id,))
+    conn.commit()
+
+
+def _mark_failed(conn: Any, notif_id: int, error: str) -> None:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE notifications
+            SET status = 'failed',
+                payload = COALESCE(payload, '{}'::jsonb) || %s::jsonb
+            WHERE id = %s
+            """,
+            (json.dumps({"delivery_error": error[:500]}), notif_id),
+        )
+    conn.commit()

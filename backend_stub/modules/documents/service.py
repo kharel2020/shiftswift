@@ -1,0 +1,512 @@
+"""Unified document store service."""
+
+from __future__ import annotations
+
+import re
+from datetime import date, datetime
+from typing import Any
+
+from modules.documents.constants import (
+    EMPLOYEE_DOCUMENT_REQUIREMENTS,
+    VALID_EMPLOYEE_CATEGORIES,
+    VALID_LIFECYCLE_STAGES,
+    VALID_TENANT_CATEGORIES,
+)
+
+NI_PATTERN = re.compile(r"^[A-CEGHJ-PR-TW-Z]{2}\d{6}[A-D]?$", re.I)
+EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def validate_email(value: str | None, *, field_label: str = "Email") -> None:
+    if value is None or not str(value).strip():
+        return
+    if not EMAIL_PATTERN.match(str(value).strip()):
+        raise ValueError(f"{field_label} format looks invalid")
+
+
+def validate_ni_number(value: str | None) -> str | None:
+    if value is None or not str(value).strip():
+        return None
+    cleaned = re.sub(r"\s+", "", str(value).upper())
+    if not NI_PATTERN.match(cleaned):
+        raise ValueError("National Insurance number format looks invalid")
+    return cleaned
+
+
+def validate_information_fields(section: str, updates: dict[str, Any]) -> dict[str, Any]:
+    """Validate employee information sections before save."""
+    validated = dict(updates)
+    if section == "induction":
+        if "ni_number" in validated:
+            validated["ni_number"] = validate_ni_number(validated.get("ni_number"))
+        if "date_of_birth" in validated and validated["date_of_birth"]:
+            dob = validated["date_of_birth"]
+            if isinstance(dob, str):
+                dob = date.fromisoformat(dob)
+            if dob > date.today():
+                raise ValueError("Date of birth cannot be in the future")
+        for phone_field in ("phone", "emergency_contact_phone"):
+            if phone_field in validated and validated[phone_field]:
+                digits = re.sub(r"\D", "", str(validated[phone_field]))
+                if len(digits) < 10:
+                    raise ValueError(f"{phone_field.replace('_', ' ').title()} looks too short")
+    if section == "onboarding":
+        start = validated.get("start_date")
+        probation = validated.get("probation_end_date")
+        if start and probation:
+            if isinstance(start, str):
+                start = date.fromisoformat(start)
+            if isinstance(probation, str):
+                probation = date.fromisoformat(probation)
+            if probation < start:
+                raise ValueError("Probation end date cannot be before start date")
+    if section == "recruitment" and "email" in validated and validated["email"]:
+        validate_email(validated["email"], field_label="Work email")
+    return validated
+
+
+def fetch_document_categories_by_employee(*, tenant_id: int, conn: Any) -> dict[int, list[str]]:
+    """Map employee_id → distinct document categories (for completion summaries)."""
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT employee_id, category
+            FROM employee_documents
+            WHERE tenant_id = %s
+            """,
+            (tenant_id,),
+        )
+        grouped: dict[int, set[str]] = {}
+        for employee_id, category in cur.fetchall():
+            grouped.setdefault(int(employee_id), set()).add(category)
+    return {employee_id: sorted(categories) for employee_id, categories in grouped.items()}
+
+
+def document_requirements(*, is_sponsored: bool) -> list[dict[str, Any]]:
+    key = "sponsored" if is_sponsored else "standard"
+    return [dict(item) for item in EMPLOYEE_DOCUMENT_REQUIREMENTS[key]]
+
+
+def requirements_status(
+    *,
+    is_sponsored: bool,
+    documents: list[dict[str, Any]],
+) -> dict[str, Any]:
+    requirements = document_requirements(is_sponsored=is_sponsored)
+    present_categories = {doc.get("category") for doc in documents if doc.get("category")}
+    items = []
+    missing_required = 0
+    for req in requirements:
+        satisfied = req["category"] in present_categories
+        if req["required"] and not satisfied:
+            missing_required += 1
+        items.append({**req, "satisfied": satisfied})
+    required_total = sum(1 for req in requirements if req["required"])
+    satisfied_required = required_total - missing_required
+    return {
+        "items": items,
+        "required_total": required_total,
+        "satisfied_required": satisfied_required,
+        "complete": missing_required == 0,
+        "missing_required": missing_required,
+    }
+
+
+def validate_employee_document_data(data: dict[str, Any]) -> dict[str, Any]:
+    title = (data.get("title") or "").strip()
+    if not title:
+        raise ValueError("Document title is required")
+    category = data.get("category", "general")
+    if category not in VALID_EMPLOYEE_CATEGORIES:
+        raise ValueError("Invalid document category")
+    lifecycle_stage = data.get("lifecycle_stage", "document_store")
+    employee_stages = VALID_LIFECYCLE_STAGES - {"policy"}
+    if lifecycle_stage not in employee_stages:
+        lifecycle_stage = "document_store"
+    document_url = data.get("document_url")
+    if document_url is not None:
+        document_url = str(document_url).strip() or None
+    if not document_url and not data.get("notes"):
+        raise ValueError("Provide a document URL or notes describing where the file is stored")
+    return {
+        "title": title,
+        "category": category,
+        "lifecycle_stage": lifecycle_stage,
+        "document_url": document_url,
+        "notes": data.get("notes"),
+        "expires_at": data.get("expires_at"),
+        "original_filename": data.get("original_filename"),
+    }
+
+
+def validate_tenant_document_data(data: dict[str, Any]) -> dict[str, Any]:
+    title = (data.get("title") or "").strip()
+    if not title:
+        raise ValueError("Document title is required")
+    category = data.get("category", "general")
+    if category not in VALID_TENANT_CATEGORIES:
+        raise ValueError("Invalid document category")
+    lifecycle_stage = data.get("lifecycle_stage", "general")
+    if lifecycle_stage not in VALID_LIFECYCLE_STAGES:
+        lifecycle_stage = "general"
+    document_url = data.get("document_url")
+    if document_url is not None:
+        document_url = str(document_url).strip() or None
+    if not document_url and not data.get("notes"):
+        raise ValueError("Provide a document URL or notes describing where the file is stored")
+    return {
+        "title": title,
+        "category": category,
+        "lifecycle_stage": lifecycle_stage,
+        "document_url": document_url,
+        "notes": data.get("notes"),
+        "expires_at": data.get("expires_at"),
+        "original_filename": data.get("original_filename"),
+        "employee_id": data.get("employee_id"),
+    }
+
+
+def _iso(value: Any) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, (date, datetime)):
+        return value.isoformat()
+    return str(value)
+
+
+def _row_to_employee_document(row: tuple[Any, ...]) -> dict[str, Any]:
+    return {
+        "id": row[0],
+        "title": row[1],
+        "category": row[2],
+        "lifecycle_stage": row[3],
+        "document_url": row[4],
+        "notes": row[5],
+        "uploaded_by": row[6],
+        "expires_at": _iso(row[7]),
+        "original_filename": row[8],
+        "created_at": _iso(row[9]),
+        "updated_at": _iso(row[10]),
+        "employee_id": row[11],
+    }
+
+
+EMPLOYEE_DOCUMENT_SELECT = """
+    id, title, category, lifecycle_stage, document_url, notes, uploaded_by,
+    expires_at, original_filename, created_at, updated_at, employee_id
+"""
+
+
+def list_employee_documents(
+    *,
+    tenant_id: int,
+    employee_id: int,
+    conn: Any,
+    category: str | None = None,
+    lifecycle_stage: str | None = None,
+) -> list[dict[str, Any]]:
+    clauses = ["tenant_id = %s", "employee_id = %s"]
+    params: list[Any] = [tenant_id, employee_id]
+    if category:
+        clauses.append("category = %s")
+        params.append(category)
+    if lifecycle_stage:
+        clauses.append("lifecycle_stage = %s")
+        params.append(lifecycle_stage)
+    where = " AND ".join(clauses)
+    with conn.cursor() as cur:
+        cur.execute(
+            f"""
+            SELECT {EMPLOYEE_DOCUMENT_SELECT}
+            FROM employee_documents
+            WHERE {where}
+            ORDER BY created_at DESC
+            """,
+            params,
+        )
+        return [_row_to_employee_document(row) for row in cur.fetchall()]
+
+
+def get_employee_document(
+    *,
+    tenant_id: int,
+    employee_id: int,
+    document_id: int,
+    conn: Any,
+) -> dict[str, Any] | None:
+    with conn.cursor() as cur:
+        cur.execute(
+            f"""
+            SELECT {EMPLOYEE_DOCUMENT_SELECT}
+            FROM employee_documents
+            WHERE tenant_id = %s AND employee_id = %s AND id = %s
+            """,
+            (tenant_id, employee_id, document_id),
+        )
+        row = cur.fetchone()
+    return _row_to_employee_document(row) if row else None
+
+
+def create_employee_document(
+    *,
+    tenant_id: int,
+    employee_id: int,
+    data: dict[str, Any],
+    uploaded_by: str,
+    conn: Any,
+) -> dict[str, Any]:
+    payload = validate_employee_document_data(data)
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO employee_documents (
+              tenant_id, employee_id, title, category, lifecycle_stage,
+              document_url, notes, uploaded_by, expires_at, original_filename
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING """
+            + EMPLOYEE_DOCUMENT_SELECT,
+            (
+                tenant_id,
+                employee_id,
+                payload["title"],
+                payload["category"],
+                payload["lifecycle_stage"],
+                payload["document_url"],
+                payload["notes"],
+                uploaded_by,
+                payload.get("expires_at"),
+                payload.get("original_filename"),
+            ),
+        )
+        row = cur.fetchone()
+        conn.commit()
+    doc = _row_to_employee_document(row)
+    doc["employee_id"] = employee_id
+    return doc
+
+
+def update_employee_document(
+    *,
+    tenant_id: int,
+    employee_id: int,
+    document_id: int,
+    updates: dict[str, Any],
+    conn: Any,
+) -> dict[str, Any]:
+    allowed = {
+        k: v
+        for k, v in updates.items()
+        if k
+        in (
+            "title",
+            "category",
+            "lifecycle_stage",
+            "document_url",
+            "notes",
+            "expires_at",
+            "original_filename",
+        )
+    }
+    if not allowed:
+        raise ValueError("no fields to update")
+    merged = {**allowed}
+    if "title" in merged:
+        merged["title"] = str(merged["title"]).strip()
+        if not merged["title"]:
+            raise ValueError("Document title is required")
+    if "category" in merged and merged["category"] not in VALID_EMPLOYEE_CATEGORIES:
+        raise ValueError("Invalid document category")
+    if "lifecycle_stage" in merged and merged["lifecycle_stage"] not in VALID_LIFECYCLE_STAGES - {"policy"}:
+        raise ValueError("Invalid lifecycle stage")
+    merged["updated_at"] = datetime.utcnow()
+    sets = ", ".join(f"{key} = %s" for key in merged)
+    values = list(merged.values()) + [tenant_id, employee_id, document_id]
+    with conn.cursor() as cur:
+        cur.execute(
+            f"""
+            UPDATE employee_documents SET {sets}
+            WHERE tenant_id = %s AND employee_id = %s AND id = %s
+            RETURNING {EMPLOYEE_DOCUMENT_SELECT}
+            """,
+            values,
+        )
+        row = cur.fetchone()
+        if not row:
+            raise LookupError("document not found")
+        conn.commit()
+    doc = _row_to_employee_document(row)
+    doc["employee_id"] = employee_id
+    return doc
+
+
+def delete_employee_document(
+    *,
+    tenant_id: int,
+    employee_id: int,
+    document_id: int,
+    conn: Any,
+) -> None:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            DELETE FROM employee_documents
+            WHERE tenant_id = %s AND employee_id = %s AND id = %s
+            """,
+            (tenant_id, employee_id, document_id),
+        )
+        if cur.rowcount == 0:
+            raise LookupError("document not found")
+        conn.commit()
+
+
+def _row_to_tenant_document(row: tuple[Any, ...]) -> dict[str, Any]:
+    return {
+        "id": row[0],
+        "title": row[1],
+        "category": row[2],
+        "lifecycle_stage": row[3],
+        "document_url": row[4],
+        "notes": row[5],
+        "uploaded_by": row[6],
+        "expires_at": _iso(row[7]),
+        "original_filename": row[8],
+        "created_at": _iso(row[9]),
+        "updated_at": _iso(row[10]),
+        "employee_id": row[11],
+    }
+
+
+TENANT_DOCUMENT_SELECT = """
+    id, title, category, lifecycle_stage, document_url, notes, uploaded_by,
+    expires_at, original_filename, created_at, updated_at, employee_id
+"""
+
+
+def list_tenant_documents(
+    *,
+    tenant_id: int,
+    conn: Any,
+    category: str | None = None,
+    lifecycle_stage: str | None = None,
+    employee_id: int | None = None,
+    limit: int = 200,
+) -> list[dict[str, Any]]:
+    clauses = ["tenant_id = %s"]
+    params: list[Any] = [tenant_id]
+    if category:
+        clauses.append("category = %s")
+        params.append(category)
+    if lifecycle_stage:
+        clauses.append("lifecycle_stage = %s")
+        params.append(lifecycle_stage)
+    if employee_id is not None:
+        clauses.append("employee_id = %s")
+        params.append(employee_id)
+    where = " AND ".join(clauses)
+    with conn.cursor() as cur:
+        cur.execute(
+            f"""
+            SELECT {TENANT_DOCUMENT_SELECT}
+            FROM tenant_documents
+            WHERE {where}
+            ORDER BY created_at DESC
+            LIMIT %s
+            """,
+            [*params, limit],
+        )
+        return [_row_to_tenant_document(row) for row in cur.fetchall()]
+
+
+def create_tenant_document(
+    *,
+    tenant_id: int,
+    data: dict[str, Any],
+    uploaded_by: str,
+    conn: Any,
+) -> dict[str, Any]:
+    payload = validate_tenant_document_data(data)
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO tenant_documents (
+              tenant_id, title, category, lifecycle_stage, document_url, notes,
+              uploaded_by, expires_at, original_filename, employee_id
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING """
+            + TENANT_DOCUMENT_SELECT,
+            (
+                tenant_id,
+                payload["title"],
+                payload["category"],
+                payload["lifecycle_stage"],
+                payload["document_url"],
+                payload["notes"],
+                uploaded_by,
+                payload.get("expires_at"),
+                payload.get("original_filename"),
+                payload.get("employee_id"),
+            ),
+        )
+        row = cur.fetchone()
+        conn.commit()
+    return _row_to_tenant_document(row)
+
+
+def update_tenant_document(
+    *,
+    tenant_id: int,
+    document_id: int,
+    updates: dict[str, Any],
+    conn: Any,
+) -> dict[str, Any]:
+    allowed = {
+        k: v
+        for k, v in updates.items()
+        if k
+        in (
+            "title",
+            "category",
+            "lifecycle_stage",
+            "document_url",
+            "notes",
+            "expires_at",
+            "original_filename",
+            "employee_id",
+        )
+    }
+    if not allowed:
+        raise ValueError("no fields to update")
+    if "category" in allowed and allowed["category"] not in VALID_TENANT_CATEGORIES:
+        raise ValueError("Invalid document category")
+    if "lifecycle_stage" in allowed and allowed["lifecycle_stage"] not in VALID_LIFECYCLE_STAGES:
+        raise ValueError("Invalid lifecycle stage")
+    allowed["updated_at"] = datetime.utcnow()
+    sets = ", ".join(f"{key} = %s" for key in allowed)
+    values = list(allowed.values()) + [tenant_id, document_id]
+    with conn.cursor() as cur:
+        cur.execute(
+            f"""
+            UPDATE tenant_documents SET {sets}
+            WHERE tenant_id = %s AND id = %s
+            RETURNING {TENANT_DOCUMENT_SELECT}
+            """,
+            values,
+        )
+        row = cur.fetchone()
+        if not row:
+            raise LookupError("document not found")
+        conn.commit()
+    return _row_to_tenant_document(row)
+
+
+def delete_tenant_document(*, tenant_id: int, document_id: int, conn: Any) -> None:
+    with conn.cursor() as cur:
+        cur.execute(
+            "DELETE FROM tenant_documents WHERE tenant_id = %s AND id = %s RETURNING id",
+            (tenant_id, document_id),
+        )
+        if not cur.fetchone():
+            raise LookupError("document not found")
+        conn.commit()

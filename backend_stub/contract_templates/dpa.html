@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"/><title>Data Processing Addendum</title></head>
+<body>
+<h1>Data Processing Addendum (DPA)</h1>
+<p><strong>Contract ref:</strong> {{contract_number}} &nbsp;|&nbsp; <strong>MSA ref:</strong> {{msa_contract_number}} &nbsp;|&nbsp; <strong>Effective date:</strong> {{effective_date}}</p>
+
+<h2>1. Roles</h2>
+<p><strong>Controller:</strong> {{customer_legal_name}}</p>
+<p><strong>Processor:</strong> {{provider_legal_name}}, Company No. {{provider_company_number}}, {{provider_address}} (trading as ShiftSwift HR)</p>
+
+<h2>2. Subject matter</h2>
+<p>Processing employee personal data for HR administration for the term of the MSA.</p>
+
+<h2>3. Data silo (critical)</h2>
+<p>Processor operates ShiftSwift HR on infrastructure <strong>logically and physically segregated</strong> from hospitality commerce systems (EPOS, order logs, card transaction metadata). Employee HR data is stored in dedicated tenant databases (<code>platform = hr</code>). No HR records are commingled with EPOS sales or payment card data.</p>
+
+<h2>4. Categories processed</h2>
+<p>Identity, contact, employment, salary, disciplinary, right-to-work, and sponsorship status data.</p>
+
+<h2>5. Security</h2>
+<p>TLS encryption, RBAC, tenant isolation, audit logging, Cyber Essentials-aligned controls.</p>
+
+<h2>6. Sub-processors</h2>
+<p>Hosting provider, email delivery, Stripe (billing metadata only — not employee HR files).</p>
+
+<h2>7. Breach notification</h2>
+<p>Processor notifies Controller without undue delay (target: 72 hours of becoming aware).</p>
+
+<h2>8. Deletion</h2>
+<p>Return or delete HR data within ninety (90) days of MSA termination, subject to legal retention.</p>
+
+<h2>9. Signatures</h2>
+<p><strong>Customer:</strong> {{signatory_name}}, {{signatory_title}} — {{signatory_email}}</p>
+<p><em>Draft generated {{generated_at}}.</em></p>
+</body>
+</html>

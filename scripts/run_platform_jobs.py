@@ -1,0 +1,108 @@
+#!/usr/bin/env python3
+"""Unified platform background jobs — compliance, visa/RTW expiry, domain events."""
+
+from __future__ import annotations
+
+import json
+import os
+import sys
+from datetime import date
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "backend_stub"))
+
+from core.events import process_pending_events  # noqa: E402
+from modules.compliance.audit_export import (  # noqa: E402
+    evaluate_rtw_expiry_alerts,
+    evaluate_visa_expiry_alerts,
+)
+from sponsor_licence_compliance import (  # noqa: E402
+    evaluate_day9_absence_alerts,
+    refresh_sms_change_alert_statuses,
+)
+from modules.hr_templates.sync import sync_all_templates  # noqa: E402
+from core.notifications import queue_notification  # noqa: E402
+from trial_service import process_trial_reminders  # noqa: E402
+from license_service import process_payment_failure_cycle  # noqa: E402
+
+
+def _connect():
+    import psycopg2
+
+    url = os.getenv("DATABASE_URL")
+    if not url:
+        raise SystemExit("DATABASE_URL is required")
+    return psycopg2.connect(url)
+
+
+def _tenant_ids(conn) -> list[int]:
+    with conn.cursor() as cur:
+        cur.execute("SELECT id FROM tenants ORDER BY id")
+        return [row[0] for row in cur.fetchall()]
+
+
+def _queue_notification(conn, tenant_id: int, channel: str, subject: str, body: str, payload: dict) -> None:
+    try:
+        purpose = "compliance" if channel == "email" else "general"
+        queue_notification(
+            conn=conn,
+            tenant_id=tenant_id,
+            channel=channel,
+            subject=subject,
+            body=body,
+            payload=payload,
+            purpose=purpose,
+        )
+    except Exception as exc:
+        print(json.dumps({"warning": "notification_queue_unavailable", "error": str(exc)}))
+
+
+def main() -> int:
+    as_of = date.today()
+    conn = _connect()
+    summary = {
+        "absence_alerts": 0,
+        "sms_statuses_updated": 0,
+        "visa_expiry_alerts": 0,
+        "rtw_expiry_alerts": 0,
+        "events_processed": 0,
+        "notifications": {"sent": 0, "failed": 0, "processed": 0},
+        "hr_templates": {"created": 0, "updated": 0, "unchanged": 0},
+        "trial_reminders": {"checked": 0, "reminders_sent": 0, "expired": 0},
+        "payment_failure": {"checked": 0, "reminders_sent": 0, "holds_applied": 0},
+    }
+    try:
+        for tenant_id in _tenant_ids(conn):
+            alerts = evaluate_day9_absence_alerts(tenant_id=tenant_id, as_of=as_of, conn=conn)
+            for alert in alerts:
+                subject = "ShiftSwift HR: Day 9 sponsor absence alert"
+                body = (
+                    f"Sponsored worker #{alert['employee_id']} — "
+                    f"{alert['consecutive_working_days']} consecutive working-day absences."
+                )
+                for channel in alert.get("channels", ["email"]):
+                    _queue_notification(conn, tenant_id, channel, subject, body, alert)
+                summary["absence_alerts"] += 1
+            summary["sms_statuses_updated"] += refresh_sms_change_alert_statuses(
+                tenant_id=tenant_id, as_of=as_of, conn=conn
+            )
+            visa_alerts = evaluate_visa_expiry_alerts(tenant_id=tenant_id, as_of=as_of, conn=conn)
+            summary["visa_expiry_alerts"] += len(visa_alerts)
+            rtw_alerts = evaluate_rtw_expiry_alerts(tenant_id=tenant_id, as_of=as_of, conn=conn)
+            summary["rtw_expiry_alerts"] += len(rtw_alerts)
+        summary["events_processed"] = process_pending_events(conn=conn)
+        summary["hr_templates"] = sync_all_templates(conn=conn)
+        summary["trial_reminders"] = process_trial_reminders(conn=conn)
+        summary["payment_failure"] = process_payment_failure_cycle(conn=conn)
+        from core.notifications import process_queued_notifications
+
+        summary["notifications"] = process_queued_notifications(conn=conn)
+    finally:
+        conn.close()
+    print(json.dumps(summary))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

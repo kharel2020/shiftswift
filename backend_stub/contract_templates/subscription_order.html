@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"/><title>Subscription Order Form</title></head>
+<body>
+<h1>Subscription Order Form</h1>
+<p><strong>Order ref:</strong> {{contract_number}} &nbsp;|&nbsp; <strong>Date:</strong> {{effective_date}}</p>
+
+<h2>Customer</h2>
+<p>{{customer_legal_name}}<br/>VAT: {{vat_number}}<br/>Billing contact: {{signatory_email}}</p>
+
+<h2>Ordered services</h2>
+<table border="1" cellpadding="8">
+  <tr><th>Service</th><th>Staff cap</th><th>Price (ex VAT)</th></tr>
+  <tr><td>{{plan_name}} (platform)</td><td>{{max_employees}}</td><td>£{{plan_price_gbp_ex_vat}} / {{billing_interval}}</td></tr>
+  <tr><td>{{payroll_plan_name}} (payroll add-on)</td><td>—</td><td>£{{payroll_price_gbp_ex_vat}} / month</td></tr>
+</table>
+<p>Payroll add-on is optional and billed separately from the HR platform subscription.</p>
+
+<h2>Payment terms</h2>
+<ul>
+  <li>UK VAT at 20% applied via Stripe Tax where applicable</li>
+  <li>B2B sale — no statutory cooling-off period</li>
+  <li>Subscriptions non-refundable except as required by law or MSA SLA remedy</li>
+  <li>14-day free trial where selected at signup</li>
+</ul>
+
+<h2>Acceptance</h2>
+<p>By signing, Customer orders the above subscription and accepts the MSA, DPA, and B2B Payment Terms.</p>
+<p><strong>Authorised signatory:</strong> {{signatory_name}}, {{signatory_title}}</p>
+<p><em>Generated {{generated_at}}.</em></p>
+</body>
+</html>

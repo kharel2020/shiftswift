@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ShiftSwift HR — API</title>
+    <link rel="icon" type="image/svg+xml" href="/static/assets/shiftswift-hr-icon.svg" />
+    <link rel="stylesheet" href="/static/theme.css" />
+    <link rel="stylesheet" href="/static/api-surface.css" />
+  </head>
+  <body class="auth-body">
+    <div class="auth-shell">
+      <div class="auth-card">
+        <a class="brand" href="/">
+          <img class="brand-logo" src="/static/assets/shiftswift-hr-logo-nav.svg" alt="ShiftSwift HR" />
+        </a>
+        <h1>API server</h1>
+        <p class="muted">Minimal ShiftSwift surface for health checks, auth, and developer docs.</p>
+        <div id="api-status" class="badge warn">Checking status…</div>
+        <div id="status-grid" class="status-grid" hidden></div>
+        <div class="stack" style="margin-top: 8px;">
+          <a class="btn" href="/app/business-login.html">Sign in</a>
+          <a class="btn ghost" href="/docs">API reference (Swagger)</a>
+          <a class="btn ghost" href="/redoc">API reference (ReDoc)</a>
+          <a class="btn ghost" href="/health">Health JSON</a>
+        </div>
+      </div>
+      <div class="auth-side">
+        <h2>Same design system</h2>
+        <ul class="auth-list">
+          <li>Brand greens and Plus Jakarta Sans typography</li>
+          <li>Business and master login at <code>/app</code></li>
+          <li>Frontend app also available on port 5173 locally</li>
+        </ul>
+      </div>
+    </div>
+    <script>
+      async function loadStatus() {
+        const badge = document.getElementById("api-status");
+        const grid = document.getElementById("status-grid");
+        try {
+          const [health, setup] = await Promise.all([
+            fetch("/health").then((r) => r.json()),
+            fetch("/setup/status").then((r) => r.json()),
+          ]);
+          badge.textContent = setup.complete ? "Ready" : "Setup required";
+          badge.className = "badge " + (setup.complete ? "ok" : "warn");
+          grid.hidden = false;
+          grid.innerHTML = [
+            ["Environment", health.environment || setup.app_env],
+            ["Database", setup.modules_ready?.database ? "Connected" : "Not configured"],
+            ["2FA", setup.security?.totp_2fa ? "Enabled" : "Off"],
+            ["Separate login portals", setup.security?.separate_master_business_login ? "Yes" : "No"],
+          ]
+            .map(
+              ([label, value]) =>
+                `<div class="status-row"><span>${label}</span><strong>${value}</strong></div>`
+            )
+            .join("");
+        } catch (error) {
+          badge.textContent = "Unavailable";
+          badge.className = "badge warn";
+        }
+      }
+      loadStatus();
+    </script>
+  </body>
+</html>

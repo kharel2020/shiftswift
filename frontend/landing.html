@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ShiftSwift HR — HR Software for UK Businesses</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon.png?v=brandkit-v1" />
+    <link rel="icon" type="image/svg+xml" href="./assets/shiftswift-hr-icon.svg?v=brandkit-v1" />
+    <link rel="apple-touch-icon" href="./assets/shiftswift-hr-icon.png?v=brandkit-v1" />
+    <link rel="stylesheet" href="./landing.css?v=brandkit-v7" />
+    <link rel="stylesheet" href="./pricing.css?v=1" />
+  </head>
+  <body>
+    <div class="page-bg" aria-hidden="true">
+      <span class="page-bg__orb page-bg__orb--1"></span>
+      <span class="page-bg__orb page-bg__orb--2"></span>
+      <span class="page-bg__orb page-bg__orb--3"></span>
+    </div>
+    <div class="page">
+      <header class="nav nav--animated">
+        <a class="brand" href="./index.html">
+          <img class="brand-logo" src="./assets/shiftswift-hr-logo-nav.svg?v=brandkit-v4" alt="ShiftSwift HR" />
+        </a>
+        <nav class="nav-links">
+          <a href="#features">Features</a>
+          <a href="#compliance">Compliance</a>
+          <a href="#pricing">Pricing</a>
+        </nav>
+        <div class="nav-cta">
+          <a class="btn ghost" href="./business-login.html">Sign in</a>
+          <a class="btn" href="./signup.html">Start free trial</a>
+        </div>
+      </header>
+
+      <main>
+        <section class="hero hero--animated">
+          <div class="hero-copy">
+            <div class="badge badge--pulse hero-in hero-in--1">Built for UK compliance • HMRC + Home Office ready</div>
+            <h1 class="hero-in hero-in--2">Your complete people & workforce platform.</h1>
+            <p class="hero-in hero-in--3">
+              Replace scattered spreadsheets with one modern HR hub. Run payroll, manage right-to-work,
+              track performance, and keep every document in one secure place.
+            </p>
+            <div class="hero-actions hero-in hero-in--4">
+              <a class="btn" href="./signup.html">Start 14-day free trial</a>
+              <a class="btn ghost" href="./business-login.html">Sign in</a>
+            </div>
+          </div>
+          <div class="hero-panel hero-panel--pulse hero-in hero-in--6">
+            <div class="phone-header">ShiftSwift HR</div>
+            <p>Onboarding, attendance, payroll, RTW checks, and compliance exports — aligned to your brand colours and workflows.</p>
+          </div>
+        </section>
+
+        <section id="features" class="section reveal">
+          <h2>Everything your HR team needs</h2>
+          <div class="section-grid reveal-stagger">
+            <article class="feature-card feature-card--animated">
+              <h3>Employee lifecycle</h3>
+              <p>Onboarding, documents, contracts, and profile management in one place.</p>
+            </article>
+            <article class="feature-card feature-card--animated">
+              <h3>Payroll & RTI</h3>
+              <p>Pay cycles, payslips, and HMRC RTI workflows for UK employers.</p>
+            </article>
+            <article class="feature-card feature-card--animated">
+              <h3>Compliance</h3>
+              <p>Right-to-work checks, alerts, and Home Office export packs with audit trails.</p>
+            </article>
+          </div>
+        </section>
+
+        <section id="compliance" class="section">
+          <div class="feature-card">
+            <h3>UK compliance ready</h3>
+            <p>ShiftSwift HR keeps your business aligned with HMRC RTI requirements and Home Office checks, with retention and audit tooling built in.</p>
+          </div>
+        </section>
+
+        <section id="pricing" class="section pricing-section">
+          <div class="pricing-intro">
+            <div class="badge">B2B pricing for hospitality</div>
+            <h2>Simple plans for restaurants, cafés & pubs</h2>
+            <p>
+              One flat price per site — no per-seat surprises. UK VAT is calculated at checkout.
+              Every plan includes a <strong>14-day free trial</strong>.
+            </p>
+          </div>
+          <div id="pricing-plans" class="pricing-grid"></div>
+          <p class="pricing-footnote">
+            Prices exclude VAT unless stated. Business subscriptions are non-refundable.
+            <a href="../docs/b2b_payment_terms.md" target="_blank" rel="noopener">Payment terms</a>
+          </p>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <strong>ShiftSwift HR</strong> — UK HR & sponsor licence compliance
+      </footer>
+    </div>
+    <script src="./landing-animations.js?v=1"></script>
+    <script src="./pricing.js?v=1"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        window.ShiftSwiftPricing?.initMarketing("pricing-plans");
+      });
+    </script>
+  </body>
+</html>

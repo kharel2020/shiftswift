@@ -1,0 +1,769 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ShiftSwift HR — Admin Console</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon.png?v=brandkit-v1" />
+    <link rel="icon" type="image/svg+xml" href="./assets/shiftswift-hr-icon.svg?v=brandkit-v1" />
+    <link rel="apple-touch-icon" href="./assets/shiftswift-hr-icon.png?v=brandkit-v1" />
+    <link rel="stylesheet" href="./styles.css?v=admin-v5" />
+  </head>
+  <body>
+    <div id="sidebar-overlay" class="sidebar-overlay" aria-hidden="true"></div>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="sidebar-head">
+          <a class="brand" href="./index.html">
+            <img class="brand-logo brand-logo--compact" src="./assets/shiftswift-hr-logo-nav.svg?v=brandkit-v4" alt="ShiftSwift HR" />
+          </a>
+          <button type="button" class="sidebar-close" id="sidebar-close" aria-label="Close menu">×</button>
+        </div>
+        <nav class="nav">
+          <a class="nav-link" href="#overview" data-section="overview">Overview</a>
+          <a class="nav-link" href="#employees" data-section="employees">Employees</a>
+          <a class="nav-link" href="#recruitment" data-section="recruitment">Recruitment</a>
+          <a class="nav-link" href="#grievance" data-section="grievance">Grievance</a>
+          <a class="nav-link" href="#offboarding" data-section="offboarding">Offboarding</a>
+          <a class="nav-link" href="#payroll" data-section="payroll" data-feature="payroll">Payroll</a>
+          <a class="nav-link" href="#promotions" data-section="promotions">Promotions</a>
+          <a class="nav-link" href="#templates" data-section="templates">HR Templates & AI</a>
+          <a class="nav-link" href="#compliance" data-section="compliance" data-feature="sponsor-compliance">Sponsor Compliance</a>
+          <a class="nav-link" href="#contracts" data-section="contracts">Contracts</a>
+          <a class="nav-link" href="#time-punch" data-section="time-punch">Time punch</a>
+          <a class="nav-link" href="#settings" data-section="settings">Settings</a>
+        </nav>
+        <div class="badge pill">shiftswifthr.co.uk</div>
+      </aside>
+      <main class="content">
+        <div class="topbar">
+          <div class="topbar-main">
+            <button type="button" class="sidebar-toggle" id="sidebar-toggle" aria-label="Open menu">Menu</button>
+            <div>
+              <h1>ShiftSwift HR Admin</h1>
+              <p class="muted">Sponsor licence compliance, workforce records, and billing for your organisation.</p>
+            </div>
+          </div>
+          <div class="stack topbar-actions">
+            <a class="btn ghost" href="./business-login.html" data-sign-out>Sign out</a>
+          </div>
+        </div>
+
+        <div id="trial-upgrade-banner" class="promo-result" hidden></div>
+
+        <section id="overview" class="admin-section">
+          <header class="section-header">
+            <div>
+              <h2>Overview</h2>
+              <p class="muted">Workspace snapshot for your business.</p>
+            </div>
+          </header>
+          <div class="metric-grid" id="overview-metrics"></div>
+        </section>
+
+        <section id="employees" class="admin-section" hidden>
+          <header class="section-header">
+            <div>
+              <h2>Employees</h2>
+              <p class="muted">Follow the employee lifecycle — recruitment through off-boarding — one step at a time.</p>
+            </div>
+          </header>
+
+          <div id="employees-list-view">
+            <article class="card edit-panel">
+              <h3>Add employee</h3>
+              <p class="muted">Start at step 1 (Recruitment). Employee type, payroll, and sponsor licence steps unlock as you progress.</p>
+              <div id="employee-quick-add-form"></div>
+            </article>
+            <article class="card">
+              <h3>Employee register</h3>
+              <div class="table-wrap">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Department</th>
+                      <th>Status</th>
+                      <th>Progress</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="employees-table-body">
+                    <tr><td colspan="5" class="muted">Loading employees…</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+
+          <div id="employees-detail-view" hidden>
+            <article class="card employee-workspace">
+              <div class="employee-workspace-header">
+                <button type="button" class="btn ghost" id="employee-back-btn">← Back to register</button>
+                <div>
+                  <h3 id="employee-workspace-title">Employee</h3>
+                  <p class="muted" id="employee-workspace-subtitle"></p>
+                </div>
+                <div class="employee-progress-wrap">
+                  <div class="employee-progress-bar"><span id="employee-progress-fill"></span></div>
+                  <span class="muted" id="employee-progress-label"></span>
+                </div>
+              </div>
+              <div class="lifecycle-accordion" id="employee-lifecycle-accordion" aria-label="Employee lifecycle"></div>
+              <article class="card edit-panel" id="employee-advanced-links" hidden>
+                <h4>Related workflows</h4>
+                <p class="link-row" id="employee-advanced-link-row">
+                  <a href="#grievance" class="btn ghost">Grievance cases</a>
+                  <a href="#offboarding" class="btn ghost">Offboarding</a>
+                  <a href="#time-punch" class="btn ghost">Time punch</a>
+                </p>
+              </article>
+            </article>
+          </div>
+        </section>
+
+        <section id="recruitment" class="admin-section" hidden>
+          <header class="section-header">
+            <div>
+              <h2>Recruitment</h2>
+              <p class="muted">10-step pipeline from vacancy to offer accepted — then hand off to employee onboarding.</p>
+            </div>
+          </header>
+          <div id="recruitment-list-view">
+            <article class="card edit-panel">
+              <h3>Step 1 — Vacancy identified</h3>
+              <p class="muted">Create a vacancy, then walk through posting, screening, interviews, offer, and onboarding trigger.</p>
+              <div id="recruitment-quick-add-form"></div>
+            </article>
+            <article class="card">
+              <h3>Open vacancies</h3>
+              <div class="table-wrap">
+                <table class="data-table">
+                  <thead><tr><th>Role</th><th>Department</th><th>Status</th><th>Pipeline</th><th></th></tr></thead>
+                  <tbody id="recruitment-table-body">
+                    <tr><td colspan="5" class="muted">Open this section to load vacancies…</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+          <div id="recruitment-detail-view" hidden>
+            <article class="card employee-workspace">
+              <div class="employee-workspace-header">
+                <button type="button" class="btn ghost" id="recruitment-back-btn">← Back to vacancies</button>
+                <div>
+                  <h3 id="recruitment-workspace-title">Vacancy</h3>
+                  <p class="muted" id="recruitment-workspace-subtitle"></p>
+                </div>
+                <div class="employee-progress-wrap">
+                  <div class="employee-progress-bar"><span id="recruitment-progress-fill"></span></div>
+                  <span class="muted" id="recruitment-progress-label"></span>
+                </div>
+              </div>
+              <div class="lifecycle-accordion" id="recruitment-lifecycle-accordion" aria-label="Recruitment pipeline"></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="grievance" class="admin-section" hidden>
+          <header class="section-header">
+            <div>
+              <h2>Grievance cases</h2>
+              <p class="muted">Encrypted investigation notes, ACAS deadlines, and compliance cross-triggers.</p>
+            </div>
+          </header>
+          <article class="card edit-panel">
+            <h3>Open new case</h3>
+            <div id="grievance-case-form"></div>
+          </article>
+          <article class="card">
+            <h3>Case register</h3>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Reference</th>
+                    <th>Employee</th>
+                    <th>Allegation</th>
+                    <th>Status</th>
+                    <th>ACAS deadline</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="grievance-cases-body">
+                  <tr><td colspan="6" class="muted">Open this section to load cases…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+          <article class="card edit-panel" id="grievance-case-detail" hidden>
+            <h3>Case detail — <span data-case-ref></span> <span data-case-status></span></h3>
+            <p class="muted">ACAS investigation deadline: <strong data-case-deadline></strong></p>
+            <h4>Encrypted notes</h4>
+            <div id="grievance-note-form"></div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead><tr><th>Type</th><th>Author</th><th>When</th><th>Note</th></tr></thead>
+                <tbody id="grievance-notes-body"></tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <section id="offboarding" class="admin-section" hidden>
+          <header class="section-header">
+            <div>
+              <h2>Offboarding</h2>
+              <p class="muted">ACAS appeal windows and sponsorship cessation reporting.</p>
+            </div>
+          </header>
+          <article class="card edit-panel">
+            <h3>Start leaver workflow</h3>
+            <div class="edit-form edit-form--cols-2">
+              <label class="edit-field"><span class="edit-label">Employee</span><select id="offboarding-employee"></select></label>
+              <label class="edit-field"><span class="edit-label">Reason</span><input id="offboarding-reason" type="text" placeholder="Resignation, dismissal…" /></label>
+              <div class="edit-form-actions" data-span="2"><button type="button" class="btn" id="offboarding-start-btn">Start workflow</button></div>
+            </div>
+          </article>
+          <article class="card">
+            <h3>Active workflows</h3>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Employee</th>
+                    <th>Reason</th>
+                    <th>Status</th>
+                    <th>ACAS appeal by</th>
+                    <th>Cessation</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="offboarding-body">
+                  <tr><td colspan="7" class="muted">Open this section to load workflows…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <section id="payroll" class="admin-section" hidden data-feature="payroll">
+          <header class="section-header">
+            <div>
+              <h2>Payroll</h2>
+              <p class="muted">Payroll add-on billing is separate from your HR platform subscription.</p>
+            </div>
+          </header>
+          <article class="card" id="payroll-enroll-panel" hidden>
+            <h3>Payroll add-on not active</h3>
+            <p class="muted">Payroll features unlock when you add a payroll plan to your subscription. Upgrade your package to run pay runs, RTI, and payslips.</p>
+            <p class="link-row"><button type="button" class="btn" id="payroll-enroll-upgrade-btn">Add payroll to subscription</button></p>
+          </article>
+          <article class="card edit-panel" id="payroll-active-panel">
+            <div id="payroll-details"><p class="muted">Loading payroll details…</p></div>
+          </article>
+        </section>
+
+        <section id="promotions" class="admin-section" hidden>
+          <header class="section-header">
+            <div>
+              <h2>Discount &amp; referral codes</h2>
+              <p class="muted">Validate promotion codes against platform plans before signup or checkout.</p>
+            </div>
+          </header>
+
+          <article class="card edit-panel">
+            <h3>Billing code validator</h3>
+            <p class="muted">Uses the same rules as signup — select a plan, enter codes, and preview adjusted pricing.</p>
+            <div id="promo-validate-form"></div>
+            <div id="promo-validation-result" class="promo-result" hidden></div>
+          </article>
+
+          <article class="card">
+            <h3>Discount codes</h3>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Label</th>
+                    <th>Discount</th>
+                    <th>Plans</th>
+                    <th>Usage</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="discount-codes-body">
+                  <tr><td colspan="7" class="muted">Open this section to load discount codes…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="card">
+            <h3>Referral codes</h3>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Partner</th>
+                    <th>Reward</th>
+                    <th>Commission</th>
+                    <th>Usage</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="referral-codes-body">
+                  <tr><td colspan="7" class="muted">Open this section to load referral codes…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <section id="templates" class="admin-section" hidden>
+          <header class="section-header">
+            <div>
+              <h2>HR templates & AI assistant</h2>
+              <p class="muted">Platform templates update automatically when UK law changes. Download the latest version or keep your custom copy — version labels make it clear which is which.</p>
+            </div>
+          </header>
+
+          <div id="hr-template-updates-banner" class="promo-result" hidden></div>
+
+          <article class="card edit-panel">
+            <header class="section-header section-header--compact">
+              <div>
+                <h3>AI document assistant</h3>
+                <p class="muted">Powered by Google Gemini 2.0 Flash (low cost). Set <code>GEMINI_API_KEY</code> in backend .env.</p>
+              </div>
+              <label class="edit-field edit-field--checkbox" style="margin:0;">
+                <input type="checkbox" id="ai-tenant-toggle" />
+                <span class="edit-label">Enable AI for this business</span>
+              </label>
+            </header>
+            <div id="ai-status-panel" class="promo-result"></div>
+          </article>
+
+          <article class="card">
+            <h3>Process template library</h3>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Template</th>
+                    <th>Category</th>
+                    <th>Version</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="hr-templates-body">
+                  <tr><td colspan="4" class="muted">Open this section to load templates…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="card edit-panel" id="template-editor-panel" hidden>
+            <header class="section-header section-header--compact">
+              <div>
+                <h3 id="template-editor-title">Edit template</h3>
+                <p class="muted" id="template-editor-meta"></p>
+              </div>
+              <div class="link-row">
+                <button type="button" class="btn ghost" id="template-editor-close">Close</button>
+                <button type="button" class="btn secondary" id="template-apply-update-btn" hidden>Apply platform update</button>
+                <button type="button" class="btn secondary" id="template-reset-btn">Reset to default</button>
+                <button type="button" class="btn secondary" id="template-download-platform-btn">Download platform latest</button>
+                <button type="button" class="btn secondary" id="template-download-btn">Download my copy</button>
+                <button type="button" class="btn" id="template-save-btn">Save changes</button>
+              </div>
+            </header>
+            <div id="template-update-notice" class="promo-result" hidden></div>
+            <div id="template-legal-meta" class="muted" style="margin-bottom:0.75rem;"></div>
+            <details id="template-revisions-panel" class="edit-panel" style="margin-bottom:0.75rem;padding:0.75rem;" hidden>
+              <summary style="cursor:pointer;font-weight:600;">Version history</summary>
+              <ul id="template-revisions-list" class="muted" style="margin:0.5rem 0 0;padding-left:1.25rem;"></ul>
+            </details>
+            <label class="edit-field"><span class="edit-label">Title</span><input id="template-title-input" type="text" /></label>
+            <label class="edit-field" style="display:block;margin-top:0.75rem;">
+              <span class="edit-label">Content (Markdown)</span>
+              <textarea id="template-body-input" rows="16" style="width:100%;font-family:monospace;font-size:0.9rem;"></textarea>
+            </label>
+            <p class="muted" id="template-save-status"></p>
+
+            <div id="ai-assist-panel" class="edit-panel" style="margin-top:1rem;padding:1rem;" hidden>
+              <h4>AI assist</h4>
+              <input type="hidden" id="ai-template-id" value="" />
+              <label class="edit-field"><span class="edit-label">Brief for AI</span>
+                <textarea id="ai-prompt-input" rows="3" placeholder="e.g. Adapt this onboarding checklist for a 40-seat restaurant with sponsored kitchen staff…"></textarea>
+              </label>
+              <label class="edit-field"><span class="edit-label">Business context (optional)</span>
+                <textarea id="ai-context-input" rows="2" placeholder="Sites, brand name, typical roles…"></textarea>
+              </label>
+              <button type="button" class="btn" id="ai-draft-btn">Generate with AI</button>
+              <p class="muted" id="ai-draft-status"></p>
+            </div>
+          </article>
+        </section>
+
+        <section id="compliance" class="admin-section" hidden data-feature="sponsor-compliance">
+          <header class="section-header">
+            <div>
+              <h2>Sponsor Licence Safeguards</h2>
+              <p class="muted">Mandatory UK Home Office duty enforcement for sponsored visa workers.</p>
+            </div>
+            <a class="btn secondary" id="rtw-checklist-link" href="#" target="_blank" rel="noopener">Open GOV.UK RTW Checklist</a>
+          </header>
+
+          <div class="alert-grid">
+            <article class="alert-card" id="rtw-summary">
+              <div class="alert-card-head">
+                <span class="alert-label">Right to Work</span>
+                <span class="status-pill status-ok" id="rtw-status-pill">Loading</span>
+              </div>
+              <p class="alert-copy">Immutable dated PDF evidence linked to the official UK Government checklist.</p>
+              <div class="metric-row">
+                <div><strong id="rtw-valid-count">—</strong><span>Valid checks</span></div>
+                <div><strong id="rtw-expired-count">—</strong><span>Expired checks</span></div>
+              </div>
+            </article>
+
+            <article class="alert-card alert-card-critical" id="absence-summary">
+              <div class="alert-card-head">
+                <span class="alert-label">10-Day Absence Trigger</span>
+                <span class="status-pill status-critical" id="absence-status-pill">Day 9 alert</span>
+              </div>
+              <p class="alert-copy">Only <strong>unauthorized</strong> working-day absences count. Paid annual leave, authorized unpaid leave, and bank holidays are excused.</p>
+              <ul class="alert-list" id="absence-alert-list"></ul>
+              <ul class="alert-list" id="absence-streak-summary"></ul>
+            </article>
+
+            <article class="alert-card alert-card-warning" id="sms-summary">
+              <div class="alert-card-head">
+                <span class="alert-label">SMS Change Reporting</span>
+                <span class="status-pill status-warning" id="sms-status-pill">10-day window</span>
+              </div>
+              <p class="alert-copy">Job title, salary, and work location changes must be reported via SMS within 10 days.</p>
+              <ul class="alert-list" id="sms-change-list"></ul>
+            </article>
+
+            <article class="alert-card" id="advert-summary">
+              <div class="alert-card-head">
+                <span class="alert-label">Recruitment Adverts</span>
+                <span class="status-pill status-ok" id="advert-status-pill">Records</span>
+              </div>
+              <p class="alert-copy">Store job advert links for sponsored vacancies — required for sponsor licence audits and RLMT evidence.</p>
+              <div class="metric-row">
+                <div><strong id="advert-active-count">—</strong><span>Active adverts</span></div>
+                <div><strong id="advert-sponsored-count">—</strong><span>Sponsored roles</span></div>
+              </div>
+            </article>
+          </div>
+
+          <article class="card edit-panel">
+            <header class="section-header section-header--compact">
+              <div>
+                <h3>Sponsored worker absence tracking</h3>
+                <p class="muted">Record paid/unpaid leave and unauthorized absences. Unexcused streaks feed the day-9 Home Office alert.</p>
+              </div>
+            </header>
+            <div id="absence-day-form"></div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Employee</th>
+                    <th>Unexcused streak</th>
+                    <th>Paid leave (30d)</th>
+                    <th>Unpaid auth. (30d)</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="absence-streak-body">
+                  <tr><td colspan="5" class="muted">Open compliance section to load streaks…</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="table-wrap" style="margin-top:1rem;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Employee</th>
+                    <th>Type</th>
+                    <th>Paid</th>
+                    <th>Counts toward day 9</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="absence-days-body">
+                  <tr><td colspan="6" class="muted">No absence days recorded yet.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="card edit-panel">
+            <header class="section-header section-header--compact">
+              <div>
+                <h3>Working calendar (bank holidays)</h3>
+                <p class="muted">Mark non-working days so weekends and bank holidays do not break absence streaks incorrectly.</p>
+              </div>
+            </header>
+            <div id="working-calendar-form"></div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="working-calendar-body">
+                  <tr><td colspan="3" class="muted">No custom calendar entries — all weekdays count as working days.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="card edit-panel">
+            <header class="section-header section-header--compact">
+              <div>
+                <h3>Right to Work</h3>
+                <p class="muted">Upload immutable PDF evidence or verify an eVisa share code.</p>
+              </div>
+            </header>
+            <div id="rtw-upload-form"></div>
+            <div id="share-code-form"></div>
+            <div id="share-code-result" class="promo-result" hidden></div>
+          </article>
+
+          <article class="card edit-panel">
+            <header class="section-header section-header--compact">
+              <div>
+                <h3>Home Office audit export</h3>
+                <p class="muted">One-click pack for unexpected sponsor licence inspections.</p>
+              </div>
+              <div class="link-row">
+                <label class="edit-field" style="min-width:140px;margin:0;">
+                  <span class="edit-label">Employee ID (optional)</span>
+                  <input id="audit-export-employee" type="number" placeholder="All" />
+                </label>
+                <button type="button" class="btn secondary" id="audit-export-json">Download JSON</button>
+                <button type="button" class="btn" id="audit-export-pdf">Download PDF</button>
+              </div>
+            </header>
+          </article>
+
+          <article class="card">
+            <h3>Open reporting triggers</h3>
+            <p class="muted">Auto-created when sponsored workers are suspended or offboarded.</p>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Type</th>
+                    <th>Employee</th>
+                    <th>Description</th>
+                    <th>Deadline</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="reporting-triggers-body">
+                  <tr><td colspan="5" class="muted">Open compliance section to load triggers…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="card edit-panel">
+            <header class="section-header section-header--compact">
+              <div>
+                <h3>Advertisement records &amp; links</h3>
+                <p class="muted">Log where each vacancy was advertised with live URLs and related archive links.</p>
+              </div>
+              <div class="link-row" id="gov-recruitment-links"></div>
+            </header>
+            <div id="advert-form"></div>
+            <div class="table-wrap">
+              <table class="data-table" id="advert-records-table">
+                <thead>
+                  <tr>
+                    <th>Job title</th>
+                    <th>Platform</th>
+                    <th>Posted</th>
+                    <th>Primary link</th>
+                    <th>Other links</th>
+                  </tr>
+                </thead>
+                <tbody id="advert-records-body">
+                  <tr><td colspan="5" class="muted">Loading advertisement records…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="card legal-note">
+            <h3>EULA liability shield</h3>
+            <p class="muted legal-note-copy">
+              Customers accept mandatory clauses in the HR Module EULA: sponsor-licence duties remain the customer's sole responsibility,
+              and ShiftSwift HR is not liable for licence revocation where alerts were ignored.
+            </p>
+            <a class="btn ghost" href="../docs/eula_hr_module.md" target="_blank" rel="noopener">View HR Module EULA</a>
+          </article>
+        </section>
+
+        <section id="contracts" class="admin-section" hidden>
+          <header class="section-header">
+            <div>
+              <h2>Legal contracts</h2>
+              <p class="muted">Generate MSA, DPA, and subscription order forms from customer data. Send for e-signature and store signed copies.</p>
+            </div>
+          </header>
+
+          <article class="card edit-panel">
+            <h3>Generate contract pack</h3>
+            <p class="muted">Contracts are auto-created on signup. Use this form to regenerate or fill missing customer details.</p>
+            <div id="contract-generate-form"></div>
+            <div id="signing-link-box" class="signing-link-box" hidden></div>
+          </article>
+
+          <article class="card">
+            <h3>Contract register</h3>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Reference</th>
+                    <th>Customer</th>
+                    <th>Status</th>
+                    <th>Signatory</th>
+                    <th>Signed</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="contracts-table-body">
+                  <tr><td colspan="6" class="muted">Loading contracts…</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div id="contract-preview-panel" class="contract-preview-panel" hidden></div>
+          </article>
+        </section>
+
+        <section id="time-punch" class="admin-section" hidden>
+          <header class="section-header">
+            <div>
+              <h2>Time punch</h2>
+              <p class="muted">Geofenced clock in/out sites and recent punch activity.</p>
+            </div>
+            <div class="section-actions">
+              <button type="button" class="btn primary" id="sync-punch-site-btn">Sync site from address</button>
+            </div>
+          </header>
+          <p id="punch-admin-message" class="muted" aria-live="polite"></p>
+          <article class="card">
+            <h3>Punch sites</h3>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Address</th>
+                    <th>Coordinates</th>
+                    <th>Radius</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="punch-sites-body">
+                  <tr><td colspan="6" class="muted">Open this section to load sites…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+          <article class="card">
+            <h3>Recent punches</h3>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>When</th>
+                    <th>Employee</th>
+                    <th>Type</th>
+                    <th>Site</th>
+                    <th>Distance</th>
+                  </tr>
+                </thead>
+                <tbody id="recent-punches-body">
+                  <tr><td colspan="5" class="muted">Open this section to load punches…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <section id="settings" class="admin-section" hidden>
+          <header class="section-header">
+            <div>
+              <h2>Settings</h2>
+              <p class="muted">Business information and document store for your organisation.</p>
+            </div>
+          </header>
+
+          <article class="card edit-panel">
+            <h3>Business information</h3>
+            <div id="tenant-profile-form"></div>
+          </article>
+
+          <article class="card edit-panel">
+            <h3>Document store</h3>
+            <p class="muted">Store links and references to HR documents. Filter by category or lifecycle stage; edit metadata including expiry dates.</p>
+            <div id="document-filters"></div>
+            <div id="document-form"></div>
+            <div id="document-edit-panel" class="edit-panel" hidden></div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Category</th>
+                    <th>Stage</th>
+                    <th>Link</th>
+                    <th>Expires</th>
+                    <th>Added</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="documents-table-body">
+                  <tr><td colspan="7" class="muted">Loading documents…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+      </main>
+    </div>
+    <script src="./auth-guard.js?v=security-v1"></script>
+    <script src="./brand-config.js?v=brand-v4"></script>
+    <script src="./admin-shared.js?v=admin-v8"></script>
+    <script src="./admin-workspace.js?v=admin-v6"></script>
+    <script src="./admin-documents.js?v=1"></script>
+    <script src="./admin-employees.js?v=7"></script>
+    <script src="./admin-recruitment.js?v=4"></script>
+    <script src="./admin-promotions.js?v=admin-v4"></script>
+    <script src="./admin-compliance.js?v=admin-v4"></script>
+    <script src="./admin-grievance.js?v=admin-v4"></script>
+    <script src="./admin-offboarding.js?v=admin-v4"></script>
+    <script src="./admin-templates.js?v=admin-v6"></script>
+    <script src="./admin-time-punch.js?v=1"></script>
+    <script src="./app.js?v=admin-v4"></script>
+    <script src="./contracts.js?v=admin-v4"></script>
+  </body>
+</html>

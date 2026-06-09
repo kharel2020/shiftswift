@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"/><title>Master Services Agreement</title></head>
+<body>
+<h1>Master Services Agreement</h1>
+<p><strong>Contract ref:</strong> {{contract_number}} &nbsp;|&nbsp; <strong>Effective date:</strong> {{effective_date}}</p>
+
+<h2>1. Parties</h2>
+<p><strong>Provider:</strong> {{provider_legal_name}}, Company No. {{provider_company_number}}, {{provider_address}} (trading as "ShiftSwift HR")</p>
+<p><strong>Customer:</strong> {{customer_legal_name}} ({{customer_trading_name}}), Company No. {{company_number}}, {{registered_address}} ("Customer")</p>
+
+<h2>2. Scope — HR platform only</h2>
+<p>Provider supplies the <strong>ShiftSwift HR</strong> cloud workforce platform only. This agreement does <strong>not</strong> cover EPOS, ordering, payment terminals, or hospitality transaction systems. Those are separate products with separate agreements and service levels.</p>
+
+<h2>3. Service</h2>
+<p>Cloud HR software including employee records, rotas, payroll export, and UK compliance modules (where subscribed). Data is hosted on isolated HR infrastructure (<code>platform = hr</code>), segregated from commercial EPOS data.</p>
+
+<h2>4. Subscription</h2>
+<p>Plan: <strong>{{plan_name}}</strong> — £{{plan_price_gbp_ex_vat}} + VAT per billing period. B2B subscriptions are non-refundable. No consumer cooling-off period applies.</p>
+
+<h2>5. Customer obligations</h2>
+<ul>
+  <li>Lawful processing of employee personal data</li>
+  <li>Accurate data entry and secure credentials</li>
+  <li>UK Sponsor Licence duties remain Customer's sole responsibility (see HR Module EULA)</li>
+</ul>
+
+<h2>6. Data protection</h2>
+<p>Governed by the Data Processing Addendum (DPA) executed concurrently with this MSA.</p>
+
+<h2>7. Liability</h2>
+<p>Liability capped at fees paid in the prior twelve (12) months. No liability for indirect or consequential loss. Sponsor-licence module subject to HR Module EULA Clause B.</p>
+
+<h2>8. Term</h2>
+<p>Monthly or annual term per Stripe subscription. Thirty (30) day data export window after termination.</p>
+
+<h2>9. Governing law</h2>
+<p>England and Wales.</p>
+
+<h2>10. Signatures</h2>
+<p><strong>Provider:</strong> {{provider_legal_name}}, Company No. {{provider_company_number}}</p>
+<p><strong>Customer:</strong> {{signatory_name}}, {{signatory_title}} — {{signatory_email}}</p>
+<p><em>Draft generated {{generated_at}}. Solicitor review recommended before execution.</em></p>
+</body>
+</html>

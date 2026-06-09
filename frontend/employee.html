@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ShiftSwift HR — Employee Portal</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon.png?v=brandkit-v1" />
+    <link rel="icon" type="image/svg+xml" href="./assets/shiftswift-hr-icon.svg?v=brandkit-v1" />
+    <link rel="apple-touch-icon" href="./assets/shiftswift-hr-icon.png?v=brandkit-v1" />
+    <link rel="stylesheet" href="./styles.css?v=brandkit-v2" />
+  </head>
+  <body>
+    <div class="app employee-app">
+      <aside class="sidebar">
+        <div class="sidebar-head">
+          <a class="brand" href="./index.html">
+            <img class="brand-logo brand-logo--compact" src="./assets/shiftswift-hr-logo-nav.svg?v=brandkit-v4" alt="ShiftSwift HR" />
+          </a>
+        </div>
+        <nav class="nav">
+          <a class="nav-link active" href="#overview">Overview</a>
+          <a class="nav-link" href="#time-clock">Time clock</a>
+          <a class="nav-link" href="#documents">My documents</a>
+          <a class="nav-link" href="#payslips">Payslips</a>
+        </nav>
+        <div class="badge pill">Employee portal</div>
+      </aside>
+      <main class="content">
+        <div class="topbar">
+          <div class="topbar-main">
+            <div>
+              <h1>Employee portal</h1>
+              <p class="muted">Self-service for payslips, documents, and profile updates.</p>
+            </div>
+          </div>
+          <div class="stack topbar-actions">
+            <a class="btn ghost" href="./business-login.html" data-sign-out>Sign out</a>
+          </div>
+        </div>
+
+        <section id="overview" class="admin-section">
+          <header class="section-header">
+            <div>
+              <h2>Welcome</h2>
+              <p class="muted" id="employee-welcome">Loading your account…</p>
+            </div>
+          </header>
+          <div class="metric-grid">
+            <article class="card">
+              <h3>My documents</h3>
+              <p class="muted">Contracts, policies, and HR letters shared with you.</p>
+              <p class="muted">Coming soon — ask your HR team for copies in the meantime.</p>
+            </article>
+            <article class="card">
+              <h3>Payslips</h3>
+              <p class="muted">Download monthly payslips and tax summaries.</p>
+              <p class="muted">Coming soon — payroll integration in progress.</p>
+            </article>
+          </div>
+        </section>
+
+        <section id="time-clock" class="admin-section">
+          <header class="section-header">
+            <div>
+              <h2>Time clock</h2>
+              <p class="muted">Clock in and out when you are at an assigned work site. Location access is required.</p>
+            </div>
+          </header>
+          <article class="card punch-card">
+            <p id="punch-status" class="muted">Loading punch status…</p>
+            <div class="punch-actions">
+              <button type="button" class="btn primary" id="punch-in-btn">Clock in</button>
+              <button type="button" class="btn ghost" id="punch-out-btn" disabled>Clock out</button>
+            </div>
+            <p id="punch-message" class="punch-message" aria-live="polite"></p>
+            <h3>Your punch sites</h3>
+            <ul id="punch-sites" class="punch-site-list muted">
+              <li>Loading…</li>
+            </ul>
+          </article>
+        </section>
+      </main>
+    </div>
+    <script src="./brand-config.js?v=brand-v4"></script>
+    <script src="./employee.js?v=2"></script>
+    <script src="./employee-time-punch.js?v=1"></script>
+  </body>
+</html>

@@ -1,0 +1,66 @@
+@import url("./theme.css");
+
+body {
+  margin: 0;
+  background: var(--page-bg);
+}
+
+.swagger-ui .topbar {
+  display: none;
+}
+
+.swagger-ui .information-container,
+.swagger-ui .scheme-container {
+  background: var(--white);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  margin: 24px auto;
+  max-width: 1460px;
+  padding: 8px 16px;
+}
+
+.swagger-ui .info .title {
+  color: var(--green-800);
+  font-family: var(--font-heading);
+}
+
+.swagger-ui .info .title small {
+  background: var(--green-100);
+  color: var(--green-800);
+}
+
+.swagger-ui .opblock-tag {
+  color: var(--green-800);
+  font-family: var(--font-heading);
+  border-bottom: 1px solid var(--card-border);
+}
+
+.swagger-ui .btn.authorize,
+.swagger-ui .btn.execute {
+  background: var(--green-700);
+  border-color: var(--green-700);
+}
+
+.swagger-ui .btn.authorize:hover,
+.swagger-ui .btn.execute:hover {
+  background: var(--green-800);
+  border-color: var(--green-800);
+}
+
+.swagger-ui .opblock.opblock-get .opblock-summary-method { background: var(--green-500); }
+.swagger-ui .opblock.opblock-post .opblock-summary-method { background: var(--green-700); }
+.swagger-ui .opblock.opblock-put .opblock-summary-method { background: var(--green-800); }
+.swagger-ui .opblock.opblock-delete .opblock-summary-method { background: #c62828; }
+
+.swagger-ui .opblock {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border-color: var(--card-border);
+}
+
+.swagger-ui .model-box-control:focus,
+.swagger-ui .opblock-summary-control:focus,
+.swagger-ui .tab li button.tablinks:focus {
+  outline: 2px solid var(--green-300);
+}
