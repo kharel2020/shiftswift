@@ -63,7 +63,10 @@ def setup_brand() -> dict[str, object]:
 
 @app.get("/setup/status")
 def setup_status() -> dict[str, object]:
+    from core.notifications import smtp_config_summary
+
     db_ok = bool(os.getenv("DATABASE_URL"))
+    smtp = smtp_config_summary()
     return {
         "complete": db_ok,
         "enabled": db_ok,
@@ -73,9 +76,11 @@ def setup_status() -> dict[str, object]:
             "database": db_ok,
             "encryption": encryption_configured(),
             "stripe": bool(os.getenv("STRIPE_SECRET_KEY")),
+            "smtp": smtp["configured"],
             "rtw_storage": bool(os.getenv("RTW_STORAGE_DIR", "uploads/rtw_immutable")),
             "ai_assistant": bool(os.getenv("AI_ENABLED", "0").strip().lower() in {"1", "true", "yes", "on"}),
         },
+        "smtp": smtp,
         "security": {
             "jwt_auth": True,
             "bcrypt_passwords": True,

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import smtplib
@@ -24,10 +25,30 @@ EmailPurpose = Literal[
 EmailAudience = Literal["hr", "employee", "platform"]
 
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+logger = logging.getLogger(__name__)
 
 
 def smtp_configured() -> bool:
-    return bool(os.getenv("SMTP_HOST") and os.getenv("SMTP_FROM"))
+    return bool(
+        os.getenv("SMTP_HOST")
+        and os.getenv("SMTP_FROM")
+        and os.getenv("SMTP_USER")
+        and os.getenv("SMTP_PASSWORD")
+    )
+
+
+def smtp_config_summary() -> dict[str, str | bool]:
+    """Non-secret SMTP config snapshot for diagnostics."""
+    password = os.getenv("SMTP_PASSWORD", "")
+    return {
+        "configured": smtp_configured(),
+        "host": os.getenv("SMTP_HOST", ""),
+        "port": os.getenv("SMTP_PORT", "587"),
+        "from": os.getenv("SMTP_FROM", ""),
+        "user": os.getenv("SMTP_USER", ""),
+        "password_set": bool(password),
+        "password_length": len(password),
+    }
 
 
 def _support_email() -> str:
@@ -315,7 +336,18 @@ def send_email_notification(
         except Exception as exc:
             delivery_error = str(exc)[:500]
             status = "failed"
+            logger.error(
+                "Email delivery failed to %s (%s): %s",
+                payload_out.get("to"),
+                purpose,
+                delivery_error,
+            )
     elif deliver_now and not smtp_configured():
+        delivery_error = (
+            "SMTP not configured — set SMTP_HOST, SMTP_FROM, SMTP_USER, SMTP_PASSWORD in backend_stub/.env"
+        )
+        status = "failed"
+        logger.error("Email not sent (%s): %s", purpose, delivery_error)
         _log_channel("email", subject, body, payload_out)
 
     if delivery_error:
