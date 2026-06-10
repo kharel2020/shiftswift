@@ -87,6 +87,13 @@ MODULES: list[dict[str, object]] = [
         "description": "Clock in/out at assigned work sites with GPS geofence validation.",
         "setup": ["DATABASE_URL"],
     },
+    {
+        "id": "rota",
+        "name": "Weekly Rota Builder",
+        "prefix": "/admin/rota",
+        "description": "Plan shifts by week with overlap validation and publish workflow.",
+        "setup": ["DATABASE_URL"],
+    },
 ]
 
 

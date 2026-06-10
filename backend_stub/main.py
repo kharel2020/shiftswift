@@ -23,6 +23,7 @@ from modules.employees.routes import router as employees_router
 from modules.recruitment.routes import router as recruitment_router
 from modules.time_punch.routes import admin_router as time_punch_admin_router
 from modules.time_punch.routes import employee_router as time_punch_router
+from modules.rota.routes import router as rota_router
 from modules.registry import module_catalog
 from signup_routes import router as signup_router
 from config import load_settings
@@ -114,3 +115,4 @@ app.include_router(time_punch_router)
 app.include_router(employees_router)
 app.include_router(recruitment_router)
 app.include_router(time_punch_admin_router)
+app.include_router(rota_router)

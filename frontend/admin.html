@@ -31,6 +31,7 @@
           <a class="nav-link" href="#compliance" data-section="compliance" data-feature="sponsor-compliance">Sponsor Compliance</a>
           <a class="nav-link" href="#contracts" data-section="contracts">Contracts</a>
           <a class="nav-link" href="#time-punch" data-section="time-punch">Time punch</a>
+          <a class="nav-link" href="#rota" data-section="rota">Rota</a>
           <a class="nav-link" href="#settings" data-section="settings">Settings</a>
         </nav>
         <div class="badge pill">shiftswifthr.co.uk</div>
@@ -116,6 +117,7 @@
                   <a href="#grievance" class="btn ghost">Grievance cases</a>
                   <a href="#offboarding" class="btn ghost">Offboarding</a>
                   <a href="#time-punch" class="btn ghost">Time punch</a>
+                  <a href="#rota" class="btn ghost">Rota</a>
                 </p>
               </article>
             </article>
@@ -714,6 +716,76 @@
           </article>
         </section>
 
+        <section id="rota" class="admin-section" hidden>
+          <header class="section-header">
+            <div>
+              <h2>Rota</h2>
+              <p class="muted">Build the live weekly rota — overlaps blocked, atomic save, publish when ready.</p>
+            </div>
+            <div class="section-actions rota-week-nav">
+              <button type="button" class="btn ghost" id="rota-prev-week" aria-label="Previous week">←</button>
+              <div class="rota-week-nav__label">
+                <strong id="rota-week-label">Week</strong>
+                <span id="rota-week-status"></span>
+              </div>
+              <button type="button" class="btn ghost" id="rota-next-week" aria-label="Next week">→</button>
+              <button type="button" class="btn ghost" id="rota-this-week">This week</button>
+            </div>
+          </header>
+          <p id="rota-admin-message" class="muted rota-admin-message" aria-live="polite"></p>
+          <article class="card">
+            <h3>Shifts</h3>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Day</th>
+                    <th>Employee</th>
+                    <th>Start</th>
+                    <th>End</th>
+                    <th>Role</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="rota-shifts-body">
+                  <tr><td colspan="6" class="muted">Open this section to load the rota…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+          <article class="card edit-panel">
+            <h3>Add shift</h3>
+            <div class="rota-add-form">
+              <label>
+                Employee
+                <select id="rota-add-employee"></select>
+              </label>
+              <label>
+                Day
+                <select id="rota-add-day"></select>
+              </label>
+              <label>
+                Start
+                <input id="rota-add-start" type="time" value="09:00" />
+              </label>
+              <label>
+                End
+                <input id="rota-add-end" type="time" value="17:00" />
+              </label>
+              <label>
+                Role <span class="muted">(optional)</span>
+                <input id="rota-add-role" type="text" maxlength="80" placeholder="e.g. Floor, Bar, Kitchen" />
+              </label>
+              <button type="button" class="btn" id="rota-add-btn">Add to rota</button>
+            </div>
+          </article>
+          <div class="rota-actions">
+            <button type="button" class="btn primary" id="rota-save-btn">Save rota</button>
+            <button type="button" class="btn ghost" id="rota-publish-btn">Publish rota</button>
+            <button type="button" class="btn ghost" id="rota-reload-btn">Reload</button>
+          </div>
+        </section>
+
         <section id="settings" class="admin-section" hidden>
           <header class="section-header">
             <div>
@@ -780,6 +852,7 @@
     <script src="./admin-offboarding.js?v=admin-v4"></script>
     <script src="./admin-templates.js?v=admin-v6"></script>
     <script src="./admin-time-punch.js?v=1"></script>
+    <script src="./admin-rota.js?v=1"></script>
     <script src="./app.js?v=admin-v4"></script>
     <script src="./contracts.js?v=admin-v4"></script>
   </body>

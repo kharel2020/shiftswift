@@ -1393,3 +1393,55 @@ textarea:focus {
   gap: 10px;
 }
 
+.rota-week-nav {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.rota-week-nav__label {
+  display: grid;
+  gap: 4px;
+  text-align: center;
+  min-width: 180px;
+}
+
+.rota-add-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.rota-add-form label {
+  display: grid;
+  gap: 6px;
+  font-size: var(--text-caption-size);
+  font-weight: var(--text-label-weight);
+}
+
+.rota-add-form input,
+.rota-add-form select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  font: inherit;
+}
+
+.rota-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.rota-admin-message[data-type="error"] {
+  color: var(--danger, #b42318);
+  font-weight: 600;
+}
+
+.btn-sm {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
