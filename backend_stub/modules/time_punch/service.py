@@ -223,9 +223,28 @@ def last_punch(*, tenant_id: int, employee_id: int, conn: Any) -> dict[str, Any]
 
 
 def employee_punch_status(*, tenant_id: int, employee_id: int, conn: Any) -> dict[str, Any]:
+    from datetime import date
+
+    from modules.rota.attendance import expected_shift_for_employee_on_date, list_employee_week_shifts
+    from modules.rota.service import monday_on_or_before
+
     sites = eligible_sites_for_employee(tenant_id=tenant_id, employee_id=employee_id, conn=conn)
     last = last_punch(tenant_id=tenant_id, employee_id=employee_id, conn=conn)
     clocked_in = bool(last and last["punch_type"] == "in")
+    today = date.today()
+    week_start = monday_on_or_before(today)
+    expected_shift = expected_shift_for_employee_on_date(
+        tenant_id=tenant_id,
+        employee_id=employee_id,
+        on_date=today,
+        conn=conn,
+    )
+    week_shifts = list_employee_week_shifts(
+        tenant_id=tenant_id,
+        employee_id=employee_id,
+        week_start=week_start,
+        conn=conn,
+    )
     return {
         "clocked_in": clocked_in,
         "last_punch": last,
@@ -238,6 +257,9 @@ def employee_punch_status(*, tenant_id: int, employee_id: int, conn: Any) -> dic
             }
             for s in sites
         ],
+        "expected_shift_today": expected_shift,
+        "week_shifts": week_shifts,
+        "week_start": week_start.isoformat(),
     }
 
 

@@ -402,3 +402,49 @@ def publish_week(
     conn.commit()
     _, shifts = list_shifts_for_week(tenant_id=tenant_id, week_start=week_start, conn=conn)
     return {"week": week, "shifts": shifts, "message": "Rota published"}
+
+
+def copy_week_from_previous(
+    *,
+    tenant_id: int,
+    week_start: date,
+    expected_version: int | None,
+    actor_username: str,
+    conn: Any,
+) -> dict[str, Any]:
+    previous_start = week_start - timedelta(days=7)
+    _, previous_shifts = list_shifts_for_week(tenant_id=tenant_id, week_start=previous_start, conn=conn)
+    if not previous_shifts:
+        raise RotaValidationError("Previous week has no shifts to copy", field="week_start")
+
+    _, current_shifts = list_shifts_for_week(tenant_id=tenant_id, week_start=week_start, conn=conn)
+    if current_shifts:
+        raise RotaValidationError(
+            "Current week already has shifts — remove them or save an empty rota before copying",
+            field="shifts",
+        )
+
+    payload = []
+    for shift in previous_shifts:
+        old_date = date.fromisoformat(shift["shift_date"])
+        payload.append(
+            {
+                "employee_id": shift["employee_id"],
+                "shift_date": (old_date + timedelta(days=7)).isoformat(),
+                "start_time": shift["start_time"],
+                "end_time": shift["end_time"],
+                "role_label": shift.get("role_label") or "",
+                "notes": shift.get("notes") or "",
+            }
+        )
+    result = save_week_shifts(
+        tenant_id=tenant_id,
+        week_start=week_start,
+        shifts_payload=payload,
+        expected_version=expected_version,
+        actor_username=actor_username,
+        conn=conn,
+    )
+    result["message"] = f"Copied {len(payload)} shifts from previous week"
+    result["copied_from_week"] = previous_start.isoformat()
+    return result

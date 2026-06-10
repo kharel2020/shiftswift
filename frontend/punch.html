@@ -15,7 +15,7 @@
     <link rel="icon" type="image/svg+xml" href="./assets/shiftswift-hr-icon.svg?v=brandkit-v1" />
     <link rel="apple-touch-icon" href="./assets/shiftswift-hr-icon.png?v=brandkit-v1" />
     <link rel="stylesheet" href="./theme.css?v=brand-v1" />
-    <link rel="stylesheet" href="./punch.css?v=2" />
+    <link rel="stylesheet" href="./punch.css?v=3" />
   </head>
   <body class="punch-app">
     <div class="punch-shell">
@@ -77,6 +77,37 @@
           Need payslips or documents?
           <a href="./business-login.html">Open full employee portal</a>
         </p>
+
+        <details class="punch-install-help" id="punch-install-help">
+          <summary>How to install on your phone</summary>
+          <div class="punch-install-help__body">
+            <p class="punch-install-help__lead">
+              There is no App Store download. Add this page to your home screen once — then open the
+              <strong>Time Clock</strong> icon to clock in at work.
+            </p>
+            <div class="punch-install-help__grid">
+              <div class="punch-install-help__platform">
+                <h3>iPhone / iPad</h3>
+                <ol>
+                  <li>Open this page in <strong>Safari</strong> (not Chrome).</li>
+                  <li>Tap <strong>Share</strong> (square with arrow).</li>
+                  <li>Tap <strong>Add to Home Screen</strong>, then <strong>Add</strong>.</li>
+                </ol>
+              </div>
+              <div class="punch-install-help__platform">
+                <h3>Android</h3>
+                <ol>
+                  <li>Open this page in <strong>Chrome</strong>.</li>
+                  <li>Tap <strong>Install app</strong> (banner or ⋮ menu).</li>
+                  <li>Confirm <strong>Add to Home screen</strong>.</li>
+                </ol>
+              </div>
+            </div>
+            <p class="punch-install-help__note">
+              When you clock in or out, allow <strong>location</strong> when your phone asks — GPS is required at your work site.
+            </p>
+          </div>
+        </details>
       </section>
 
       <section id="punch-mfa-view" class="punch-view" hidden>
@@ -101,12 +132,19 @@
 
           <div id="punch-clock-status" class="punch-clock-status is-out">Loading punch status…</div>
 
+          <div id="punch-expected-shift" class="punch-expected-shift" hidden></div>
+
           <div class="punch-clock-actions">
             <button type="button" class="punch-btn punch-btn--in" id="punch-in-btn">Clock in</button>
             <button type="button" class="punch-btn punch-btn--out punch-btn--ghost" id="punch-out-btn" disabled>Clock out</button>
           </div>
 
           <p id="punch-message" class="punch-message" aria-live="polite"></p>
+
+          <h2 class="punch-sites-title">Your shifts this week</h2>
+          <ul id="punch-week-shifts" class="punch-shift-list">
+            <li class="muted">Loading…</li>
+          </ul>
 
           <h2 class="punch-sites-title">Your punch sites</h2>
           <ul id="punch-sites" class="punch-site-list">
@@ -117,10 +155,33 @@
         <p class="punch-portal-link">
           <a href="./employee.html#time-clock">Open full employee portal</a>
         </p>
+
+        <details class="punch-install-help" id="punch-install-help-signed-in">
+          <summary>How to install on your phone</summary>
+          <div class="punch-install-help__body">
+            <p class="punch-install-help__lead">
+              Add Time Clock to your home screen for quick access — same steps as on the sign-in screen.
+            </p>
+            <div class="punch-install-help__grid">
+              <div class="punch-install-help__platform">
+                <h3>iPhone / iPad</h3>
+                <ol>
+                  <li>Safari → <strong>Share</strong> → <strong>Add to Home Screen</strong>.</li>
+                </ol>
+              </div>
+              <div class="punch-install-help__platform">
+                <h3>Android</h3>
+                <ol>
+                  <li>Chrome → <strong>Install app</strong> or menu → <strong>Add to Home screen</strong>.</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </details>
       </section>
     </div>
 
     <script src="./brand-config.js?v=brand-v4"></script>
-    <script src="./punch.js?v=2"></script>
+    <script src="./punch.js?v=3"></script>
   </body>
 </html>

@@ -11,6 +11,7 @@
   const messageEl = document.getElementById("punch-message");
   const clockInBtn = document.getElementById("punch-in-btn");
   const clockOutBtn = document.getElementById("punch-out-btn");
+  const expectedEl = document.getElementById("employee-expected-shift");
 
   let punchInFlight = false;
   let clockedInState = false;
@@ -118,6 +119,13 @@
         sitesEl.innerHTML = sites.length
           ? sites.map((s) => `<li>${s.name}: ${s.address} (${s.radius_meters}m radius)</li>`).join("")
           : "<li>No punch sites configured. Ask HR.</li>";
+      }
+      if (expectedEl && data.expected_shift_today) {
+        const s = data.expected_shift_today;
+        expectedEl.hidden = false;
+        expectedEl.innerHTML = `<strong>Today’s shift</strong> ${s.start_time}–${s.end_time}${s.role_label ? ` · ${s.role_label}` : ""}`;
+      } else if (expectedEl) {
+        expectedEl.hidden = true;
       }
       syncClockButtons();
     } catch {

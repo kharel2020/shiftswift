@@ -733,7 +733,15 @@
             </div>
           </header>
           <p id="rota-admin-message" class="muted rota-admin-message" aria-live="polite"></p>
-          <article class="card">
+          <div class="rota-view-toggle" role="tablist" aria-label="Rota view">
+            <button type="button" class="btn ghost is-active" id="rota-view-grid" data-view="grid">Grid</button>
+            <button type="button" class="btn ghost" id="rota-view-list" data-view="list">List</button>
+          </div>
+          <article class="card" id="rota-grid-panel">
+            <h3>Week grid <span class="muted">— drag shifts between days and staff</span></h3>
+            <div id="rota-grid" class="rota-grid" aria-label="Weekly rota grid"></div>
+          </article>
+          <article class="card" id="rota-list-panel" hidden>
             <h3>Shifts</h3>
             <div class="table-wrap">
               <table class="data-table">
@@ -744,11 +752,51 @@
                     <th>Start</th>
                     <th>End</th>
                     <th>Role</th>
+                    <th>Punch</th>
                     <th></th>
                   </tr>
                 </thead>
                 <tbody id="rota-shifts-body">
-                  <tr><td colspan="6" class="muted">Open this section to load the rota…</td></tr>
+                  <tr><td colspan="7" class="muted">Open this section to load the rota…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+          <article class="card" id="rota-attendance-panel" hidden>
+            <h3>Punch vs rota</h3>
+            <p class="muted">Late and no-show flags compare published shifts to geofenced clock-ins.</p>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Day</th>
+                    <th>Employee</th>
+                    <th>Shift</th>
+                    <th>Status</th>
+                    <th>Detail</th>
+                  </tr>
+                </thead>
+                <tbody id="rota-attendance-body">
+                  <tr><td colspan="5" class="muted">Publish the rota to track attendance.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+          <article class="card" id="rota-requests-panel">
+            <h3>Cover &amp; swap requests</h3>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>When</th>
+                    <th>Employee</th>
+                    <th>Type</th>
+                    <th>Note</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="rota-requests-body">
+                  <tr><td colspan="5" class="muted">No pending requests.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -781,6 +829,7 @@
           </article>
           <div class="rota-actions">
             <button type="button" class="btn primary" id="rota-save-btn">Save rota</button>
+            <button type="button" class="btn" id="rota-copy-prev-btn">Copy previous week</button>
             <button type="button" class="btn ghost" id="rota-publish-btn">Publish rota</button>
             <button type="button" class="btn ghost" id="rota-reload-btn">Reload</button>
           </div>
@@ -852,7 +901,7 @@
     <script src="./admin-offboarding.js?v=admin-v4"></script>
     <script src="./admin-templates.js?v=admin-v6"></script>
     <script src="./admin-time-punch.js?v=1"></script>
-    <script src="./admin-rota.js?v=1"></script>
+    <script src="./admin-rota.js?v=2"></script>
     <script src="./app.js?v=admin-v4"></script>
     <script src="./contracts.js?v=admin-v4"></script>
   </body>

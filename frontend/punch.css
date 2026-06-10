@@ -248,6 +248,39 @@ body.punch-app {
   line-height: 1.45;
 }
 
+.punch-expected-shift {
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-lg);
+  background: #eef8f3;
+  border: 1px solid var(--green-300);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.punch-expected-shift--late {
+  background: #fff4e5;
+  border-color: #f5c26b;
+}
+
+.punch-expected-shift--no_show {
+  background: #fdecea;
+  border-color: #f5a8a0;
+}
+
+.punch-expected-shift__note {
+  color: var(--gray-500);
+  font-size: 0.85rem;
+}
+
+.punch-shift-list {
+  margin: 0 0 1rem;
+  padding-left: 1.1rem;
+  color: var(--gray-500);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
 .punch-install-banner {
   margin-bottom: 1rem;
   padding: 0.85rem 1rem;
@@ -333,4 +366,88 @@ body.punch-app {
   .punch-install-banner {
     display: none !important;
   }
+
+  .punch-install-help {
+    display: none !important;
+  }
+}
+
+.punch-install-help {
+  margin-top: 1.25rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--green-200);
+  background: var(--green-50);
+  color: var(--gray-800);
+}
+
+.punch-install-help summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--green-800);
+  list-style: none;
+}
+
+.punch-install-help summary::-webkit-details-marker {
+  display: none;
+}
+
+.punch-install-help summary::after {
+  content: " +";
+  font-weight: 400;
+  color: var(--gray-600);
+}
+
+.punch-install-help[open] summary::after {
+  content: " −";
+}
+
+.punch-install-help__body {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--green-200);
+}
+
+.punch-install-help__lead,
+.punch-install-help__note {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--gray-700);
+}
+
+.punch-install-help__note {
+  margin-bottom: 0;
+}
+
+.punch-install-help__grid {
+  display: grid;
+  gap: 0.85rem;
+}
+
+@media (min-width: 520px) {
+  .punch-install-help__grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.punch-install-help__platform h3 {
+  margin: 0 0 0.45rem;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--green-800);
+}
+
+.punch-install-help__platform ol {
+  margin: 0;
+  padding-left: 1.15rem;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--gray-700);
+}
+
+.punch-install-help__platform li + li {
+  margin-top: 0.35rem;
 }

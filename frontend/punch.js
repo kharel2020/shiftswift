@@ -24,6 +24,8 @@
   const offlineBanner = document.getElementById("punch-offline-banner");
   const updateBanner = document.getElementById("punch-update-banner");
   const updateBtn = document.getElementById("punch-update-btn");
+  const expectedShiftEl = document.getElementById("punch-expected-shift");
+  const weekShiftsEl = document.getElementById("punch-week-shifts");
 
   let pendingChallenge = null;
   let deferredInstallPrompt = null;
@@ -267,6 +269,44 @@
     }
   }
 
+  function renderRotaContext(data) {
+    const expected = data.expected_shift_today;
+    if (expectedShiftEl) {
+      if (expected) {
+        expectedShiftEl.hidden = false;
+        const status = expected.attendance_status;
+        const statusNote =
+          status === "late"
+            ? "You clocked in late for today’s shift."
+            : status === "no_show"
+              ? "You missed today’s scheduled shift — contact your manager."
+              : status === "awaiting"
+                ? "You’re on the rota today — remember to clock in."
+                : status === "attended"
+                  ? "Today’s shift is recorded."
+                  : `Today: ${expected.start_time}–${expected.end_time}${expected.role_label ? ` (${expected.role_label})` : ""}.`;
+        expectedShiftEl.innerHTML = `<strong>Today’s shift</strong> ${expected.start_time}–${expected.end_time}${expected.role_label ? ` · ${expected.role_label}` : ""}<br /><span class="punch-expected-shift__note">${statusNote}</span>`;
+        expectedShiftEl.className = `punch-expected-shift punch-expected-shift--${status || "scheduled"}`;
+      } else {
+        expectedShiftEl.hidden = true;
+      }
+    }
+    if (weekShiftsEl) {
+      const items = data.week_shifts || [];
+      weekShiftsEl.innerHTML = items.length
+        ? items
+            .map((s) => {
+              const day = new Date(`${s.shift_date}T12:00:00`).toLocaleDateString("en-GB", {
+                weekday: "short",
+                day: "numeric",
+              });
+              return `<li><strong>${day}</strong> ${s.start_time}–${s.end_time}${s.role_label ? ` · ${s.role_label}` : ""}</li>`;
+            })
+            .join("")
+        : "<li class=\"muted\">No published shifts this week yet.</li>";
+    }
+  }
+
   async function loadStatus() {
     if (!statusEl || !token()) return;
     if (!navigator.onLine) {
@@ -307,6 +347,7 @@
           ? sites.map((s) => `<li>${s.name}: ${s.address} (${s.radius_meters}m radius)</li>`).join("")
           : "<li>No punch sites configured. Ask HR.</li>";
       }
+      renderRotaContext(data);
       setOnlineState(true);
       syncClockButtons();
     } catch {
