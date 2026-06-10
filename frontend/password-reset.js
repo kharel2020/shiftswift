@@ -3,7 +3,11 @@
     if (window.ShiftSwiftBrand?.resolveApiBase) {
       return window.ShiftSwiftBrand.resolveApiBase();
     }
-    return localStorage.getItem("apiBaseUrl") || "http://localhost:3000";
+    const stored = localStorage.getItem("apiBaseUrl");
+    if (stored && !/localhost|127\.0\.0\.1/.test(stored)) {
+      return stored;
+    }
+    return "http://localhost:3000";
   }
 
   function setStatus(el, message, isSuccess) {

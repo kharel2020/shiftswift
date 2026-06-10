@@ -113,6 +113,28 @@ for page in "${PWA_FILES[@]}"; do
 done
 echo "    Time Clock PWA OK"
 
+echo "==> verify password reset pages (App)"
+RESET_FILES=(
+  forgot-password.html
+  reset-password.html
+  password-reset.js
+)
+for page in "${RESET_FILES[@]}"; do
+  if [ ! -f "${APP_ROOT}/${page}" ]; then
+    echo "ERROR: missing ${APP_ROOT}/${page} after rsync — run git pull on API repo first"
+    exit 1
+  fi
+done
+if grep -q 'mailto:.*password reset' "${APP_ROOT}/business-login.html" 2>/dev/null; then
+  echo "ERROR: business-login.html still uses mailto password reset — git pull and rsync again"
+  exit 1
+fi
+if ! grep -q 'forgot-password.html' "${APP_ROOT}/business-login.html" 2>/dev/null; then
+  echo "ERROR: business-login.html missing forgot-password link"
+  exit 1
+fi
+echo "    password reset pages OK"
+
 echo "==> health check"
 if command -v curl >/dev/null 2>&1; then
   health_ok=0
