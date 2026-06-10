@@ -9,7 +9,12 @@ BACKEND = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BACKEND))
 
 from billing_config import get_plan
-from billing_pricing import calculate_monthly_quote, plan_pricing_payload
+from billing_pricing import (
+    billable_seat_quantity,
+    calculate_monthly_quote,
+    max_billable_seats_under_cap,
+    plan_pricing_payload,
+)
 
 
 def test_essentials_quote_at_ten_staff() -> None:
@@ -26,9 +31,18 @@ def test_compliance_quote_hits_cap() -> None:
     plan = get_plan("site_medium_monthly")
     assert plan is not None
     quote = calculate_monthly_quote(plan, active_employees=30)
-    assert quote["subtotal_gbp_ex_vat"] == 109.0
+    assert quote["billable_seats"] == 20
+    assert quote["subtotal_gbp_ex_vat"] == 79.0
     assert quote["total_gbp_ex_vat"] == 79.0
     assert quote["cap_applied"] is True
+
+
+def test_billable_seat_quantity_respects_cap() -> None:
+    plan = get_plan("site_medium_monthly")
+    assert plan is not None
+    assert max_billable_seats_under_cap(plan) == 20
+    assert billable_seat_quantity(plan, 5) == 5
+    assert billable_seat_quantity(plan, 30) == 20
 
 
 def test_plan_pricing_payload_includes_examples() -> None:

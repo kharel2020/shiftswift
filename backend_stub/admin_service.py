@@ -210,6 +210,9 @@ def create_employee(
         user_agent=user_agent,
         conn=conn,
     )
+    from billing_seat_sync import maybe_sync_tenant_stripe_seats
+
+    maybe_sync_tenant_stripe_seats(tenant_id=tenant_id, conn=conn)
     return emp
 
 
@@ -294,6 +297,10 @@ def update_employee(
         user_agent=user_agent,
         conn=conn,
     )
+    if "status" in allowed:
+        from billing_seat_sync import maybe_sync_tenant_stripe_seats
+
+        maybe_sync_tenant_stripe_seats(tenant_id=tenant_id, conn=conn)
     return emp
 
 
@@ -334,6 +341,9 @@ def delete_employee(
         user_agent=user_agent,
         conn=conn,
     )
+    from billing_seat_sync import maybe_sync_tenant_stripe_seats
+
+    maybe_sync_tenant_stripe_seats(tenant_id=tenant_id, conn=conn)
 
 
 def list_documents(

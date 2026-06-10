@@ -39,14 +39,16 @@ def calculate_monthly_quote(
 ) -> dict[str, Any]:
     """Return ex-VAT monthly bill for a plan and active headcount."""
     seats = max(0, int(active_employees))
+    billable_seats = billable_seat_quantity(plan, seats)
     base = plan_base_price(plan)
     per_head = plan_per_head_price(plan)
-    variable = round(seats * per_head, 2)
+    variable = round(billable_seats * per_head, 2)
     subtotal = round(base + variable, 2)
     cap = plan_monthly_cap(plan)
     capped = round(min(subtotal, cap), 2) if cap is not None else subtotal
     return {
         "active_employees": seats,
+        "billable_seats": billable_seats,
         "base_gbp_ex_vat": base,
         "per_head_gbp_ex_vat": per_head,
         "variable_gbp_ex_vat": variable,
@@ -54,8 +56,31 @@ def calculate_monthly_quote(
         "monthly_cap_gbp_ex_vat": cap,
         "total_gbp_ex_vat": capped,
         "total_gbp_inc_vat": round(capped * 1.2, 2),
-        "cap_applied": cap is not None and subtotal > cap,
+        "cap_applied": seats > billable_seats,
     }
+
+
+def max_billable_seats_under_cap(plan: PlanPricing) -> int | None:
+    """Seat quantity at which base + seats × per-head reaches the monthly cap."""
+    cap = plan_monthly_cap(plan)
+    per_head = plan_per_head_price(plan)
+    base = plan_base_price(plan)
+    if cap is None or per_head <= 0:
+        return None
+    return max(0, int((cap - base) // per_head))
+
+
+def billable_seat_quantity(plan: PlanPricing, active_employees: int) -> int:
+    """Stripe seat line quantity — active employees capped so invoice ≤ monthly cap."""
+    seats = max(0, int(active_employees))
+    max_under_cap = max_billable_seats_under_cap(plan)
+    if max_under_cap is not None:
+        return min(seats, max_under_cap)
+    return seats
+
+
+def estimate_monthly_total(plan: PlanPricing, *, active_employees: int) -> float:
+    return float(calculate_monthly_quote(plan, active_employees=active_employees)["total_gbp_ex_vat"])
 
 
 def example_headcounts(plan: PlanPricing) -> list[int]:

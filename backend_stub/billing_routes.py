@@ -12,8 +12,9 @@ from pydantic import BaseModel, EmailStr, Field
 from auth_service import AuthUser
 from billing_config import stripe_payment_method_types, stripe_settings
 from billing_plans import get_plan, list_plans, resolve_stripe_price_id, resolve_stripe_seat_price_id
-from billing_pricing import plan_pricing_payload
+from billing_pricing import estimate_monthly_total, plan_pricing_payload
 from billing_promotions import validate_promotions
+from billing_seat_sync import build_platform_subscription_items
 from billing_stripe_checkout import (
     create_mandate_checkout_for_tenant,
     create_subscription_checkout_session,
@@ -69,6 +70,7 @@ class PromoValidateRequest(BaseModel):
     plan_id: str
     discount_code: str | None = Field(default=None, max_length=64)
     referral_code: str | None = Field(default=None, max_length=64)
+    active_employees: int = Field(default=0, ge=0, le=10000)
 
 
 class UpgradeRequest(BaseModel):
@@ -116,7 +118,7 @@ def list_plan_catalog() -> dict[str, object]:
         "platform_plans": platform_items,
         "payroll_plans": payroll_items,
         "model": {
-            "platform": "flat_per_site_with_employee_bands",
+            "platform": "base_plus_per_head_with_monthly_cap",
             "payroll": "flat_per_site_payroll_addon",
         },
         "note": "Platform HR and payroll are billed separately — combine at signup or add payroll later.",
@@ -133,13 +135,14 @@ def validate_promo(payload: PromoValidateRequest) -> dict[str, object]:
     plan = get_plan(payload.plan_id)
     if not plan:
         raise HTTPException(status_code=404, detail="Unknown plan")
+    monthly_total = estimate_monthly_total(plan, active_employees=payload.active_employees)
     promo = validate_promotions(
         plan_id=plan.id,
-        base_price_gbp=plan.price_gbp_ex_vat,
+        base_price_gbp=monthly_total,
         discount_code=payload.discount_code,
         referral_code=payload.referral_code,
     )
-    adjusted = max(round(plan.price_gbp_ex_vat - promo.discount_amount_gbp, 2), 0)
+    adjusted = max(round(monthly_total - promo.discount_amount_gbp, 2), 0)
     return {
         "valid": promo.valid,
         "message": promo.message,
@@ -148,7 +151,8 @@ def validate_promo(payload: PromoValidateRequest) -> dict[str, object]:
         "discount_applied_gbp": promo.discount_amount_gbp,
         "extra_trial_days": promo.extra_trial_days,
         "partner_name": promo.partner_name,
-        "price_gbp_ex_vat": plan.price_gbp_ex_vat,
+        "active_employees": payload.active_employees,
+        "price_gbp_ex_vat": monthly_total,
         "adjusted_price_gbp_ex_vat": adjusted,
         "adjusted_price_gbp_inc_vat": round(adjusted * 1.2, 2),
     }
@@ -312,16 +316,6 @@ def create_checkout_session(
 
     stripe.api_key = settings["secret_key"]
 
-    line_items: list[dict[str, object]] = [{"price": price_id, "quantity": 1}]
-    if payroll_plan:
-        payroll_price_id = resolve_payroll_stripe_price_id(payroll_plan)
-        if not payroll_price_id:
-            raise HTTPException(
-                status_code=503,
-                detail=f"Missing env var {payroll_plan.stripe_price_id_env} for payroll plan {payroll_plan.id}",
-            )
-        line_items.append({"price": payroll_price_id, "quantity": 1})
-
     conn = _db_conn()
     stripe_customer_id = None
     try:
@@ -329,6 +323,18 @@ def create_checkout_session(
             cur.execute("SELECT stripe_customer_id FROM tenants WHERE id = %s", (payload.tenant_id,))
             row = cur.fetchone()
             stripe_customer_id = row[0] if row else None
+
+        line_items = build_platform_subscription_items(
+            plan=plan, conn=conn, tenant_id=payload.tenant_id
+        )
+        if payroll_plan:
+            payroll_price_id = resolve_payroll_stripe_price_id(payroll_plan)
+            if not payroll_price_id:
+                raise HTTPException(
+                    status_code=503,
+                    detail=f"Missing env var {payroll_plan.stripe_price_id_env} for payroll plan {payroll_plan.id}",
+                )
+            line_items.append({"price": payroll_price_id, "quantity": 1})
     finally:
         conn.close()
 

@@ -9,6 +9,7 @@ from typing import Any
 
 from billing_config import stripe_settings
 from billing_plans import get_plan, resolve_stripe_price_id
+from billing_seat_sync import build_platform_subscription_items
 from billing_stripe_checkout import create_subscription_checkout_session
 from payroll_plans import get_payroll_plan, resolve_stripe_price_id as resolve_payroll_stripe_price_id
 
@@ -318,7 +319,7 @@ def create_upgrade_checkout(
 
     stripe.api_key = cfg["secret_key"]
 
-    line_items: list[dict[str, object]] = [{"price": price_id, "quantity": 1}]
+    line_items = build_platform_subscription_items(plan=plan, conn=conn, tenant_id=tenant_id)
     payroll_plan = get_payroll_plan(snap["payroll_plan_id"]) if snap["payroll_plan_id"] else None
     if payroll_plan:
         payroll_price_id = resolve_payroll_stripe_price_id(payroll_plan)

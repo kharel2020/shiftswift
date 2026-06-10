@@ -116,13 +116,26 @@
     return planPerHeadPrice(plan) > 0 || plan.billing_model === "base_plus_per_head";
   }
 
-  function estimateMonthlyBill(plan, activeEmployees) {
+  function maxBillableSeatsUnderCap(plan) {
+    const cap = planMonthlyCap(plan);
+    const perHead = planPerHeadPrice(plan);
+    const base = planBasePrice(plan);
+    if (cap == null || perHead <= 0) return null;
+    return Math.max(0, Math.floor((cap - base) / perHead));
+  }
+
+  function billableSeatQuantity(plan, activeEmployees) {
     const seats = Math.max(0, Number(activeEmployees) || 0);
+    const maxUnderCap = maxBillableSeatsUnderCap(plan);
+    if (maxUnderCap != null) return Math.min(seats, maxUnderCap);
+    return seats;
+  }
+
+  function estimateMonthlyBill(plan, activeEmployees) {
+    const billable = billableSeatQuantity(plan, activeEmployees);
     const base = planBasePrice(plan);
     const perHead = planPerHeadPrice(plan);
-    const subtotal = base + seats * perHead;
-    const cap = planMonthlyCap(plan);
-    return cap != null ? Math.min(subtotal, cap) : subtotal;
+    return base + billable * perHead;
   }
 
   function pricingExamplesHtml(plan) {
@@ -437,8 +450,7 @@
     const platformContainer = document.getElementById(platformContainerId);
     const payrollContainer = payrollContainerId ? document.getElementById(payrollContainerId) : null;
     const toggle = document.getElementById("pricing-billing-toggle");
-    // Marketing page uses strategy pricing — signup/billing API may lag until catalog is re-seeded.
-    const catalog = {
+    let catalog = {
       platform_plans: FALLBACK_PLATFORM_PLANS,
       payroll_plans: [],
     };
@@ -452,8 +464,18 @@
 
     if (platformContainer) {
       platformContainer.innerHTML = '<div class="pricing-loading">Loading plans…</div>';
-      renderPlatformPlans();
     }
+
+    try {
+      catalog = await fetchCatalog();
+    } catch (_err) {
+      catalog = {
+        platform_plans: FALLBACK_PLATFORM_PLANS,
+        payroll_plans: [],
+      };
+    }
+
+    renderPlatformPlans();
     if (payrollContainer) {
       renderPayrollPartners(payrollContainer);
     }
@@ -462,6 +484,53 @@
       toggle.hidden = true;
       toggle.setAttribute("aria-hidden", "true");
     }
+
+    initBillingCalculator(catalog.platform_plans);
+  }
+
+  function initBillingCalculator(platformPlans) {
+    const root = document.getElementById("pricing-calculator");
+    if (!root) return;
+
+    const planSelect = root.querySelector("#pricing-calc-plan");
+    const headcountInput = root.querySelector("#pricing-calc-headcount");
+    const resultEl = root.querySelector("#pricing-calc-result");
+    const detailEl = root.querySelector("#pricing-calc-detail");
+    if (!planSelect || !headcountInput || !resultEl) return;
+
+    const monthlyPlans = (platformPlans || FALLBACK_PLATFORM_PLANS).filter(
+      (p) => p.billing_interval === "month"
+    );
+    planSelect.innerHTML = monthlyPlans
+      .map((p) => `<option value="${p.id}">${p.name}</option>`)
+      .join("");
+    if (!planSelect.value && monthlyPlans[0]) {
+      planSelect.value = monthlyPlans[0].id;
+    }
+
+    function renderEstimate() {
+      const plan = monthlyPlans.find((p) => p.id === planSelect.value) || monthlyPlans[0];
+      if (!plan) return;
+      const active = Math.max(0, Number(headcountInput.value) || 0);
+      const billable = billableSeatQuantity(plan, active);
+      const total = estimateMonthlyBill(plan, active);
+      const incVat = formatMoney(total * 1.2);
+      resultEl.textContent = `≈ £${formatMoney(total)} + VAT / month (£${incVat} inc. VAT)`;
+      if (detailEl) {
+        const cap = planMonthlyCap(plan);
+        const capNote =
+          active > billable && cap != null
+            ? ` Cap applies — billed for ${billable} of ${active} active employees.`
+            : "";
+        detailEl.textContent = `£${formatMoney(planBasePrice(plan))} base + £${formatMoney(
+          planPerHeadPrice(plan)
+        )} × ${billable} active employee${billable === 1 ? "" : "s"}.${capNote}`;
+      }
+    }
+
+    planSelect.addEventListener("change", renderEstimate);
+    headcountInput.addEventListener("input", renderEstimate);
+    renderEstimate();
   }
 
   let currentSelectedPlan = "site_medium_monthly";
@@ -537,6 +606,7 @@
     fetchPlans,
     fetchCatalog,
     initMarketing,
+    initBillingCalculator,
     initSignup,
     refreshSummary,
     formatMoney,

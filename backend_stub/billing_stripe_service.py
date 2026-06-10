@@ -6,9 +6,10 @@ import os
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from billing_plans import SubscriptionPlan, resolve_stripe_price_id, resolve_stripe_seat_price_id
+from billing_plans import SubscriptionPlan, resolve_stripe_price_id
 from billing_promotions import PromotionResult, record_promotion_redemption
 from billing_config import stripe_settings
+from billing_seat_sync import build_platform_subscription_items, sync_tenant_stripe_seats
 from billing_stripe_checkout import create_direct_debit_mandate_session
 from payroll_plans import PayrollPlan, resolve_stripe_price_id as resolve_payroll_stripe_price_id
 from trial_service import DEFAULT_TRIAL_DAYS
@@ -64,10 +65,7 @@ def provision_tenant_billing(
             except Exception:
                 pass
 
-        line_items: list[dict[str, object]] = [{"price": price_id, "quantity": 1}]
-        seat_price_id = resolve_stripe_seat_price_id(plan)
-        if seat_price_id:
-            line_items.append({"price": seat_price_id, "quantity": 1})
+        line_items = build_platform_subscription_items(plan=plan, conn=conn, tenant_id=tenant_id)
         if payroll_price_id:
             line_items.append({"price": payroll_price_id, "quantity": 1})
 
@@ -90,6 +88,7 @@ def provision_tenant_billing(
         subscription = stripe.Subscription.create(**subscription_kwargs)
         stripe_subscription_id = subscription.id
         subscription_status = subscription.status or subscription_status
+        sync_tenant_stripe_seats(tenant_id=tenant_id, conn=conn)
 
         if subscription.status in {"incomplete", "trialing"}:
             try:

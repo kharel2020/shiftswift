@@ -12,7 +12,7 @@
     <link rel="icon" type="image/svg+xml" href="./assets/shiftswift-hr-icon.svg?v=brandkit-v2" />
     <link rel="apple-touch-icon" href="./assets/shiftswift-hr-icon.png?v=brandkit-v2" />
     <link rel="stylesheet" href="./landing.css?v=brandkit-v16" />
-    <link rel="stylesheet" href="./pricing.css?v=7" />
+    <link rel="stylesheet" href="./pricing.css?v=8" />
   </head>
   <body>
     <div id="startup-loader" class="startup-loader" role="status" aria-live="polite" aria-label="Loading ShiftSwift HR">
@@ -349,14 +349,24 @@
               billed monthly by active headcount with a hard cap. <strong>14-day free trial</strong>, no card required.
             </p>
             <p class="pricing-model-note muted">Managers and HR users are free — only active employees count toward billing.</p>
-            <div class="pricing-billing-toggle" id="pricing-billing-toggle" role="group" aria-label="Billing interval">
-              <button type="button" class="is-active" data-billing="month" aria-pressed="true">Monthly</button>
-              <button type="button" data-billing="year" aria-pressed="false">
-                Annual <span class="save-tag">Save 2 months</span>
-              </button>
-            </div>
           </div>
           <div id="pricing-plans" class="pricing-grid pricing-grid--platform"></div>
+          <div id="pricing-calculator" class="pricing-calculator" aria-labelledby="pricing-calc-heading">
+            <h3 id="pricing-calc-heading">Estimate your monthly bill</h3>
+            <p class="muted">Pick a plan and enter active employee headcount. Your monthly cap is applied automatically.</p>
+            <div class="pricing-calculator__controls">
+              <label>
+                Plan
+                <select id="pricing-calc-plan" aria-label="Subscription plan"></select>
+              </label>
+              <label>
+                Active employees
+                <input id="pricing-calc-headcount" type="number" min="0" max="500" value="10" inputmode="numeric" />
+              </label>
+            </div>
+            <p id="pricing-calc-result" class="pricing-calculator__result" aria-live="polite"></p>
+            <p id="pricing-calc-detail" class="pricing-calculator__detail muted"></p>
+          </div>
           <article class="pricing-card pricing-card--enterprise">
             <div class="pricing-card-head">
               <div class="pricing-plan-name">Enterprise</div>
@@ -413,6 +423,12 @@
         <section id="faq" class="section faq-section" aria-labelledby="faq-heading">
             <h2 id="faq-heading">Frequently asked questions</h2>
             <details class="faq-item">
+              <summary>How does per-head billing work?</summary>
+              <div class="faq-item__answer">
+                <p>Each plan has a small monthly base fee plus a per-active-employee charge. Only employees with an active, onboarding, or suspended status count — managers and HR admins are free. When headcount grows, your bill rises predictably until you hit the plan&apos;s monthly cap; above that, you pay the cap amount only.</p>
+              </div>
+            </details>
+            <details class="faq-item">
               <summary>Are you in early access?</summary>
               <div class="faq-item__answer">
                 <p>Yes. The product is live for trials and pilot customers on UK-hosted infrastructure, but we are still completing our go-live checklist — Stripe live billing, solicitor-reviewed contracts, and our first named case study. Book a demo and judge the product yourself rather than relying on template marketing quotes.</p>
@@ -463,7 +479,7 @@
         </section>
 
         <p class="pricing-footnote">
-          Prices exclude UK VAT. Annual plans are non-refundable. Monthly plans cancel at end of billing period. Payroll is billed as a separate add-on.
+          Prices exclude UK VAT unless stated. Monthly plans cancel at end of billing period. Payroll export to BrightPay or Xero is included — ShiftSwift HR does not run RTI.
           <span class="pricing-footnote__link"><a href="./payment-terms.html" target="_blank" rel="noopener">Payment terms</a></span>
         </p>
       </main>
@@ -500,7 +516,7 @@
     <script src="./landing-animations.js?v=3"></script>
     <script src="./landing-faq.js?v=2"></script>
     <script src="./brand-config.js?v=brand-v4"></script>
-    <script src="./pricing.js?v=5"></script>
+    <script src="./pricing.js?v=8"></script>
     <script>
       document.addEventListener("DOMContentLoaded", () => {
         window.ShiftSwiftPricing?.initMarketing("pricing-plans", "pricing-payroll-plans");
