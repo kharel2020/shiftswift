@@ -97,6 +97,22 @@ for root in "${APP_ROOT}" "${WWW_ROOT}"; do
 done
 echo "    legal pages OK"
 
+echo "==> verify Time Clock PWA (App)"
+PWA_FILES=(
+  punch.html
+  punch.js
+  punch.css
+  punch-sw.js
+  punch-manifest.webmanifest
+)
+for page in "${PWA_FILES[@]}"; do
+  if [ ! -f "${APP_ROOT}/${page}" ]; then
+    echo "ERROR: missing ${APP_ROOT}/${page} after rsync"
+    exit 1
+  fi
+done
+echo "    Time Clock PWA OK"
+
 echo "==> health check"
 if command -v curl >/dev/null 2>&1; then
   health_ok=0

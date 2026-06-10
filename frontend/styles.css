@@ -1360,6 +1360,16 @@ textarea:focus {
   padding-left: 18px;
 }
 
+.punch-pwa-hint {
+  margin-top: 8px;
+  font-size: 14px;
+}
+
+.punch-pwa-hint a {
+  font-weight: 600;
+  color: var(--green-700);
+}
+
 .section-actions {
   display: flex;
   align-items: center;

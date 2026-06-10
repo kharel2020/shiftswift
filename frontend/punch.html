@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f6e56" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Time Clock" />
+    <meta name="description" content="Clock in and out at your assigned work sites with GPS verification." />
+    <title>ShiftSwift Time Clock</title>
+    <link rel="manifest" href="./punch-manifest.webmanifest?v=1" />
+    <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon.png?v=brandkit-v1" />
+    <link rel="icon" type="image/svg+xml" href="./assets/shiftswift-hr-icon.svg?v=brandkit-v1" />
+    <link rel="apple-touch-icon" href="./assets/shiftswift-hr-icon.png?v=brandkit-v1" />
+    <link rel="stylesheet" href="./punch.css?v=1" />
+  </head>
+  <body class="punch-app">
+    <div class="punch-shell">
+      <header class="punch-header">
+        <a class="punch-brand" href="./punch.html" aria-label="ShiftSwift Time Clock home">
+          <img src="./assets/shiftswift-hr-logo-nav.svg?v=brandkit-v4" alt="" />
+          <span class="punch-brand-text">
+            <strong>Time Clock</strong>
+            <span>ShiftSwift HR</span>
+          </span>
+        </a>
+        <div class="punch-header-actions">
+          <button type="button" class="punch-link-btn" id="punch-sign-out" hidden>Sign out</button>
+        </div>
+      </header>
+
+      <div id="pwa-install-banner" class="punch-install-banner" hidden>
+        <p id="pwa-install-copy">Install ShiftSwift Time Clock on your home screen for quick access.</p>
+        <div class="punch-install-actions">
+          <button type="button" class="punch-btn punch-btn--primary" id="pwa-install-btn">Install app</button>
+          <button type="button" class="punch-btn punch-btn--ghost" id="pwa-install-dismiss">Not now</button>
+        </div>
+      </div>
+
+      <section id="punch-login-view" class="punch-view">
+        <article class="punch-card">
+          <h1>Employee sign in</h1>
+          <p class="punch-lead">Sign in to clock in or out at your assigned work site. Location access is required when you punch.</p>
+
+          <form id="punch-login-form" class="punch-form">
+            <label>
+              Username
+              <input name="username" required autocomplete="username" placeholder="employee@shiftswifthr.co.uk" />
+            </label>
+            <label>
+              Password
+              <input name="password" type="password" required autocomplete="current-password" placeholder="Enter password" />
+            </label>
+            <p id="punch-login-status" class="punch-status-msg" hidden></p>
+            <button class="punch-btn punch-btn--primary" type="submit">Sign in to clock</button>
+          </form>
+
+          <p class="punch-secure-note">Secured · <span data-secure-host>shiftswifthr.co.uk</span></p>
+        </article>
+
+        <p class="punch-portal-link">
+          Need payslips or documents?
+          <a href="./business-login.html">Open full employee portal</a>
+        </p>
+      </section>
+
+      <section id="punch-mfa-view" class="punch-view" hidden>
+        <article class="punch-card">
+          <h1>Verification code</h1>
+          <p class="punch-lead">Enter the code sent for <strong data-mfa-user></strong>.</p>
+          <form id="punch-mfa-form" class="punch-form">
+            <label>
+              Code
+              <input name="code" inputmode="numeric" autocomplete="one-time-code" required placeholder="123456" />
+            </label>
+            <p id="punch-mfa-status" class="punch-status-msg" hidden></p>
+            <button class="punch-btn punch-btn--primary" type="submit">Verify and continue</button>
+          </form>
+        </article>
+      </section>
+
+      <section id="punch-clock-view" class="punch-view" hidden>
+        <article class="punch-card">
+          <h1 id="punch-greeting">Time clock</h1>
+          <p class="punch-lead" id="punch-user-line">Loading your shift status…</p>
+
+          <div id="punch-clock-status" class="punch-clock-status is-out">Loading punch status…</div>
+
+          <div class="punch-clock-actions">
+            <button type="button" class="punch-btn punch-btn--in" id="punch-in-btn">Clock in</button>
+            <button type="button" class="punch-btn punch-btn--out punch-btn--ghost" id="punch-out-btn" disabled>Clock out</button>
+          </div>
+
+          <p id="punch-message" class="punch-message" aria-live="polite"></p>
+
+          <h2 class="punch-sites-title">Your punch sites</h2>
+          <ul id="punch-sites" class="punch-site-list">
+            <li>Loading…</li>
+          </ul>
+        </article>
+
+        <p class="punch-portal-link">
+          <a href="./employee.html#time-clock">Open full employee portal</a>
+        </p>
+      </section>
+    </div>
+
+    <script src="./brand-config.js?v=brand-v4"></script>
+    <script src="./punch.js?v=1"></script>
+  </body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "name": "ShiftSwift Time Clock",
+  "short_name": "Time Clock",
+  "description": "Clock in and out at your assigned work sites with GPS verification.",
+  "start_url": "./punch.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#04342c",
+  "theme_color": "#0f6e56",
+  "icons": [
+    {
+      "src": "./assets/shiftswift-hr-icon.png?v=brandkit-v1",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./assets/shiftswift-hr-icon.png?v=brandkit-v1",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
