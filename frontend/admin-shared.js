@@ -51,6 +51,8 @@ window.Admin = (() => {
   let tenantFeatures = {
     payroll_enabled: false,
     sponsor_compliance_enabled: false,
+    sponsor_licence_acknowledged: false,
+    holds_sponsor_licence: false,
     grievance_enabled: false,
     audit_export_enabled: false,
     multi_site_enabled: false,
@@ -112,6 +114,8 @@ window.Admin = (() => {
       tenantFeatures = {
         payroll_enabled: Boolean(data.payroll_enabled),
         sponsor_compliance_enabled: Boolean(data.sponsor_compliance_enabled),
+        sponsor_licence_acknowledged: Boolean(data.sponsor_licence_acknowledged),
+        holds_sponsor_licence: Boolean(data.holds_sponsor_licence),
         grievance_enabled: Boolean(data.grievance_enabled),
         audit_export_enabled: Boolean(data.audit_export_enabled),
         multi_site_enabled: Boolean(data.multi_site_enabled),

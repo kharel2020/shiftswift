@@ -33,6 +33,8 @@ class SignupStartRequest(BaseModel):
     start_trial: bool = True
     discount_code: str | None = Field(default=None, max_length=64)
     referral_code: str | None = Field(default=None, max_length=64)
+    holds_sponsor_licence: bool = False
+    sponsor_licence_acknowledged: bool = False
 
 
 def _validate_payroll_for_platform(platform_plan, payroll_plan_id: str | None):
@@ -150,6 +152,12 @@ def signup_start(payload: SignupStartRequest, request: Request) -> dict[str, obj
     if not promotion.valid:
         raise HTTPException(status_code=400, detail=promotion.message)
 
+    if payload.sponsor_licence_acknowledged and not payload.holds_sponsor_licence:
+        raise HTTPException(
+            status_code=400,
+            detail="Confirm your organisation holds a UK Sponsor Licence before accepting sponsor duty terms.",
+        )
+
     ip = client_ip(request)
     user_agent = request.headers.get("User-Agent")
 
@@ -231,6 +239,15 @@ def signup_start(payload: SignupStartRequest, request: Request) -> dict[str, obj
             )
         except Exception:
             logger.exception("Contract pack generation failed during signup for tenant %s", tenant_id)
+        if payload.holds_sponsor_licence and payload.sponsor_licence_acknowledged:
+            from sponsor_licence_ack import acknowledge_sponsor_licence
+
+            acknowledge_sponsor_licence(
+                tenant_id=tenant_id,
+                acknowledged_by=admin_username,
+                holds_sponsor_licence=True,
+                conn=conn,
+            )
         conn.commit()
     except HTTPException:
         conn.rollback()

@@ -35,6 +35,24 @@ router = APIRouter(prefix="/compliance/sponsor-licence", tags=["Sponsor Licence 
 settings = load_settings()
 
 
+def _require_sponsor_compliance_plan(*, tenant_id: int, conn: Any) -> None:
+    from plan_features import assert_tenant_feature
+
+    assert_tenant_feature(tenant_id=tenant_id, feature="sponsor_compliance", conn=conn)
+
+
+def _require_sponsor_compliance_access(*, tenant_id: int, conn: Any) -> None:
+    _require_sponsor_compliance_plan(tenant_id=tenant_id, conn=conn)
+    from sponsor_licence_ack import assert_sponsor_licence_acknowledged
+
+    assert_sponsor_licence_acknowledged(tenant_id=tenant_id, conn=conn)
+
+
+class SponsorLicenceAckRequest(BaseModel):
+    holds_sponsor_licence: bool
+    accept_terms: bool = Field(description="Must be true to record acknowledgement.")
+
+
 class SmsChangeRequest(BaseModel):
     employee_id: int
     field_name: str = Field(pattern="^(job_title|salary|work_location)$")
@@ -94,6 +112,52 @@ async def _read_validated_pdf(upload: UploadFile) -> bytes:
     return pdf_bytes
 
 
+@router.get("/acknowledgement")
+def sponsor_licence_ack_status(
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, Any]:
+    from sponsor_licence_ack import get_sponsor_licence_ack_status
+
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = _db_conn()
+    try:
+        _require_sponsor_compliance_plan(tenant_id=tenant_id, conn=conn)
+        return get_sponsor_licence_ack_status(tenant_id=tenant_id, conn=conn)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    finally:
+        conn.close()
+
+
+@router.post("/acknowledgement")
+def sponsor_licence_acknowledge(
+    payload: SponsorLicenceAckRequest,
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, Any]:
+    from sponsor_licence_ack import acknowledge_sponsor_licence
+
+    if not payload.accept_terms:
+        raise HTTPException(status_code=400, detail="You must accept sponsor duty terms.")
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = _db_conn()
+    try:
+        _require_sponsor_compliance_plan(tenant_id=tenant_id, conn=conn)
+        return acknowledge_sponsor_licence(
+            tenant_id=tenant_id,
+            acknowledged_by=current_user.username,
+            holds_sponsor_licence=payload.holds_sponsor_licence,
+            conn=conn,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    else:
+        conn.commit()
+    finally:
+        conn.close()
+
+
 @router.get("/checklist")
 def rtw_checklist_link() -> dict[str, str]:
     return {
@@ -120,6 +184,7 @@ async def create_rtw_check(
     pdf_bytes = await _read_validated_pdf(evidence_pdf)
     conn = _db_conn()
     try:
+        _require_sponsor_compliance_access(tenant_id=tenant_id, conn=conn)
         stored = store_immutable_rtw_pdf(
             tenant_id=tenant_id,
             employee_id=employee_id,
@@ -154,6 +219,7 @@ def run_absence_alerts(
     tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
     conn = _db_conn()
     try:
+        _require_sponsor_compliance_access(tenant_id=tenant_id, conn=conn)
         alerts = evaluate_day9_absence_alerts(
             tenant_id=tenant_id,
             as_of=as_of or date.today(),
@@ -174,6 +240,7 @@ def record_sms_change(
     tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
     conn = _db_conn()
     try:
+        _require_sponsor_compliance_access(tenant_id=tenant_id, conn=conn)
         entry = log_sms_reportable_change(
             tenant_id=tenant_id,
             employee_id=payload.employee_id,
@@ -199,6 +266,7 @@ def refresh_sms_statuses(
     tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
     conn = _db_conn()
     try:
+        _require_sponsor_compliance_access(tenant_id=tenant_id, conn=conn)
         updated = refresh_sms_change_alert_statuses(
             tenant_id=tenant_id,
             as_of=as_of or date.today(),
@@ -217,6 +285,7 @@ def sponsor_dashboard(
     tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
     conn = _db_conn()
     try:
+        _require_sponsor_compliance_access(tenant_id=tenant_id, conn=conn)
         data = compliance_dashboard(tenant_id=tenant_id, conn=conn)
     finally:
         conn.close()
@@ -238,6 +307,7 @@ def list_adverts(
     tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
     conn = _db_conn()
     try:
+        _require_sponsor_compliance_access(tenant_id=tenant_id, conn=conn)
         items = list_advertisement_records(tenant_id=tenant_id, conn=conn, status=status, limit=limit)
     finally:
         conn.close()
@@ -254,6 +324,7 @@ def create_advert(
     tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
     conn = _db_conn()
     try:
+        _require_sponsor_compliance_access(tenant_id=tenant_id, conn=conn)
         record = create_advertisement_record(
             tenant_id=tenant_id,
             job_title=payload.job_title,
@@ -290,6 +361,7 @@ def get_advert(
     tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
     conn = _db_conn()
     try:
+        _require_sponsor_compliance_access(tenant_id=tenant_id, conn=conn)
         return get_advertisement_record(tenant_id=tenant_id, record_id=record_id, conn=conn)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -307,6 +379,7 @@ def add_advert_link(
     tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
     conn = _db_conn()
     try:
+        _require_sponsor_compliance_access(tenant_id=tenant_id, conn=conn)
         link = add_advertisement_link(
             tenant_id=tenant_id,
             record_id=record_id,
@@ -363,6 +436,7 @@ def get_absence_days(
     tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
     conn = _db_conn()
     try:
+        _require_sponsor_compliance_access(tenant_id=tenant_id, conn=conn)
         items = list_sponsored_absence_days(
             tenant_id=tenant_id,
             conn=conn,
@@ -385,6 +459,7 @@ def record_absence_day(
     tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
     conn = _db_conn()
     try:
+        _require_sponsor_compliance_access(tenant_id=tenant_id, conn=conn)
         result = record_sponsored_absence_day(
             tenant_id=tenant_id,
             employee_id=payload.employee_id,
@@ -413,6 +488,7 @@ def remove_absence_day(
     tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
     conn = _db_conn()
     try:
+        _require_sponsor_compliance_access(tenant_id=tenant_id, conn=conn)
         deleted = delete_sponsored_absence_day(
             tenant_id=tenant_id,
             employee_id=employee_id,
@@ -436,6 +512,7 @@ def absence_streaks(
     tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
     conn = _db_conn()
     try:
+        _require_sponsor_compliance_access(tenant_id=tenant_id, conn=conn)
         items = get_absence_streak_summaries(
             tenant_id=tenant_id,
             as_of=as_of or date.today(),
@@ -458,6 +535,7 @@ def get_working_calendar(
     tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
     conn = _db_conn()
     try:
+        _require_sponsor_compliance_access(tenant_id=tenant_id, conn=conn)
         items = list_working_calendar(
             tenant_id=tenant_id,
             conn=conn,
@@ -479,6 +557,7 @@ def update_working_calendar(
     tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
     conn = _db_conn()
     try:
+        _require_sponsor_compliance_access(tenant_id=tenant_id, conn=conn)
         result = upsert_working_calendar(
             tenant_id=tenant_id,
             entries=[entry.model_dump() for entry in payload.entries],
@@ -508,6 +587,7 @@ def audit_export(
     try:
         from plan_features import assert_tenant_feature
 
+        _require_sponsor_compliance_access(tenant_id=tenant_id, conn=conn)
         assert_tenant_feature(tenant_id=tenant_id, feature="audit_export", conn=conn)
         if format.lower() == "pdf":
             pdf_bytes = audit_export_pdf_bytes(
@@ -553,6 +633,7 @@ def verify_rtw_share_code(
 
     conn = _db_conn()
     try:
+        _require_sponsor_compliance_access(tenant_id=tenant_id, conn=conn)
         result = persist_verification(
             conn=conn,
             tenant_id=tenant_id,
@@ -576,6 +657,7 @@ def list_reporting_triggers(
     tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
     conn = _db_conn()
     try:
+        _require_sponsor_compliance_access(tenant_id=tenant_id, conn=conn)
         with conn.cursor() as cur:
             query = """
                 SELECT id, employee_id, trigger_type, source_module, description,
@@ -616,6 +698,7 @@ def update_reporting_trigger(
     tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
     conn = _db_conn()
     try:
+        _require_sponsor_compliance_access(tenant_id=tenant_id, conn=conn)
         with conn.cursor() as cur:
             cur.execute(
                 """

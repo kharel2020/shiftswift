@@ -99,6 +99,10 @@
 
             <fieldset class="signup-form__section signup-form__section--legal">
               <legend class="signup-form__legend">Agreement</legend>
+              <p class="signup-sponsor-duty-note muted" id="signup-sponsor-duty-note" hidden>
+                ShiftSwift HR provides <strong>recording tools and alerts</strong> for sponsor licence compliance.
+                Your organisation remains responsible for Right to Work checks, Home Office SMS reporting, and acting on alerts.
+              </p>
               <label class="signup-check">
                 <input type="checkbox" name="start_trial" checked />
                 <span>Start my 14-day free trial before billing begins</span>
@@ -110,6 +114,17 @@
                   <a href="./eula.html" target="_blank" rel="noopener">HR Module EULA</a>
                   and
                   <a href="./payment-terms.html" target="_blank" rel="noopener">B2B payment terms</a>.
+                </span>
+              </label>
+              <label class="signup-check">
+                <input type="checkbox" name="holds_sponsor_licence" id="holds-sponsor-licence" />
+                <span>Our organisation holds (or is applying for) a UK Sponsor Licence</span>
+              </label>
+              <label class="signup-check" id="sponsor-ack-wrap" hidden>
+                <input type="checkbox" name="sponsor_licence_acknowledged" id="sponsor-licence-ack" />
+                <span>
+                  I understand we must perform checks and submit Home Office reports ourselves, and I accept sponsor duty terms in the
+                  <a href="./eula.html" target="_blank" rel="noopener">HR Module EULA</a>
                 </span>
               </label>
             </fieldset>

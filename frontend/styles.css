@@ -773,6 +773,73 @@ textarea:focus {
 
 .legal-note { margin-top: 4px; }
 
+.sponsor-duty-notice {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--green-100);
+  color: var(--green-800);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.sponsor-duty-reminder {
+  border: 1.5px solid var(--green-700);
+  background: linear-gradient(180deg, var(--green-100) 0%, #fff 100%);
+}
+
+.sponsor-duty-reminder h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.sponsor-duty-details {
+  margin-top: 12px;
+}
+
+.sponsor-duty-details summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--green-700);
+}
+
+.sponsor-duty-grid {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.sponsor-duty-item {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+}
+
+.sponsor-duty-item h4 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.sponsor-duty-item p {
+  margin: 0 0 6px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.sponsor-duty-item p:last-child {
+  margin-bottom: 0;
+}
+
+.signup-sponsor-duty-note {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--green-100);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .advert-panel { display: grid; gap: 18px; margin-top: 8px; }
 
 .advert-form label { align-content: start; }

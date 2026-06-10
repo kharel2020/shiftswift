@@ -60,7 +60,9 @@ def get_tenant_profile(*, tenant_id: int, conn: Any) -> dict[str, Any]:
             SELECT id, name, trading_name, company_number, registered_address, phone,
                    billing_email, vat_number, signatory_name, signatory_title, signatory_email,
                    subscription_plan, subscription_status, max_employees,
-                   payroll_plan_id, payroll_enabled
+                   payroll_plan_id, payroll_enabled,
+                   holds_sponsor_licence, sponsor_licence_acknowledged_at,
+                   sponsor_licence_acknowledged_by, sponsor_licence_ack_version
             FROM tenants WHERE id = %s
             """,
             (tenant_id,),
@@ -85,6 +87,11 @@ def get_tenant_profile(*, tenant_id: int, conn: Any) -> dict[str, Any]:
             "max_employees": row[13],
             "payroll_plan_id": row[14],
             "payroll_enabled": row[15],
+            "holds_sponsor_licence": bool(row[16]),
+            "sponsor_licence_acknowledged": row[17] is not None,
+            "sponsor_licence_acknowledged_at": row[17].isoformat() if row[17] else None,
+            "sponsor_licence_acknowledged_by": row[18],
+            "sponsor_licence_ack_version": row[19],
         }
 
 
@@ -495,5 +502,7 @@ def admin_overview(*, tenant_id: int, conn: Any) -> dict[str, Any]:
         "payroll_plan_id": profile["payroll_plan_id"],
         "trial_active": bool(plan_flags.get("trial_active")),
         "days_remaining": trial.get("days_remaining"),
+        "holds_sponsor_licence": bool(profile.get("holds_sponsor_licence")),
+        "sponsor_licence_acknowledged": bool(profile.get("sponsor_licence_acknowledged")),
         **plan_flags,
     }

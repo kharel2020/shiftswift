@@ -407,11 +407,51 @@
           <header class="section-header">
             <div>
               <h2>Sponsor Licence Safeguards</h2>
-              <p class="muted">Mandatory UK Home Office duty enforcement for sponsored visa workers.</p>
+              <p class="muted">Recording tools and alerts for UK sponsor licence duties — your organisation remains legally responsible for checks, SMS reporting, and Home Office submissions.</p>
             </div>
             <a class="btn secondary" id="rtw-checklist-link" href="#" target="_blank" rel="noopener">Open GOV.UK RTW Checklist</a>
           </header>
 
+          <article class="card edit-panel" id="sponsor-licence-ack-panel" hidden>
+            <header class="section-header section-header--compact">
+              <div>
+                <h3>Confirm sponsor licence holder &amp; your duties</h3>
+                <p class="muted">ShiftSwift HR helps you <strong>record</strong> compliance activity. You remain responsible for performing checks, acting on alerts, and reporting to the Home Office.</p>
+              </div>
+            </header>
+            <p class="sponsor-duty-notice" id="sponsor-licence-tools-notice"></p>
+            <div class="sponsor-duty-grid" id="sponsor-licence-duties-list" aria-label="Your sponsor licence duties"></div>
+            <p class="muted" id="sponsor-licence-ack-text"></p>
+            <label class="signup-check">
+              <input type="checkbox" id="sponsor-licence-holds" />
+              <span>Our organisation holds (or is applying for) a valid UK Sponsor Licence</span>
+            </label>
+            <label class="signup-check">
+              <input type="checkbox" id="sponsor-licence-understand" />
+              <span>I understand ShiftSwift HR records data we enter — it does not submit Home Office reports on our behalf</span>
+            </label>
+            <label class="signup-check">
+              <input type="checkbox" id="sponsor-licence-accept" />
+              <span>
+                I accept sponsor licence duty terms in the
+                <a href="./eula.html" target="_blank" rel="noopener">HR Module EULA</a>
+              </span>
+            </label>
+            <div class="edit-form-actions">
+              <button type="button" class="btn" id="sponsor-licence-ack-btn">Enable sponsor compliance tools</button>
+              <p class="edit-form-status muted" id="sponsor-licence-ack-status"></p>
+            </div>
+          </article>
+
+          <div id="compliance-tools-content">
+          <article class="card sponsor-duty-reminder" id="sponsor-duty-reminder" hidden>
+            <h3>Your duties — we provide the recording tools</h3>
+            <p class="muted" id="sponsor-duty-reminder-notice"></p>
+            <details class="sponsor-duty-details">
+              <summary>View sponsor licence duties vs what ShiftSwift HR does</summary>
+              <div class="sponsor-duty-grid" id="sponsor-duty-reminder-list"></div>
+            </details>
+          </article>
           <div class="alert-grid">
             <article class="alert-card" id="rtw-summary">
               <div class="alert-card-head">
@@ -602,13 +642,15 @@
           </article>
 
           <article class="card legal-note">
-            <h3>EULA liability shield</h3>
+            <h3>Software records — you act on duties</h3>
             <p class="muted legal-note-copy">
-              Customers accept mandatory clauses in the HR Module EULA: sponsor-licence duties remain the customer's sole responsibility,
-              and ShiftSwift HR is not liable for licence revocation where alerts were ignored.
+              ShiftSwift HR stores the evidence and alerts your team creates. You must still perform Right to Work checks,
+              submit SMS reports through official Home Office channels, and respond to day-9 absence alerts. See the
+              <a href="./eula.html" target="_blank" rel="noopener">HR Module EULA</a> for full liability terms.
             </p>
             <a class="btn ghost" href="./eula.html" target="_blank" rel="noopener">View HR Module EULA</a>
           </article>
+          </div>
         </section>
 
         <section id="contracts" class="admin-section" hidden>
@@ -881,7 +923,7 @@
     <script src="./admin-employees.js?v=7"></script>
     <script src="./admin-recruitment.js?v=4"></script>
     <script src="./admin-promotions.js?v=admin-v4"></script>
-    <script src="./admin-compliance.js?v=admin-v4"></script>
+    <script src="./admin-compliance.js?v=admin-v6"></script>
     <script src="./admin-grievance.js?v=admin-v4"></script>
     <script src="./admin-offboarding.js?v=admin-v4"></script>
     <script src="./admin-templates.js?v=admin-v6"></script>

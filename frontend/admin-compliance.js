@@ -3,6 +3,100 @@
   const { apiFetch, loadFormOptions, loadEmployees, mountEditForm, renderTableBody, FORM_SCHEMAS, escapeHtml, statusPill, downloadAuthenticated, authHeaders, API_BASE, parseHashBaseSection } = window.Admin;
 
   let complianceReady = false;
+  let ackPanelBound = false;
+
+  function renderSponsorDutyGrid(container, duties) {
+    if (!container || !Array.isArray(duties)) return;
+    container.innerHTML = duties
+      .map(
+        (item) => `<article class="sponsor-duty-item">
+          <h4>${escapeHtml(item.title)}</h4>
+          <p><strong>Your duty:</strong> ${escapeHtml(item.customer_duty)}</p>
+          <p class="muted"><strong>ShiftSwift HR:</strong> ${escapeHtml(item.software_role)}</p>
+        </article>`
+      )
+      .join("");
+  }
+
+  function applySponsorDutyCopy(data) {
+    const toolsNotice = document.getElementById("sponsor-licence-tools-notice");
+    if (toolsNotice && data.tools_notice) toolsNotice.textContent = data.tools_notice;
+
+    renderSponsorDutyGrid(document.getElementById("sponsor-licence-duties-list"), data.duties);
+
+    const reminder = document.getElementById("sponsor-duty-reminder");
+    const reminderNotice = document.getElementById("sponsor-duty-reminder-notice");
+    if (reminderNotice && data.tools_notice) reminderNotice.textContent = data.tools_notice;
+    renderSponsorDutyGrid(document.getElementById("sponsor-duty-reminder-list"), data.duties);
+    if (reminder && data.acknowledged) reminder.hidden = false;
+  }
+
+  async function ensureSponsorLicenceAcknowledged() {
+    const panel = document.getElementById("sponsor-licence-ack-panel");
+    const content = document.getElementById("compliance-tools-content");
+    if (!panel || !content) return true;
+
+    try {
+      const res = await apiFetch("/compliance/sponsor-licence/acknowledgement");
+      if (res.status === 403) {
+        panel.hidden = true;
+        content.hidden = false;
+        return true;
+      }
+      if (!res.ok) return false;
+      const data = await res.json();
+      applySponsorDutyCopy(data);
+      const ackText = document.getElementById("sponsor-licence-ack-text");
+      if (ackText && data.ack_text) ackText.textContent = data.ack_text;
+      if (data.acknowledged) {
+        panel.hidden = true;
+        content.hidden = false;
+        return true;
+      }
+      panel.hidden = false;
+      content.hidden = true;
+      bindAckPanel();
+      return false;
+    } catch {
+      return false;
+    }
+  }
+
+  function bindAckPanel() {
+    if (ackPanelBound) return;
+    ackPanelBound = true;
+    document.getElementById("sponsor-licence-ack-btn")?.addEventListener("click", async () => {
+      const status = document.getElementById("sponsor-licence-ack-status");
+      const holds = document.getElementById("sponsor-licence-holds");
+      const understand = document.getElementById("sponsor-licence-understand");
+      const accept = document.getElementById("sponsor-licence-accept");
+      if (!holds?.checked) {
+        if (status) status.textContent = "Confirm your organisation holds a UK Sponsor Licence.";
+        return;
+      }
+      if (!understand?.checked) {
+        if (status) status.textContent = "Confirm you understand ShiftSwift HR records data — it does not report to the Home Office for you.";
+        return;
+      }
+      if (!accept?.checked) {
+        if (status) status.textContent = "Accept sponsor duty terms in the HR Module EULA.";
+        return;
+      }
+      if (status) status.textContent = "Saving…";
+      try {
+        const res = await apiFetch("/compliance/sponsor-licence/acknowledgement", {
+          method: "POST",
+          body: JSON.stringify({ holds_sponsor_licence: true, accept_terms: true }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Could not save confirmation");
+        if (status) status.textContent = "Confirmed. Loading compliance tools…";
+        await initComplianceTools(true);
+      } catch (error) {
+        if (status) status.textContent = error.message;
+      }
+    });
+  }
 
   function riskPill(level) {
     const cls = level === "alert" ? "status-critical" : level === "warning" ? "status-warning" : "status-ok";
@@ -316,7 +410,11 @@
     host.dataset.mounted = "true";
   }
 
-  async function initComplianceTools() {
+  async function initComplianceTools(skipAckCheck = false) {
+    if (!skipAckCheck) {
+      const ready = await ensureSponsorLicenceAcknowledged();
+      if (!ready) return;
+    }
     mountRtwUploadForm();
     await mountShareCodeForm();
     await mountAbsenceDayForm();

@@ -93,6 +93,17 @@ function initSignupUi() {
     vatToggle.setAttribute("aria-expanded", open ? "true" : "false");
     vatToggle.textContent = open ? "− Hide VAT number" : "+ Add VAT number";
   });
+
+  const holdsSponsor = document.getElementById("holds-sponsor-licence");
+  const sponsorAckWrap = document.getElementById("sponsor-ack-wrap");
+  const sponsorAck = document.getElementById("sponsor-licence-ack");
+  const sponsorDutyNote = document.getElementById("signup-sponsor-duty-note");
+  holdsSponsor?.addEventListener("change", () => {
+    const show = holdsSponsor.checked;
+    if (sponsorAckWrap) sponsorAckWrap.hidden = !show;
+    if (sponsorDutyNote) sponsorDutyNote.hidden = !show;
+    if (!show && sponsorAck) sponsorAck.checked = false;
+  });
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -138,6 +149,8 @@ document.getElementById("signup-form")?.addEventListener("submit", async (event)
     start_trial: form.start_trial.checked,
     discount_code,
     referral_code,
+    holds_sponsor_licence: Boolean(form.holds_sponsor_licence?.checked),
+    sponsor_licence_acknowledged: Boolean(form.sponsor_licence_acknowledged?.checked),
   };
 
   if (status) status.textContent = "Creating your workspace…";
