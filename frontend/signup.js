@@ -166,6 +166,14 @@ document.getElementById("signup-form")?.addEventListener("submit", async (event)
       throw new Error(message || "Signup failed");
     }
 
+    if (!data.access_token) {
+      if (status) {
+        status.classList.add("form-success-message");
+        status.textContent = data.message || "If this email is eligible, check your inbox for sign-in instructions.";
+      }
+      return;
+    }
+
     localStorage.setItem("token", data.access_token);
     localStorage.setItem("refreshToken", data.refresh_token);
     localStorage.setItem("tenantId", String(data.tenant_id));

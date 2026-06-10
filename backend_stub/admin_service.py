@@ -449,9 +449,11 @@ def delete_document(
 
 
 def admin_overview(*, tenant_id: int, conn: Any) -> dict[str, Any]:
-    from plan_features import features_for_plan
+    from plan_features import effective_features_for_tenant
+    from trial_service import trial_snapshot
 
     profile = get_tenant_profile(tenant_id=tenant_id, conn=conn)
+    trial = trial_snapshot(tenant_id=tenant_id, conn=conn)
     with conn.cursor() as cur:
         cur.execute(
             "SELECT COUNT(*) FROM employees WHERE tenant_id = %s AND status = 'active'",
@@ -466,10 +468,12 @@ def admin_overview(*, tenant_id: int, conn: Any) -> dict[str, Any]:
         )
         sponsored_employees = int(cur.fetchone()[0])
 
-    plan_flags = features_for_plan(
-        profile["subscription_plan"],
+    plan_flags = effective_features_for_tenant(
+        plan_id=profile["subscription_plan"],
         payroll_enabled=bool(profile["payroll_enabled"]),
         sponsored_employees=sponsored_employees,
+        subscription_status=profile.get("subscription_status"),
+        trial_access_allowed=bool(trial.get("access_allowed")),
     )
     return {
         "tenant_name": profile["name"],
@@ -479,5 +483,7 @@ def admin_overview(*, tenant_id: int, conn: Any) -> dict[str, Any]:
         "active_employees": active_employees,
         "document_count": document_count,
         "payroll_plan_id": profile["payroll_plan_id"],
+        "trial_active": bool(plan_flags.get("trial_active")),
+        "days_remaining": trial.get("days_remaining"),
         **plan_flags,
     }

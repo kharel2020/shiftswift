@@ -13,7 +13,7 @@ from config import Settings
 from core.notifications import send_email_content
 
 PortalRole = Literal["hr", "employee", "any"]
-RESET_HOURS = int(os.getenv("PASSWORD_RESET_HOURS", "2"))
+RESET_HOURS = int(os.getenv("PASSWORD_RESET_HOURS", "24"))
 
 
 def _app_url() -> str:

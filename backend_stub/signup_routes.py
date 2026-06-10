@@ -58,6 +58,28 @@ def _db_conn() -> Any:
     return psycopg2.connect(url)
 
 
+def _business_email_registered(conn: Any, email: str) -> bool:
+    """True when email already has an active business-portal login (one email, one account)."""
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT 1
+            FROM app_users
+            WHERE lower(username) = lower(%s)
+              AND is_active = TRUE
+              AND COALESCE(login_portal, 'business') = 'business'
+            LIMIT 1
+            """,
+            (email.strip(),),
+        )
+        return cur.fetchone() is not None
+
+
+_SIGNUP_ACK_MESSAGE = (
+    "If this email is eligible for a workspace, check your inbox for sign-in instructions."
+)
+
+
 def _create_hr_admin_user(conn: Any, tenant_id: int, username: str, password: str) -> None:
     with conn.cursor() as cur:
         cur.execute(
@@ -135,7 +157,21 @@ def signup_start(payload: SignupStartRequest, request: Request) -> dict[str, obj
     tenant_id: int
     billing_info: dict[str, object]
     contracts_created: list[dict[str, Any]] = []
+    email_norm = str(payload.billing_email).strip().lower()
     try:
+        if _business_email_registered(conn, email_norm):
+            log_security_event(
+                settings,
+                event_type="signup_duplicate_email",
+                username=email_norm,
+                tenant_id=None,
+                ip_address=ip,
+                user_agent=user_agent,
+                success=False,
+                detail="email_already_registered",
+            )
+            return {"message": _SIGNUP_ACK_MESSAGE}
+
         with conn.cursor() as cur:
             cur.execute(
                 """

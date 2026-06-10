@@ -22,17 +22,12 @@ def _require_grievance_plan(
     x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
 ) -> None:
     from admin_service import get_tenant_profile
-    from plan_features import assert_plan_feature
+    from plan_features import assert_tenant_feature
 
     tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
     conn = get_connection()
     try:
-        profile = get_tenant_profile(tenant_id=tenant_id, conn=conn)
-        assert_plan_feature(
-            profile["subscription_plan"],
-            "grievance",
-            payroll_enabled=bool(profile["payroll_enabled"]),
-        )
+        assert_tenant_feature(tenant_id=tenant_id, feature="grievance", conn=conn)
     finally:
         conn.close()
 

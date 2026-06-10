@@ -632,6 +632,17 @@ textarea:focus {
   color: var(--white);
 }
 
+.nav-link--locked {
+  opacity: 0.72;
+}
+
+.nav-link--locked::after {
+  content: " · Upgrade";
+  font-size: 0.75rem;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
 .content { padding: 32px 36px 64px; min-width: 0; }
 
 .topbar {

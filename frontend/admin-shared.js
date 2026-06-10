@@ -147,7 +147,9 @@ window.Admin = (() => {
       const feature = el.dataset.feature;
       const enabled = isFeatureEnabled(feature);
       if (el.matches(".nav-link")) {
-        el.hidden = !enabled;
+        el.hidden = false;
+        el.classList.toggle("nav-link--locked", !enabled);
+        el.setAttribute("aria-disabled", enabled ? "false" : "true");
         return;
       }
       if (el.matches(".admin-section")) {
@@ -190,15 +192,7 @@ window.Admin = (() => {
 
   function resolveSectionFromHash(rawHash) {
     const { baseSection } = parseHashPath(rawHash);
-    const featureMap = {
-      payroll: "payroll",
-      compliance: "sponsor-compliance",
-    };
-    const feature = featureMap[baseSection];
-    if (feature && !isFeatureEnabled(feature)) {
-      return "overview";
-    }
-    return baseSection;
+    return baseSection || "overview";
   }
 
   async function loadEmployees() {
@@ -420,7 +414,7 @@ window.Admin = (() => {
     function routeFromHash() {
       const { path } = parseHashPath(window.location.hash);
       const sectionId = resolveSectionFromHash(window.location.hash);
-      const exists = sections.some((s) => s.id === sectionId && s.dataset.featureDisabled !== "true");
+      const exists = sections.some((s) => s.id === sectionId);
       const targetSection = exists ? sectionId : "overview";
       const isDeepLink = path.includes("/");
 
@@ -446,8 +440,6 @@ window.Admin = (() => {
       link.addEventListener("click", (event) => {
         event.preventDefault();
         const target = link.dataset.section;
-        const feature = link.dataset.feature;
-        if (feature && !isFeatureEnabled(feature)) return;
         window.location.hash = target;
       });
     });

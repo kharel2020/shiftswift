@@ -130,6 +130,7 @@
       await loadTenantFeatures();
       applyFeatureGates();
       grid.innerHTML = `
+        ${data.trial_active ? `<p class="promo-result" style="margin-bottom:1rem;">Your <strong>14-day trial</strong> includes full HR, compliance, and workforce tools${data.days_remaining != null ? ` — <strong>${escapeHtml(data.days_remaining)} days</strong> remaining` : ""}.</p>` : ""}
         <article class="metric-card">
           <strong>${escapeHtml(data.active_employees)}</strong>
           <span>Active employees</span>
