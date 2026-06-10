@@ -42,7 +42,8 @@ fi
 if [ -f backend_stub/.env ]; then
   set -a
   # shellcheck disable=SC1091
-  source backend_stub/.env
+  source "${API_ROOT}/scripts/load_env.sh"
+  load_env_file "${API_ROOT}/backend_stub/.env"
   set +a
   echo "==> migrations"
   bash scripts/run_migrations.sh
