@@ -228,6 +228,78 @@
   background: var(--gray-50, #f9fafb);
 }
 
+.pricing-secondary {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+  gap: 20px;
+  max-width: 1080px;
+  margin: 2rem auto 0;
+  align-items: stretch;
+}
+
+.pricing-integration-wrap {
+  min-width: 0;
+}
+
+.pricing-card--integration {
+  height: 100%;
+  border-color: var(--green-500, #2a9d7a);
+  background: linear-gradient(180deg, var(--white) 0%, rgba(232, 244, 240, 0.45) 100%);
+}
+
+.pricing-integration-grid {
+  display: grid;
+  gap: 20px;
+}
+
+.pricing-integration-split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.pricing-integration-split__col {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--white);
+  border: 1px solid var(--gray-200, #e5e7eb);
+}
+
+.pricing-integration-split__col strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: var(--text-caption-size);
+  color: var(--green-700);
+}
+
+.pricing-integration-split__col p {
+  margin: 0;
+  font-size: var(--text-caption-size);
+  color: var(--gray-700);
+  line-height: 1.45;
+}
+
+.pricing-card--enterprise {
+  max-width: none;
+  margin: 0;
+  text-align: left;
+  height: 100%;
+}
+
+.pricing-card--enterprise__value {
+  font-size: 1.75rem;
+}
+
+@media (max-width: 900px) {
+  .pricing-secondary {
+    grid-template-columns: 1fr;
+  }
+
+  .pricing-integration-split {
+    grid-template-columns: 1fr;
+  }
+}
+
 .pricing-calculator h3 {
   margin: 0 0 0.35rem;
   font-size: 1.125rem;
@@ -366,13 +438,7 @@
 
 .pricing-grid--payroll {
   margin-top: 20px;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.pricing-card--enterprise {
-  max-width: 420px;
-  margin: 20px auto 0;
-  text-align: center;
+  grid-template-columns: 1fr;
 }
 
 .pricing-card--payroll {

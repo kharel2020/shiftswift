@@ -78,18 +78,30 @@
   function renderPayrollPartners(container) {
     if (!container) return;
     container.innerHTML = `
-      <article class="pricing-card pricing-card--payroll pricing-card--partners">
+      <article class="pricing-card pricing-card--integration">
         <div class="pricing-card-head">
-          <div class="pricing-plan-name">Works with BrightPay &amp; Xero</div>
-          <p class="pricing-plan-desc">ShiftSwift HR does not run payroll or RTI. Export employee CSV from admin and continue pay runs in the software you already use.</p>
+          <span class="pricing-badge pricing-badge--muted">Included with every plan</span>
+          <div class="pricing-plan-name">Payroll export · BrightPay &amp; Xero</div>
+          <p class="pricing-plan-desc">ShiftSwift HR does not run HMRC RTI or payslips. Export employee data from admin and continue pay runs in the software you already use.</p>
         </div>
-        <ul class="pricing-features">
-          <li>Employee CSV export (NI, start date, salary)</li>
-          <li>Hours CSV from Time punch (optional)</li>
-          <li>Step-by-step BrightPay import guide</li>
-          <li>No payroll add-on subscription</li>
-        </ul>
-        <p class="pricing-staff-cap muted">HMRC RTI, payslips, and P45s stay in BrightPay, Xero, or your bureau.</p>
+        <div class="pricing-integration-grid">
+          <ul class="pricing-features">
+            <li>Employee CSV export (NI, start date, salary)</li>
+            <li>Hours CSV from Time punch (optional)</li>
+            <li>Step-by-step BrightPay import guide in admin</li>
+            <li>No payroll add-on subscription</li>
+          </ul>
+          <div class="pricing-integration-split" aria-label="What stays where">
+            <div class="pricing-integration-split__col">
+              <strong>In ShiftSwift HR</strong>
+              <p>Employee records, right-to-work, geofenced clock-in, sponsor compliance</p>
+            </div>
+            <div class="pricing-integration-split__col">
+              <strong>In BrightPay, Xero, or your bureau</strong>
+              <p>RTI submissions, payslips, P45s, and pay runs</p>
+            </div>
+          </div>
+        </div>
       </article>`;
   }
 
@@ -502,10 +514,11 @@
       (p) => p.billing_interval === "month"
     );
     planSelect.innerHTML = monthlyPlans
-      .map((p) => `<option value="${p.id}">${p.name}</option>`)
+      .map((p) => `<option value="${p.id}">${planSelectLabel(p)}</option>`)
       .join("");
-    if (!planSelect.value && monthlyPlans[0]) {
-      planSelect.value = monthlyPlans[0].id;
+    const defaultPlan = monthlyPlans.find((p) => p.id === "site_medium_monthly") || monthlyPlans[0];
+    if (defaultPlan) {
+      planSelect.value = defaultPlan.id;
     }
 
     function renderEstimate() {
@@ -515,16 +528,17 @@
       const billable = billableSeatQuantity(plan, active);
       const total = estimateMonthlyBill(plan, active);
       const incVat = formatMoney(total * 1.2);
-      resultEl.textContent = `≈ £${formatMoney(total)} + VAT / month (£${incVat} inc. VAT)`;
+      const cap = planMonthlyCap(plan);
+      const capSuffix = cap != null ? ` · cap £${formatMoney(cap)} + VAT` : "";
+      resultEl.textContent = `≈ £${formatMoney(total)} + VAT / month (£${incVat} inc. VAT)${capSuffix}`;
       if (detailEl) {
-        const cap = planMonthlyCap(plan);
         const capNote =
           active > billable && cap != null
-            ? ` Cap applies — billed for ${billable} of ${active} active employees.`
+            ? ` Monthly cap reached — billed for ${billable} of ${active} active employees.`
             : "";
         detailEl.textContent = `£${formatMoney(planBasePrice(plan))} base + £${formatMoney(
           planPerHeadPrice(plan)
-        )} × ${billable} active employee${billable === 1 ? "" : "s"}.${capNote}`;
+        )} × ${billable} active employee${billable === 1 ? "" : "s"} (ex VAT).${capNote}`;
       }
     }
 

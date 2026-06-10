@@ -12,7 +12,7 @@
     <link rel="icon" type="image/svg+xml" href="./assets/shiftswift-hr-icon.svg?v=brandkit-v2" />
     <link rel="apple-touch-icon" href="./assets/shiftswift-hr-icon.png?v=brandkit-v2" />
     <link rel="stylesheet" href="./landing.css?v=brandkit-v16" />
-    <link rel="stylesheet" href="./pricing.css?v=8" />
+    <link rel="stylesheet" href="./pricing.css?v=9" />
   </head>
   <body>
     <div id="startup-loader" class="startup-loader" role="status" aria-live="polite" aria-label="Loading ShiftSwift HR">
@@ -367,27 +367,23 @@
             <p id="pricing-calc-result" class="pricing-calculator__result" aria-live="polite"></p>
             <p id="pricing-calc-detail" class="pricing-calculator__detail muted"></p>
           </div>
-          <article class="pricing-card pricing-card--enterprise">
-            <div class="pricing-card-head">
-              <div class="pricing-plan-name">Enterprise</div>
-              <p class="pricing-plan-desc">100+ staff per site · bespoke setup, SLA, and procurement support.</p>
-            </div>
-            <div class="pricing-amount">
-              <span class="value" style="font-size:1.75rem;">Custom</span>
-              <span class="interval">per site / month</span>
-            </div>
-            <p class="pricing-staff-cap">Contact us for security reviews and custom data retention.</p>
-            <div class="pricing-card-actions">
-              <a class="btn ghost" href="mailto:hello@shiftswifthr.co.uk?subject=ShiftSwift%20HR%20Enterprise">Contact sales</a>
-            </div>
-          </article>
-          <div class="pricing-subsection">
-            <h3>Payroll partners <span class="pricing-model-tag">Works with your setup</span></h3>
-            <p class="muted">
-              ShiftSwift HR does not run HMRC RTI or payslips. Export employee data to BrightPay, Xero, or your bureau —
-              included with every HR plan.
-            </p>
-            <div id="pricing-payroll-plans" class="pricing-grid pricing-grid--payroll"></div>
+          <div class="pricing-secondary" aria-label="Enterprise and payroll integration">
+            <article class="pricing-card pricing-card--enterprise">
+              <div class="pricing-card-head">
+                <span class="pricing-badge pricing-badge--muted">100+ staff per site</span>
+                <div class="pricing-plan-name">Enterprise</div>
+                <p class="pricing-plan-desc">Bespoke setup, SLA, procurement support, and custom data retention.</p>
+              </div>
+              <div class="pricing-amount">
+                <span class="value pricing-card--enterprise__value">Custom</span>
+                <span class="interval">per site / month</span>
+              </div>
+              <p class="pricing-staff-cap">Security reviews, multi-site rollouts, and dedicated onboarding.</p>
+              <div class="pricing-card-actions">
+                <a class="btn ghost" href="mailto:hello@shiftswifthr.co.uk?subject=ShiftSwift%20HR%20Enterprise">Contact sales</a>
+              </div>
+            </article>
+            <div id="pricing-payroll-plans" class="pricing-integration-wrap"></div>
           </div>
         </section>
 
@@ -467,13 +463,13 @@
             <details class="faq-item">
               <summary>Can I cancel anytime?</summary>
               <div class="faq-item__answer">
-                <p>Yes. Monthly plans can be cancelled at any time. Annual plans run to the end of the billing period. See our <a href="./payment-terms.html" target="_blank" rel="noopener">payment terms</a> for full details.</p>
+                <p>Yes. Monthly plans can be cancelled at any time and run to the end of the billing period. See our <a href="./payment-terms.html" target="_blank" rel="noopener">payment terms</a> for full details.</p>
               </div>
             </details>
             <details class="faq-item">
               <summary>Do you support multi-site businesses?</summary>
               <div class="faq-item__answer">
-                <p>Yes. Plans are priced per site, so you add a plan for each location. A multi-site dashboard is available on Scale and Enterprise plans, giving you a consolidated view across all sites.</p>
+                <p>Yes. Plans are priced per site — add a subscription for each location. The Multi-site plan includes a consolidated dashboard across locations; Enterprise covers larger rollouts and bespoke SLAs.</p>
               </div>
             </details>
         </section>
@@ -516,7 +512,7 @@
     <script src="./landing-animations.js?v=3"></script>
     <script src="./landing-faq.js?v=2"></script>
     <script src="./brand-config.js?v=brand-v4"></script>
-    <script src="./pricing.js?v=8"></script>
+    <script src="./pricing.js?v=9"></script>
     <script>
       document.addEventListener("DOMContentLoaded", () => {
         window.ShiftSwiftPricing?.initMarketing("pricing-plans", "pricing-payroll-plans");
