@@ -51,8 +51,8 @@ Add:
 # ShiftSwift HR — daily backup 08:30 UTC
 30 8 * * * cd /home/shiftswifthr-api/htdocs/api.shiftswifthr.co.uk && source scripts/load_env.sh && load_env_file backend_stub/.env && bash scripts/backup_production.sh >> /var/log/shiftswifthr/backup.log 2>&1
 
-# Sponsor compliance alerts — daily 08:00 UTC (before HR inbox)
-0 8 * * * cd /home/shiftswifthr-api/htdocs/api.shiftswifthr.co.uk && source scripts/load_env.sh && load_env_file backend_stub/.env && bash scripts/run_sponsor_compliance_jobs.sh >> /var/log/shiftswifthr/compliance-jobs.log 2>&1
+# Sponsor compliance alerts — daily 08:00 UK (before 09:00 inbox)
+0 8 * * * cd /home/shiftswifthr-api/htdocs/api.shiftswifthr.co.uk && bash scripts/run_sponsor_compliance_jobs.sh >> /var/log/shiftswifthr/compliance-jobs.log 2>&1
 ```
 
 - [ ] First manual backup succeeds (`/var/backups/shiftswifthr/YYYY-MM-DD/`)
