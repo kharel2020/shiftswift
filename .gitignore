@@ -29,3 +29,6 @@ backend_stub/storage/contracts/
 
 # Logs
 *.log
+
+# Local strategy docs (not for repo)
+ShiftSwift_HR_Strategy_Copy.docx
