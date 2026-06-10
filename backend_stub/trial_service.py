@@ -149,10 +149,13 @@ def _queue_trial_email(
     *,
     tenant_id: int,
     to_email: str,
-    subject: str,
-    body: str,
+    content: Any,
     reminder_key: str,
 ) -> None:
+    from core.email_templates import EmailContent
+
+    if not isinstance(content, EmailContent):
+        raise TypeError("content must be EmailContent")
     cur.execute(
         """
         INSERT INTO notifications (tenant_id, channel, subject, body, payload, status)
@@ -160,9 +163,17 @@ def _queue_trial_email(
         """,
         (
             tenant_id,
-            subject,
-            body,
-            json.dumps({"to": to_email, "reminder_key": reminder_key, "type": "trial_upgrade", "purpose": "billing"}),
+            content.subject,
+            content.text,
+            json.dumps(
+                {
+                    "to": to_email,
+                    "reminder_key": reminder_key,
+                    "type": "trial_upgrade",
+                    "purpose": "billing",
+                    "html_body": content.html,
+                }
+            ),
         ),
     )
     _log_reminder(cur, tenant_id, reminder_key)
@@ -174,43 +185,17 @@ def _email_body(
     days_left: int | None,
     trial_ends_at: datetime | None,
     reminder_key: str,
-) -> tuple[str, str]:
-    upgrade_url = _upgrade_page_url()
+) -> Any:
+    from core.email_templates import trial_reminder_email
+
     end_label = trial_ends_at.date().isoformat() if isinstance(trial_ends_at, datetime) else "soon"
-    brand = "ShiftSwift HR"
-    domain = os.getenv("APP_DOMAIN", "shiftswifthr.co.uk")
-
-    if reminder_key == "expired":
-        subject = f"{brand} — your free trial has ended · upgrade to continue"
-        body = f"""Hello,
-
-Your 14-day {brand} trial for {tenant_name} ended on {end_label}.
-
-Upgrade now to keep access to HR records, sponsor compliance alerts, templates, and payroll add-ons:
-
-{upgrade_url}
-
-Questions? Reply to support@{domain}
-
-— {brand} · {domain}
-"""
-        return subject, body
-
-    day_word = "day" if days_left == 1 else "days"
-    subject = f"{brand} — {days_left} {day_word} left on your free trial"
-    body = f"""Hello,
-
-Your {brand} trial for {tenant_name} ends on {end_label} ({days_left} {day_word} remaining).
-
-Upgrade before the trial ends to avoid interruption:
-
-{upgrade_url}
-
-You can choose your plan on the billing page. All prices are shown ex VAT.
-
-— {brand} · {domain}
-"""
-    return subject, body
+    return trial_reminder_email(
+        tenant_name=tenant_name,
+        days_left=days_left,
+        trial_end_label=end_label,
+        reminder_key=reminder_key,
+        upgrade_url=_upgrade_page_url(),
+    )
 
 
 def _pick_reminder_key(days_left: int | None) -> str | None:
@@ -264,7 +249,7 @@ def process_trial_reminders(*, conn: Any, as_of: datetime | None = None) -> dict
                 )
                 summary["expired"] += 1
 
-            subject, body = _email_body(
+            content = _email_body(
                 tenant_name=name or f"Tenant {tenant_id}",
                 days_left=days_left,
                 trial_ends_at=trial_ends_at,
@@ -274,8 +259,7 @@ def process_trial_reminders(*, conn: Any, as_of: datetime | None = None) -> dict
                 cur,
                 tenant_id=tenant_id,
                 to_email=billing_email,
-                subject=subject,
-                body=body,
+                content=content,
                 reminder_key=reminder_key,
             )
             summary["reminders_sent"] += 1

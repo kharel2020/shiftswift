@@ -330,27 +330,46 @@ def send_contract_for_signature(
         )
 
         signing_url = f"{frontend_base.rstrip('/')}/sign-contract.html?token={token}"
-        subject = f"ShiftSwift HR — Please sign {TEMPLATE_REGISTRY.get(template_id, {}).get('name', 'contract')} ({contract_number})"
-        body = (
-            f"Dear {signatory_name or 'Customer'},\n\n"
-            f"Please review and sign your ShiftSwift HR legal agreement:\n{signing_url}\n\n"
-            f"This link expires in 30 days.\n\nShiftSwift HR"
+        contract_label = TEMPLATE_REGISTRY.get(template_id, {}).get("name", "contract")
+        from core.email_templates import contract_signing_email
+
+        content = contract_signing_email(
+            signatory_name=signatory_name,
+            contract_name=contract_label,
+            contract_number=contract_number,
+            signing_url=signing_url,
         )
         _log_event(cur, contract_id, tenant_id, "sent", actor, signing_url)
 
     from core.notifications import queue_email_notification
 
+    audience = "hr"
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT role FROM app_users
+            WHERE lower(username) = lower(%s) AND tenant_id = %s
+            LIMIT 1
+            """,
+            (signatory_email, tenant_id),
+        )
+        role_row = cur.fetchone()
+        if role_row and role_row[0] == "employee":
+            audience = "employee"
+
     queue_email_notification(
         conn=conn,
         tenant_id=tenant_id,
-        subject=subject,
-        body=body,
+        subject=content.subject,
+        body=content.text,
         purpose="contract",
         to=signatory_email,
         payload={
             "contract_id": contract_id,
             "signing_url": signing_url,
             "type": "contract_signing",
+            "audience": audience,
+            "html_body": content.html,
         },
         commit=False,
     )

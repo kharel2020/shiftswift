@@ -293,59 +293,17 @@ def _queue_payment_email(
             return
 
     billing_url = _billing_page_url()
-    domain = os.getenv("APP_DOMAIN", "shiftswifthr.co.uk")
 
-    if reminder_key == "failed":
-        subject = "ShiftSwift HR — Direct Debit payment failed (action required)"
-        body = f"""Hello,
+    from core.email_templates import payment_failure_email
 
-We could not collect your ShiftSwift HR subscription payment by Direct Debit for {tenant_name}.
-
-You have {DD_GRACE_DAYS} days to resolve this before your software licence is placed on hold.
-
-Update your payment details or pay now:
-{billing_url}
-
-If you believe this is an error, contact support@{domain}.
-
-— ShiftSwift HR · {domain}
-"""
-    elif reminder_key == "grace_mid":
-        subject = "ShiftSwift HR — payment still overdue"
-        body = f"""Hello,
-
-Your Direct Debit payment for ShiftSwift HR is still outstanding.
-
-Grace period remaining: {grace_days_left} day(s). After that, access will be restricted.
-
-Resolve payment: {billing_url}
-
-— ShiftSwift HR
-"""
-    elif reminder_key == "grace_1_day":
-        subject = "ShiftSwift HR — licence will be placed on hold tomorrow"
-        body = f"""Hello,
-
-This is your final reminder: your ShiftSwift HR licence will be placed on hold in 1 day unless payment is received.
-
-Pay or update Direct Debit: {billing_url}
-
-— ShiftSwift HR
-"""
-    else:
-        subject = "ShiftSwift HR — software licence on hold"
-        body = f"""Hello,
-
-Your ShiftSwift HR licence is now on hold because we have not received payment after the {DD_GRACE_DAYS}-day grace period.
-
-Admin access is restricted until payment succeeds.
-
-Restore access: {billing_url}
-
-Support: support@{domain}
-
-— ShiftSwift HR
-"""
+    template_key = "grace_start" if reminder_key == "failed" else reminder_key
+    content = payment_failure_email(
+        tenant_name=tenant_name,
+        reminder_key=template_key,
+        billing_url=billing_url,
+        grace_days_left=grace_days_left,
+        grace_period_days=DD_GRACE_DAYS,
+    )
 
     with conn.cursor() as cur:
         cur.execute(
@@ -355,14 +313,15 @@ Support: support@{domain}
             """,
             (
                 tenant_id,
-                subject,
-                body,
+                content.subject,
+                content.text,
                 json.dumps(
                     {
                         "to": billing_email,
                         "type": "payment_failure",
                         "reminder_key": reminder_key,
                         "purpose": "billing",
+                        "html_body": content.html,
                     }
                 ),
             ),

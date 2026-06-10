@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, EmailStr, Field
@@ -73,6 +76,40 @@ def _create_hr_admin_user(conn: Any, tenant_id: int, username: str, password: st
         )
 
 
+def _send_signup_welcome_email(
+    *,
+    tenant_id: int,
+    business_name: str,
+    billing_email: str,
+    plan_name: str,
+    trial_days: int,
+) -> None:
+    from core.email_templates import welcome_trial_email
+    from core.notifications import send_email_content
+
+    content = welcome_trial_email(
+        business_name=business_name,
+        billing_email=billing_email,
+        plan_name=plan_name,
+        trial_days=trial_days,
+    )
+    conn = _db_conn()
+    try:
+        send_email_content(
+            conn=conn,
+            tenant_id=tenant_id,
+            content=content,
+            purpose="welcome",
+            to=billing_email,
+            audience="hr",
+            deliver_now=True,
+        )
+    except Exception:
+        logger.exception("Welcome email failed for tenant %s", tenant_id)
+    finally:
+        conn.close()
+
+
 @router.post("/start")
 def signup_start(payload: SignupStartRequest, request: Request) -> dict[str, object]:
     settings = load_settings()
@@ -139,33 +176,48 @@ def signup_start(payload: SignupStartRequest, request: Request) -> dict[str, obj
             vat_number=payload.vat_number,
             payroll_plan=payroll_plan,
         )
-        contracts_created = generate_contract_pack(
-            conn,
-            tenant_id=tenant_id,
-            customer_legal_name=payload.business_name.strip(),
-            signatory_email=str(payload.billing_email),
-            vat_number=payload.vat_number,
-            plan_id=plan.id,
-            plan_name=plan.name,
-            plan_price_gbp_ex_vat=plan.price_gbp_ex_vat,
-            max_employees=plan.max_employees,
-            billing_interval=plan.billing_interval,
-            payroll_plan_id=payroll_plan.id if payroll_plan else None,
-            payroll_plan_name=payroll_plan.name if payroll_plan else None,
-            payroll_price_gbp_ex_vat=payroll_plan.price_gbp_ex_vat if payroll_plan else None,
-            created_by="signup",
-        )
+        try:
+            contracts_created = generate_contract_pack(
+                conn,
+                tenant_id=tenant_id,
+                customer_legal_name=payload.business_name.strip(),
+                signatory_email=str(payload.billing_email),
+                vat_number=payload.vat_number,
+                plan_id=plan.id,
+                plan_name=plan.name,
+                plan_price_gbp_ex_vat=plan.price_gbp_ex_vat,
+                max_employees=plan.max_employees,
+                billing_interval=plan.billing_interval,
+                payroll_plan_id=payroll_plan.id if payroll_plan else None,
+                payroll_plan_name=payroll_plan.name if payroll_plan else None,
+                payroll_price_gbp_ex_vat=payroll_plan.price_gbp_ex_vat if payroll_plan else None,
+                created_by="signup",
+            )
+        except Exception:
+            logger.exception("Contract pack generation failed during signup for tenant %s", tenant_id)
         conn.commit()
     except HTTPException:
         conn.rollback()
         raise
     except Exception as exc:
         conn.rollback()
-        raise HTTPException(status_code=502, detail="Billing setup failed") from exc
+        logger.exception("Signup failed for %s", payload.billing_email)
+        raise HTTPException(
+            status_code=503,
+            detail="Could not finish setting up your workspace. Please try again or email support@shiftswifthr.co.uk.",
+        ) from exc
     finally:
         conn.close()
 
     contracts_count = len(contracts_created)
+
+    _send_signup_welcome_email(
+        tenant_id=tenant_id,
+        business_name=payload.business_name.strip(),
+        billing_email=str(payload.billing_email).strip().lower(),
+        plan_name=plan.name,
+        trial_days=int(billing_info.get("trial_days") or 14),
+    )
 
     log_security_event(
         settings,

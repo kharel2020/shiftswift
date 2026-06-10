@@ -1,7 +1,25 @@
-const API_BASE =
-  (window.ShiftSwiftBrand?.resolveApiBase && window.ShiftSwiftBrand.resolveApiBase()) ||
-  localStorage.getItem("apiBaseUrl") ||
-  "http://localhost:3000";
+function resolveSignupApiBase() {
+  if (window.ShiftSwiftBrand?.resolveApiBase) {
+    return window.ShiftSwiftBrand.resolveApiBase();
+  }
+  const stored = localStorage.getItem("apiBaseUrl");
+  if (stored && !/localhost|127\.0\.0\.1/.test(stored)) {
+    return stored;
+  }
+  return "http://localhost:3000";
+}
+
+const API_BASE = resolveSignupApiBase();
+
+function friendlySignupError(message) {
+  if (message === "Failed to fetch" || message === "Load failed") {
+    return "Cannot reach the signup service. Check your connection and try again, or email support@shiftswifthr.co.uk.";
+  }
+  if (message === "Unexpected token" || message.startsWith("Unexpected token")) {
+    return "The signup service returned an unexpected response. Please try again in a moment.";
+  }
+  return message || "Signup failed. Please try again.";
+}
 
 let currentPlanId = "site_starter_monthly";
 let currentPayrollPlanId = null;
@@ -134,8 +152,19 @@ document.getElementById("signup-form")?.addEventListener("submit", async (event)
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || "Signup failed");
+    let data = {};
+    try {
+      data = await res.json();
+    } catch {
+      if (!res.ok) {
+        throw new Error(`Signup service error (${res.status}). Please try again.`);
+      }
+    }
+    if (!res.ok) {
+      const detail = data.detail;
+      const message = typeof detail === "string" ? detail : Array.isArray(detail) ? detail[0]?.msg : null;
+      throw new Error(message || "Signup failed");
+    }
 
     localStorage.setItem("token", data.access_token);
     localStorage.setItem("refreshToken", data.refresh_token);
@@ -151,6 +180,6 @@ document.getElementById("signup-form")?.addEventListener("submit", async (event)
 
     window.location.href = `./signup-success.html?tenant=${data.tenant_id}&plan=${encodeURIComponent(data.plan_id)}`;
   } catch (error) {
-    if (status) status.textContent = error.message;
+    if (status) status.textContent = friendlySignupError(error.message);
   }
 });

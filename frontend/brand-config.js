@@ -36,7 +36,12 @@ window.ShiftSwiftBrand.resolveApiBase = function resolveApiBase() {
   }
 
   const stored = localStorage.getItem("apiBaseUrl");
-  if (stored) return stored;
+  if (stored && !/localhost|127\.0\.0\.1/.test(stored)) {
+    return stored;
+  }
+  if (stored) {
+    localStorage.removeItem("apiBaseUrl");
+  }
 
   if (host.startsWith("app.") || host.includes("shiftswifthr")) {
     return window.ShiftSwiftBrand.urls.api;

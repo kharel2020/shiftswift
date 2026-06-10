@@ -7,17 +7,107 @@ import os
 import re
 import smtplib
 from email.message import EmailMessage
+from email.utils import formataddr
 from typing import Any, Literal
 
 import httpx
 
-EmailPurpose = Literal["billing", "contract", "compliance", "general"]
+EmailPurpose = Literal[
+    "billing",
+    "contract",
+    "compliance",
+    "general",
+    "welcome",
+    "password_reset",
+    "employee",
+]
+EmailAudience = Literal["hr", "employee", "platform"]
 
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 def smtp_configured() -> bool:
     return bool(os.getenv("SMTP_HOST") and os.getenv("SMTP_FROM"))
+
+
+def _support_email() -> str:
+    return os.getenv("EMAIL_SUPPORT", "support@shiftswifthr.co.uk")
+
+
+def resolve_tenant_company_email(contacts: dict[str, str | None] | None) -> str | None:
+    """Best tenant contact for business Reply-To (billing → signatory → HR login)."""
+    if not contacts:
+        return None
+    for key in ("billing_email", "signatory_email", "hr_email"):
+        value = contacts.get(key)
+        if value and _looks_like_email(str(value)):
+            return str(value).strip()
+    return None
+
+
+def resolve_reply_to(
+    *,
+    audience: EmailAudience | str = "hr",
+    purpose: EmailPurpose | str = "general",
+    contacts: dict[str, str | None] | None = None,
+    explicit: str | None = None,
+) -> str:
+    """
+    Reply-To routing:
+    - ShiftSwift platform / employee mail → support@shiftswifthr.co.uk
+    - HR / tenant business mail → tenant company email when available
+    """
+    if explicit and _looks_like_email(explicit):
+        return explicit.strip()
+    if audience in {"employee", "platform"}:
+        return _support_email()
+    if purpose in {"welcome", "password_reset"}:
+        return _support_email()
+    company = resolve_tenant_company_email(contacts)
+    if company:
+        return company
+    return _support_email()
+
+
+def format_reply_to_header(
+    reply_to: str,
+    *,
+    contacts: dict[str, str | None] | None = None,
+) -> str:
+    """Format Reply-To with a readable display name where appropriate."""
+    address = reply_to.strip()
+    if not _looks_like_email(address):
+        return address
+    if address.lower() == _support_email().lower():
+        label = os.getenv("SMTP_REPLY_NAME", f"{_platform_from_name()} Support")
+        return formataddr((label, address))
+    company = resolve_tenant_company_email(contacts)
+    tenant_name = (contacts or {}).get("tenant_name")
+    if company and address.lower() == company.lower() and tenant_name:
+        return formataddr((str(tenant_name).strip(), address))
+    return address
+
+
+def _platform_from_name() -> str:
+    return os.getenv("SMTP_FROM_NAME", os.getenv("APP_NAME", "ShiftSwift HR"))
+
+
+def _parse_from_email() -> str:
+    raw = os.getenv("SMTP_FROM", "").strip()
+    if not raw:
+        return raw
+    if "<" in raw and ">" in raw:
+        return raw.split("<", 1)[1].split(">", 1)[0].strip()
+    return raw
+
+
+def format_from_header(*, audience: EmailAudience | str = "hr") -> str:
+    """Use platform display name in From — never the tenant business name (employee-safe)."""
+    from_email = _parse_from_email()
+    display = _platform_from_name()
+    if not from_email:
+        return display
+    return formataddr((display, from_email))
 
 
 def _looks_like_email(value: str | None) -> bool:
@@ -103,8 +193,14 @@ def build_email_payload(
     recipient = resolve_email_recipient(purpose=purpose, contacts=contacts, explicit=to or merged.get("to"))
     if recipient:
         merged["to"] = recipient
-    if purpose == "contract" and contacts.get("billing_email"):
-        merged.setdefault("reply_to", contacts["billing_email"])
+    if "audience" not in merged:
+        merged["audience"] = "employee" if purpose == "employee" else "hr"
+    merged["reply_to"] = resolve_reply_to(
+        audience=str(merged.get("audience") or "hr"),
+        purpose=purpose,
+        contacts=contacts,
+        explicit=merged.get("reply_to"),
+    )
     return merged
 
 
@@ -134,6 +230,104 @@ def queue_email_notification(
             VALUES (%s, 'email', %s, %s, %s::jsonb, 'queued')
             """,
             (tenant_id, subject, body, json.dumps(payload_out)),
+        )
+    if commit:
+        conn.commit()
+    return payload_out
+
+
+def send_email_content(
+    *,
+    conn: Any,
+    tenant_id: int | None,
+    content: Any,
+    purpose: EmailPurpose | str = "general",
+    to: str,
+    audience: EmailAudience | str = "hr",
+    reply_to: str | None = None,
+    payload: dict[str, Any] | None = None,
+    deliver_now: bool = True,
+    commit: bool = True,
+) -> dict[str, Any]:
+    """Send a structured EmailContent object (subject + text + html)."""
+    from core.email_templates import EmailContent
+
+    if not isinstance(content, EmailContent):
+        raise TypeError("content must be EmailContent")
+    return send_email_notification(
+        conn=conn,
+        tenant_id=tenant_id,
+        subject=content.subject,
+        body=content.text,
+        html_body=content.html,
+        purpose=purpose,
+        to=to,
+        audience=audience,
+        reply_to=reply_to,
+        payload=payload,
+        deliver_now=deliver_now,
+        commit=commit,
+    )
+
+
+def send_email_notification(
+    *,
+    conn: Any,
+    tenant_id: int | None,
+    subject: str,
+    body: str,
+    html_body: str | None = None,
+    purpose: EmailPurpose | str = "general",
+    to: str,
+    audience: EmailAudience | str = "hr",
+    reply_to: str | None = None,
+    payload: dict[str, Any] | None = None,
+    deliver_now: bool = True,
+    commit: bool = True,
+) -> dict[str, Any]:
+    """Queue an email and optionally deliver immediately via SMTP."""
+    contacts = None
+    if tenant_id:
+        contacts = fetch_tenant_contacts(tenant_id=tenant_id, conn=conn)
+    resolved_reply = resolve_reply_to(
+        audience=audience,
+        purpose=purpose,
+        contacts=contacts,
+        explicit=reply_to,
+    )
+    payload_out = dict(payload or {})
+    payload_out.update(
+        {
+            "purpose": purpose,
+            "to": to.strip(),
+            "audience": audience,
+            "reply_to": resolved_reply,
+        }
+    )
+    if html_body:
+        payload_out["html_body"] = html_body
+    status = "queued"
+    delivery_error = None
+    if deliver_now and smtp_configured():
+        try:
+            _send_email(conn=conn, tenant_id=tenant_id, subject=subject, body=body, payload=payload_out)
+            status = "sent"
+        except Exception as exc:
+            delivery_error = str(exc)[:500]
+            status = "failed"
+    elif deliver_now and not smtp_configured():
+        _log_channel("email", subject, body, payload_out)
+
+    if delivery_error:
+        payload_out["delivery_error"] = delivery_error
+
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO notifications (tenant_id, channel, subject, body, payload, status)
+            VALUES (%s, 'email', %s, %s, %s::jsonb, %s)
+            """,
+            (tenant_id, subject, body, json.dumps(payload_out), status),
         )
     if commit:
         conn.commit()
@@ -237,6 +431,16 @@ def _resolve_delivery_recipient(
     return os.getenv("COMPLIANCE_ALERT_EMAIL") or os.getenv("SMTP_TO")
 
 
+def _resolve_html_and_text(*, subject: str, body: str, payload: dict[str, Any]) -> tuple[str, str]:
+    html_body = payload.get("html_body")
+    if html_body:
+        return body, str(html_body)
+    from core.email_templates import generic_notification_email
+
+    wrapped = generic_notification_email(subject=subject, message=body)
+    return wrapped.text, wrapped.html
+
+
 def _send_email(
     *,
     conn: Any,
@@ -256,12 +460,21 @@ def _send_email(
 
     msg = EmailMessage()
     msg["Subject"] = subject
-    msg["From"] = os.getenv("SMTP_FROM", "")
+    audience = str(payload.get("audience") or "hr")
+    msg["From"] = format_from_header(audience=audience)
     msg["To"] = to_addr
-    reply_to = payload.get("reply_to")
+    contacts = fetch_tenant_contacts(tenant_id=tenant_id, conn=conn) if tenant_id else None
+    reply_to = resolve_reply_to(
+        audience=str(payload.get("audience") or "hr"),
+        purpose=str(payload.get("purpose") or "general"),
+        contacts=contacts,
+        explicit=payload.get("reply_to"),
+    )
     if reply_to and _looks_like_email(str(reply_to)):
-        msg["Reply-To"] = str(reply_to).strip()
-    msg.set_content(body)
+        msg["Reply-To"] = format_reply_to_header(str(reply_to).strip(), contacts=contacts)
+    text_body, html_body = _resolve_html_and_text(subject=subject, body=body, payload=payload)
+    msg.set_content(text_body, charset="utf-8")
+    msg.add_alternative(html_body, subtype="html", charset="utf-8")
 
     host = os.getenv("SMTP_HOST", "")
     port = int(os.getenv("SMTP_PORT", "587"))

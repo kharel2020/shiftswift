@@ -212,15 +212,17 @@ def _queue_compliance_notification(
     message: str,
 ) -> None:
     try:
+        from core.email_templates import compliance_alert_email
         from core.notifications import queue_email_notification
 
+        content = compliance_alert_email(message=message)
         queue_email_notification(
             conn=conn,
             tenant_id=tenant_id,
-            subject="ShiftSwift HR: Compliance action required",
-            body=message,
+            subject=content.subject,
+            body=content.text,
             purpose="compliance",
-            payload={"employee_id": employee_id, "module": "compliance"},
+            payload={"employee_id": employee_id, "module": "compliance", "html_body": content.html},
         )
     except Exception:
         conn.rollback()

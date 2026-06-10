@@ -274,6 +274,12 @@ a { color: inherit; }
   display: none;
 }
 
+.form-success-message {
+  background: var(--green-100, #e1f5ee);
+  border-color: rgba(15, 110, 86, 0.2);
+  color: var(--green-800, #085041);
+}
+
 .portal-login-submit {
   width: 100%;
   min-height: 50px;

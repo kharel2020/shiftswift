@@ -201,6 +201,11 @@ function switchLoginMode(nextMode) {
   if (lead) lead.textContent = mode.lead;
   if (submit) submit.textContent = mode.submit;
   if (usernameInput) usernameInput.placeholder = mode.usernamePlaceholder;
+  const forgotLink = document.getElementById("forgot-password-link");
+  if (forgotLink) {
+    forgotLink.href =
+      activeLoginMode === "employee" ? "./forgot-password.html?role=employee" : "./forgot-password.html";
+  }
   setStatus("");
 }
 

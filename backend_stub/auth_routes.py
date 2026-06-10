@@ -17,6 +17,7 @@ from auth_mfa import (
     portal_allows_user,
     verify_user_mfa_code,
 )
+from auth_password_reset import complete_password_reset, request_password_reset
 from auth_service import (
     AuthUser,
     authenticate_user,
@@ -57,6 +58,16 @@ class MfaEnableRequest(BaseModel):
 class MfaDisableRequest(BaseModel):
     password: str = Field(min_length=1, max_length=256)
     code: str = Field(min_length=6, max_length=8)
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=254)
+    role: Literal["hr", "employee", "any"] = "any"
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(min_length=20, max_length=256)
+    new_password: str = Field(min_length=8, max_length=256)
 
 
 def _db_conn():
@@ -328,6 +339,46 @@ def mfa_status(current_user: Annotated[AuthUser, Depends(get_current_user)]) -> 
         "mfa_enabled": bool(user.get("mfa_enabled")),
         "role": user["role"],
     }
+
+
+@router.post("/forgot-password")
+def forgot_password(request: Request, payload: ForgotPasswordRequest) -> dict[str, str]:
+    if not settings.use_db or not settings.database_url:
+        raise HTTPException(status_code=503, detail="Password reset requires database")
+    conn = _db_conn()
+    try:
+        return request_password_reset(
+            settings=settings,
+            conn=conn,
+            email=payload.email.strip(),
+            role_hint=payload.role,
+            ip_address=client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+        )
+    finally:
+        conn.close()
+
+
+@router.post("/reset-password")
+def reset_password(request: Request, payload: ResetPasswordRequest) -> dict[str, str]:
+    if not settings.use_db or not settings.database_url:
+        raise HTTPException(status_code=503, detail="Password reset requires database")
+    conn = _db_conn()
+    try:
+        return complete_password_reset(
+            settings=settings,
+            conn=conn,
+            raw_token=payload.token,
+            new_password=payload.new_password,
+            ip_address=client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    finally:
+        conn.close()
 
 
 @router.post("/refresh")
