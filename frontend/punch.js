@@ -21,9 +21,16 @@
   const installBtn = document.getElementById("pwa-install-btn");
   const installDismiss = document.getElementById("pwa-install-dismiss");
   const installCopy = document.getElementById("pwa-install-copy");
+  const offlineBanner = document.getElementById("punch-offline-banner");
+  const updateBanner = document.getElementById("punch-update-banner");
+  const updateBtn = document.getElementById("punch-update-btn");
 
   let pendingChallenge = null;
   let deferredInstallPrompt = null;
+  let punchInFlight = false;
+  let refreshInFlight = null;
+  let clockedInState = false;
+  let waitingServiceWorker = null;
 
   function secureHostLabel() {
     const fromBrand = window.ShiftSwiftBrand?.domain;
@@ -46,12 +53,21 @@
     return localStorage.getItem("tenantId");
   }
 
-  function authHeaders() {
-    return {
+  function authHeaders(json = true) {
+    const headers = {
       Authorization: `Bearer ${token()}`,
       "X-Tenant-Id": tenantId() || "",
-      "Content-Type": "application/json",
     };
+    if (json) headers["Content-Type"] = "application/json";
+    return headers;
+  }
+
+  function parseApiError(data, fallback) {
+    const detail = data?.detail;
+    if (typeof detail === "string") return detail;
+    if (typeof detail === "object" && detail?.message) return detail.message;
+    if (Array.isArray(detail) && detail[0]?.msg) return detail[0].msg;
+    return data?.message || fallback;
   }
 
   function setInlineStatus(el, message) {
@@ -87,22 +103,82 @@
     if (data.tenant_id) localStorage.setItem("tenantId", String(data.tenant_id));
   }
 
-  async function postJson(path, body) {
+  function setOnlineState(online) {
+    if (offlineBanner) offlineBanner.hidden = online;
+    syncClockButtons();
+  }
+
+  function syncClockButtons() {
+    const online = navigator.onLine;
+    if (clockInBtn) {
+      clockInBtn.disabled = punchInFlight || !online || clockedInState;
+    }
+    if (clockOutBtn) {
+      clockOutBtn.disabled = punchInFlight || !online || !clockedInState;
+    }
+  }
+
+  async function refreshAccessToken() {
+    if (refreshInFlight) return refreshInFlight;
+    const refresh = localStorage.getItem("refreshToken");
+    if (!refresh) return false;
+
+    refreshInFlight = (async () => {
+      try {
+        const response = await fetch(`${API_BASE}/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refresh_token: refresh }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) return false;
+        storeSession(data);
+        return true;
+      } catch {
+        return false;
+      } finally {
+        refreshInFlight = null;
+      }
+    })();
+
+    return refreshInFlight;
+  }
+
+  async function apiFetch(path, options = {}) {
+    const request = async () =>
+      fetch(`${API_BASE}${path}`, {
+        ...options,
+        headers: { ...authHeaders(options.body != null), ...(options.headers || {}) },
+      });
+
     let response;
     try {
-      response = await fetch(`${API_BASE}${path}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      response = await request();
     } catch {
       throw new Error("Cannot reach the API. Check your connection and try again.");
     }
+
+    if (response.status === 401) {
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
+        try {
+          response = await request();
+        } catch {
+          throw new Error("Cannot reach the API. Check your connection and try again.");
+        }
+      }
+    }
+    return response;
+  }
+
+  async function postJson(path, body) {
+    const response = await apiFetch(path, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      const detail = data.detail;
-      const message = typeof detail === "string" ? detail : Array.isArray(detail) ? detail[0]?.msg : null;
-      throw new Error(message || data.message || "Request failed");
+      throw new Error(parseApiError(data, "Request failed"));
     }
     return data;
   }
@@ -139,14 +215,28 @@
       return false;
     }
 
+    if (!navigator.onLine) {
+      showView(clockView);
+      if (userLine) userLine.textContent = "Signed in (offline — reconnect to refresh status)";
+      if (statusEl) {
+        statusEl.textContent = "Offline. Connect to load your latest punch status.";
+        statusEl.className = "punch-clock-status is-out";
+      }
+      setOnlineState(false);
+      maybeShowInstallBanner();
+      return true;
+    }
+
     try {
-      const response = await fetch(`${API_BASE}/auth/verify`, {
-        headers: { Authorization: `Bearer ${currentToken}` },
-      });
+      const response = await apiFetch("/auth/verify", { method: "GET", headers: authHeaders(false) });
       if (response.status === 401) {
         clearSession();
+        setInlineStatus(loginStatus, "Session expired. Sign in again.");
         showView(loginView);
         return false;
+      }
+      if (!response.ok) {
+        throw new Error("Could not verify session");
       }
       const user = await response.json();
       if (user.role !== "employee") {
@@ -159,29 +249,48 @@
         userLine.textContent = `Signed in as ${user.username}`;
       }
       showView(clockView);
+      setOnlineState(true);
       maybeShowInstallBanner();
       await loadStatus();
       return true;
     } catch {
       showView(clockView);
-      if (statusEl) statusEl.textContent = "Could not verify your session. Try signing in again.";
+      setOnlineState(navigator.onLine);
+      if (statusEl) {
+        statusEl.textContent = navigator.onLine
+          ? "Could not verify your session. Try signing in again."
+          : "Offline. Connect to refresh your punch status.";
+        statusEl.className = "punch-clock-status is-out";
+      }
       maybeShowInstallBanner();
       return true;
     }
   }
 
   async function loadStatus() {
-    if (!statusEl) return;
+    if (!statusEl || !token()) return;
+    if (!navigator.onLine) {
+      setOnlineState(false);
+      return;
+    }
+
     try {
-      const response = await fetch(`${API_BASE}/time-punch/status`, { headers: authHeaders() });
+      const response = await apiFetch("/time-punch/status", { method: "GET", headers: authHeaders(false) });
+      if (response.status === 401) {
+        clearSession();
+        setInlineStatus(loginStatus, "Session expired. Sign in again.");
+        showView(loginView);
+        return;
+      }
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        statusEl.textContent = err.detail || "Could not load punch status.";
+        statusEl.textContent = parseApiError(err, "Could not load punch status.");
         statusEl.className = "punch-clock-status is-out";
         return;
       }
       const data = await response.json();
       const last = data.last_punch;
+      clockedInState = Boolean(data.clocked_in);
       if (data.clocked_in) {
         statusEl.innerHTML = `<strong>Clocked in</strong> since ${formatTime(last?.punched_at)}${last?.site_name ? ` at ${last.site_name}` : ""}.`;
         statusEl.className = "punch-clock-status is-in";
@@ -198,55 +307,100 @@
           ? sites.map((s) => `<li>${s.name}: ${s.address} (${s.radius_meters}m radius)</li>`).join("")
           : "<li>No punch sites configured. Ask HR.</li>";
       }
-      if (clockInBtn) clockInBtn.disabled = Boolean(data.clocked_in);
-      if (clockOutBtn) clockOutBtn.disabled = !data.clocked_in;
+      setOnlineState(true);
+      syncClockButtons();
     } catch {
       statusEl.textContent = "Could not reach the time punch service.";
       statusEl.className = "punch-clock-status is-out";
+      setOnlineState(navigator.onLine);
     }
   }
 
-  function readLocation() {
+  function friendlyGeoError(error) {
+    const code = error?.code;
+    if (code === 1) {
+      return "Location permission denied. Allow location for this app in your browser or phone settings.";
+    }
+    if (code === 2) {
+      return "Location unavailable. Try moving outdoors or turning off airplane mode.";
+    }
+    if (code === 3) {
+      return "Location timed out. Check GPS signal and try again.";
+    }
+    return error?.message || "Could not read your location.";
+  }
+
+  function readLocationOnce(options) {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
         reject(new Error("Location is not supported on this device."));
         return;
       }
-      navigator.geolocation.getCurrentPosition(
-        (pos) =>
-          resolve({
-            latitude: pos.coords.latitude,
-            longitude: pos.coords.longitude,
-            accuracy_meters: pos.coords.accuracy,
-          }),
-        (err) => reject(new Error(err.message || "Could not read your location.")),
-        { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
-      );
+      navigator.geolocation.getCurrentPosition(resolve, reject, options);
     });
   }
 
+  async function readLocation() {
+    const primary = { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 };
+    try {
+      const pos = await readLocationOnce(primary);
+      return {
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+        accuracy_meters: pos.coords.accuracy,
+      };
+    } catch (firstError) {
+      if (firstError?.code !== 3) {
+        throw new Error(friendlyGeoError(firstError));
+      }
+      const pos = await readLocationOnce({ enableHighAccuracy: false, timeout: 25000, maximumAge: 15000 });
+      return {
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+        accuracy_meters: pos.coords.accuracy,
+      };
+    }
+  }
+
   async function submitPunch(punchType) {
+    if (punchInFlight) return;
+    if (!navigator.onLine) {
+      setMessage("You are offline. Connect to the internet to clock in or out.", "error");
+      return;
+    }
+
+    punchInFlight = true;
+    syncClockButtons();
     setMessage("Reading your location…", "info");
+
     try {
       const location = await readLocation();
       setMessage("Submitting punch…", "info");
-      const response = await fetch(`${API_BASE}/time-punch/punch`, {
+      const response = await apiFetch("/time-punch/punch", {
         method: "POST",
-        headers: authHeaders(),
         body: JSON.stringify({ punch_type: punchType, ...location }),
       });
       const data = await response.json().catch(() => ({}));
+      if (response.status === 401) {
+        clearSession();
+        setInlineStatus(loginStatus, "Session expired. Sign in again.");
+        showView(loginView);
+        return;
+      }
       if (!response.ok) {
-        setMessage(data.detail || "Punch failed.", "error");
+        setMessage(parseApiError(data, "Punch failed."), "error");
         return;
       }
       setMessage(
         `${punchType === "in" ? "Clocked in" : "Clocked out"} at ${data.site_name} (${Math.round(data.distance_meters)}m from site).`,
         "success"
       );
-      loadStatus();
+      await loadStatus();
     } catch (error) {
       setMessage(error.message || "Punch failed.", "error");
+    } finally {
+      punchInFlight = false;
+      syncClockButtons();
     }
   }
 
@@ -285,6 +439,48 @@
       if (installBtn) installBtn.hidden = true;
     }
   }
+
+  function showUpdateBanner(worker) {
+    waitingServiceWorker = worker;
+    if (updateBanner) updateBanner.hidden = false;
+  }
+
+  function registerServiceWorker() {
+    if (!("serviceWorker" in navigator)) return;
+
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (sessionStorage.getItem("punchSwReloaded") === "1") return;
+      sessionStorage.setItem("punchSwReloaded", "1");
+      window.location.reload();
+    });
+
+    window.addEventListener("load", () => {
+      navigator.serviceWorker
+        .register("./punch-sw.js?v=2", { scope: "./" })
+        .then((registration) => {
+          if (registration.waiting) {
+            showUpdateBanner(registration.waiting);
+          }
+          registration.addEventListener("updatefound", () => {
+            const worker = registration.installing;
+            if (!worker) return;
+            worker.addEventListener("statechange", () => {
+              if (worker.state === "installed" && navigator.serviceWorker.controller) {
+                showUpdateBanner(worker);
+              }
+            });
+          });
+        })
+        .catch(() => null);
+    });
+  }
+
+  updateBtn?.addEventListener("click", () => {
+    const worker = waitingServiceWorker;
+    if (!worker) return;
+    worker.postMessage({ type: "SKIP_WAITING" });
+    if (updateBanner) updateBanner.hidden = true;
+  });
 
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
@@ -367,18 +563,35 @@
   signOutBtn?.addEventListener("click", () => {
     clearSession();
     setMessage("", "");
+    clockedInState = false;
     showView(loginView);
     if (installBanner) installBanner.hidden = true;
+    syncClockButtons();
   });
 
   clockInBtn?.addEventListener("click", () => submitPunch("in"));
   clockOutBtn?.addEventListener("click", () => submitPunch("out"));
 
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("./punch-sw.js", { scope: "./" }).catch(() => null);
-    });
-  }
+  window.addEventListener("online", () => {
+    setOnlineState(true);
+    if (token() && clockView && !clockView.hidden) {
+      loadStatus();
+    }
+  });
+  window.addEventListener("offline", () => setOnlineState(false));
 
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && token() && clockView && !clockView.hidden && navigator.onLine) {
+      loadStatus();
+    }
+  });
+
+  setInterval(() => {
+    if (document.hidden || !token() || !clockView || clockView.hidden || !navigator.onLine) return;
+    loadStatus();
+  }, 60000);
+
+  registerServiceWorker();
+  setOnlineState(navigator.onLine);
   verifyEmployeeSession();
 })();

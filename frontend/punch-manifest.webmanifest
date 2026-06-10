@@ -1,13 +1,17 @@
 {
+  "id": "/punch.html",
   "name": "ShiftSwift Time Clock",
   "short_name": "Time Clock",
   "description": "Clock in and out at your assigned work sites with GPS verification.",
-  "start_url": "./punch.html",
+  "start_url": "./punch.html?source=pwa",
   "scope": "./",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
   "background_color": "#04342c",
   "theme_color": "#0f6e56",
+  "categories": ["business", "productivity"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "./assets/shiftswift-hr-icon.png?v=brandkit-v1",
@@ -19,7 +23,27 @@
       "src": "./assets/shiftswift-hr-icon.png?v=brandkit-v1",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "./assets/shiftswift-hr-icon.png?v=brandkit-v1",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Clock in / out",
+      "short_name": "Clock",
+      "url": "./punch.html?source=shortcut",
+      "icons": [
+        {
+          "src": "./assets/shiftswift-hr-icon.png?v=brandkit-v1",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
   ]
 }

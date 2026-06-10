@@ -2,10 +2,9 @@
   const API_BASE =
     localStorage.getItem("apiBaseUrl") ||
     (window.ShiftSwiftBrand?.resolveApiBase ? window.ShiftSwiftBrand.resolveApiBase() : "http://localhost:3000");
-  const token = localStorage.getItem("token");
   const tenantId = localStorage.getItem("tenantId");
 
-  if (!token || !tenantId) return;
+  if (!localStorage.getItem("token") || !tenantId) return;
 
   const statusEl = document.getElementById("punch-status");
   const sitesEl = document.getElementById("punch-sites");
@@ -13,18 +12,79 @@
   const clockInBtn = document.getElementById("punch-in-btn");
   const clockOutBtn = document.getElementById("punch-out-btn");
 
-  function authHeaders() {
-    return {
-      Authorization: `Bearer ${token}`,
+  let punchInFlight = false;
+  let clockedInState = false;
+  let refreshInFlight = null;
+
+  function token() {
+    return localStorage.getItem("token");
+  }
+
+  function authHeaders(json = true) {
+    const headers = {
+      Authorization: `Bearer ${token()}`,
       "X-Tenant-Id": tenantId,
-      "Content-Type": "application/json",
     };
+    if (json) headers["Content-Type"] = "application/json";
+    return headers;
+  }
+
+  function parseApiError(data, fallback) {
+    const detail = data?.detail;
+    if (typeof detail === "string") return detail;
+    if (typeof detail === "object" && detail?.message) return detail.message;
+    return data?.message || fallback;
+  }
+
+  async function refreshAccessToken() {
+    if (refreshInFlight) return refreshInFlight;
+    const refresh = localStorage.getItem("refreshToken");
+    if (!refresh) return false;
+    refreshInFlight = (async () => {
+      try {
+        const response = await fetch(`${API_BASE}/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refresh_token: refresh }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) return false;
+        if (data.access_token) localStorage.setItem("token", data.access_token);
+        if (data.refresh_token) localStorage.setItem("refreshToken", data.refresh_token);
+        return true;
+      } catch {
+        return false;
+      } finally {
+        refreshInFlight = null;
+      }
+    })();
+    return refreshInFlight;
+  }
+
+  async function apiFetch(path, options = {}) {
+    const request = async () =>
+      fetch(`${API_BASE}${path}`, {
+        ...options,
+        headers: { ...authHeaders(options.body != null), ...(options.headers || {}) },
+      });
+    let response = await request();
+    if (response.status === 401) {
+      const refreshed = await refreshAccessToken();
+      if (refreshed) response = await request();
+    }
+    return response;
   }
 
   function setMessage(text, type) {
     if (!messageEl) return;
     messageEl.textContent = text || "";
     messageEl.className = type ? `punch-message punch-message--${type}` : "punch-message";
+  }
+
+  function syncClockButtons() {
+    const online = navigator.onLine;
+    if (clockInBtn) clockInBtn.disabled = punchInFlight || !online || clockedInState;
+    if (clockOutBtn) clockOutBtn.disabled = punchInFlight || !online || !clockedInState;
   }
 
   function formatTime(iso) {
@@ -37,16 +97,17 @@
   }
 
   async function loadStatus() {
-    if (!statusEl) return;
+    if (!statusEl || !navigator.onLine) return;
     try {
-      const response = await fetch(`${API_BASE}/time-punch/status`, { headers: authHeaders() });
+      const response = await apiFetch("/time-punch/status", { method: "GET", headers: authHeaders(false) });
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        statusEl.textContent = err.detail || "Could not load punch status.";
+        statusEl.textContent = parseApiError(err, "Could not load punch status.");
         return;
       }
       const data = await response.json();
       const last = data.last_punch;
+      clockedInState = Boolean(data.clocked_in);
       statusEl.innerHTML = data.clocked_in
         ? `<strong>Clocked in</strong> since ${formatTime(last?.punched_at)} at ${last?.site_name || "work site"}.`
         : last
@@ -58,14 +119,20 @@
           ? sites.map((s) => `<li>${s.name}: ${s.address} (${s.radius_meters}m radius)</li>`).join("")
           : "<li>No punch sites configured. Ask HR.</li>";
       }
-      if (clockInBtn) clockInBtn.disabled = Boolean(data.clocked_in);
-      if (clockOutBtn) clockOutBtn.disabled = !data.clocked_in;
+      syncClockButtons();
     } catch {
       statusEl.textContent = "Could not reach the time punch service.";
     }
   }
 
-  function readLocation() {
+  function friendlyGeoError(error) {
+    if (error?.code === 1) return "Location permission denied. Enable location in your device settings.";
+    if (error?.code === 2) return "Location unavailable. Try moving outdoors.";
+    if (error?.code === 3) return "Location timed out. Check GPS and try again.";
+    return error?.message || "Could not read your location.";
+  }
+
+  async function readLocation() {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
         reject(new Error("Location is not supported on this device."));
@@ -78,39 +145,52 @@
             longitude: pos.coords.longitude,
             accuracy_meters: pos.coords.accuracy,
           }),
-        (err) => reject(new Error(err.message || "Could not read your location.")),
+        (err) => reject(new Error(friendlyGeoError(err))),
         { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
       );
     });
   }
 
   async function submitPunch(punchType) {
+    if (punchInFlight || !navigator.onLine) {
+      setMessage("Connect to the internet to clock in or out.", "error");
+      return;
+    }
+    punchInFlight = true;
+    syncClockButtons();
     setMessage("Reading your location…", "info");
     try {
       const location = await readLocation();
       setMessage("Submitting punch…", "info");
-      const response = await fetch(`${API_BASE}/time-punch/punch`, {
+      const response = await apiFetch("/time-punch/punch", {
         method: "POST",
-        headers: authHeaders(),
         body: JSON.stringify({ punch_type: punchType, ...location }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setMessage(data.detail || "Punch failed.", "error");
+        setMessage(parseApiError(data, "Punch failed."), "error");
         return;
       }
       setMessage(
         `${punchType === "in" ? "Clocked in" : "Clocked out"} at ${data.site_name} (${Math.round(data.distance_meters)}m from site).`,
         "success"
       );
-      loadStatus();
+      await loadStatus();
     } catch (error) {
       setMessage(error.message || "Punch failed.", "error");
+    } finally {
+      punchInFlight = false;
+      syncClockButtons();
     }
   }
 
   clockInBtn?.addEventListener("click", () => submitPunch("in"));
   clockOutBtn?.addEventListener("click", () => submitPunch("out"));
+  window.addEventListener("online", loadStatus);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && navigator.onLine) loadStatus();
+  });
 
+  syncClockButtons();
   loadStatus();
 })();
