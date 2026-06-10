@@ -141,12 +141,70 @@ def build_audit_export(*, tenant_id: int, employee_id: int | None, conn: Any) ->
             for r in cur.fetchall()
         ]
 
+        cur.execute(
+            f"""
+            SELECT id, title, category, lifecycle_stage, document_url, employee_id,
+                   expires_at, content_sha256, storage_path, original_filename, created_at
+            FROM tenant_documents
+            WHERE tenant_id = %s
+            ORDER BY created_at DESC LIMIT 200
+            """,
+            (tenant_id,),
+        )
+        pack["sections"]["tenant_documents"] = [
+            {
+                "id": r[0],
+                "title": r[1],
+                "category": r[2],
+                "lifecycle_stage": r[3],
+                "document_url": r[4],
+                "employee_id": r[5],
+                "expires_at": r[6].isoformat() if r[6] else None,
+                "content_sha256": r[7],
+                "has_file": bool(r[8]),
+                "original_filename": r[9],
+                "created_at": r[10].isoformat() if r[10] else None,
+            }
+            for r in cur.fetchall()
+        ]
+
+        emp_query = """
+            SELECT id, employee_id, title, category, lifecycle_stage, document_url,
+                   expires_at, content_sha256, storage_path, original_filename, created_at
+            FROM employee_documents
+            WHERE tenant_id = %s
+        """
+        emp_params: list[Any] = [tenant_id]
+        if employee_id:
+            emp_query += " AND employee_id = %s"
+            emp_params.append(employee_id)
+        emp_query += " ORDER BY created_at DESC LIMIT 200"
+        cur.execute(emp_query, emp_params)
+        pack["sections"]["employee_documents"] = [
+            {
+                "id": r[0],
+                "employee_id": r[1],
+                "title": r[2],
+                "category": r[3],
+                "lifecycle_stage": r[4],
+                "document_url": r[5],
+                "expires_at": r[6].isoformat() if r[6] else None,
+                "content_sha256": r[7],
+                "has_file": bool(r[8]),
+                "original_filename": r[9],
+                "created_at": r[10].isoformat() if r[10] else None,
+            }
+            for r in cur.fetchall()
+        ]
+
     pack["summary"] = {
         "rtw_checks": len(pack["sections"]["right_to_work_checks"]),
         "sms_changes": len(pack["sections"]["sms_change_log"]),
         "absence_alerts": len(pack["sections"]["absence_alerts"]),
         "adverts": len(pack["sections"]["advertisement_records"]),
         "reporting_triggers": len(pack["sections"]["reporting_triggers"]),
+        "tenant_documents": len(pack["sections"]["tenant_documents"]),
+        "employee_documents": len(pack["sections"]["employee_documents"]),
     }
     return pack
 

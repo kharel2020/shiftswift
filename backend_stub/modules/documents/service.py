@@ -126,8 +126,8 @@ def validate_employee_document_data(data: dict[str, Any]) -> dict[str, Any]:
     document_url = data.get("document_url")
     if document_url is not None:
         document_url = str(document_url).strip() or None
-    if not document_url and not data.get("notes"):
-        raise ValueError("Provide a document URL or notes describing where the file is stored")
+    if not document_url and not data.get("notes") and not data.get("storage_path"):
+        raise ValueError("Provide a document URL, upload a file, or notes describing where the file is stored")
     return {
         "title": title,
         "category": category,
@@ -136,6 +136,10 @@ def validate_employee_document_data(data: dict[str, Any]) -> dict[str, Any]:
         "notes": data.get("notes"),
         "expires_at": data.get("expires_at"),
         "original_filename": data.get("original_filename"),
+        "storage_path": data.get("storage_path"),
+        "content_sha256": data.get("content_sha256"),
+        "content_type": data.get("content_type"),
+        "file_size_bytes": data.get("file_size_bytes"),
     }
 
 
@@ -152,8 +156,8 @@ def validate_tenant_document_data(data: dict[str, Any]) -> dict[str, Any]:
     document_url = data.get("document_url")
     if document_url is not None:
         document_url = str(document_url).strip() or None
-    if not document_url and not data.get("notes"):
-        raise ValueError("Provide a document URL or notes describing where the file is stored")
+    if not document_url and not data.get("notes") and not data.get("storage_path"):
+        raise ValueError("Provide a document URL, upload a file, or notes describing where the file is stored")
     return {
         "title": title,
         "category": category,
@@ -163,6 +167,10 @@ def validate_tenant_document_data(data: dict[str, Any]) -> dict[str, Any]:
         "expires_at": data.get("expires_at"),
         "original_filename": data.get("original_filename"),
         "employee_id": data.get("employee_id"),
+        "storage_path": data.get("storage_path"),
+        "content_sha256": data.get("content_sha256"),
+        "content_type": data.get("content_type"),
+        "file_size_bytes": data.get("file_size_bytes"),
     }
 
 
@@ -188,12 +196,18 @@ def _row_to_employee_document(row: tuple[Any, ...]) -> dict[str, Any]:
         "created_at": _iso(row[9]),
         "updated_at": _iso(row[10]),
         "employee_id": row[11],
+        "storage_path": row[12],
+        "content_sha256": row[13],
+        "content_type": row[14],
+        "file_size_bytes": row[15],
+        "has_file": bool(row[12]),
     }
 
 
 EMPLOYEE_DOCUMENT_SELECT = """
     id, title, category, lifecycle_stage, document_url, notes, uploaded_by,
-    expires_at, original_filename, created_at, updated_at, employee_id
+    expires_at, original_filename, created_at, updated_at, employee_id,
+    storage_path, content_sha256, content_type, file_size_bytes
 """
 
 
@@ -261,9 +275,10 @@ def create_employee_document(
             """
             INSERT INTO employee_documents (
               tenant_id, employee_id, title, category, lifecycle_stage,
-              document_url, notes, uploaded_by, expires_at, original_filename
+              document_url, notes, uploaded_by, expires_at, original_filename,
+              storage_path, content_sha256, content_type, file_size_bytes
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING """
             + EMPLOYEE_DOCUMENT_SELECT,
             (
@@ -277,6 +292,10 @@ def create_employee_document(
                 uploaded_by,
                 payload.get("expires_at"),
                 payload.get("original_filename"),
+                payload.get("storage_path"),
+                payload.get("content_sha256"),
+                payload.get("content_type"),
+                payload.get("file_size_bytes"),
             ),
         )
         row = cur.fetchone()
@@ -306,6 +325,10 @@ def update_employee_document(
             "notes",
             "expires_at",
             "original_filename",
+            "storage_path",
+            "content_sha256",
+            "content_type",
+            "file_size_bytes",
         )
     }
     if not allowed:
@@ -347,6 +370,13 @@ def delete_employee_document(
     document_id: int,
     conn: Any,
 ) -> None:
+    from modules.documents.storage import delete_stored_file
+
+    existing = get_employee_document(
+        tenant_id=tenant_id, employee_id=employee_id, document_id=document_id, conn=conn
+    )
+    if not existing:
+        raise LookupError("document not found")
     with conn.cursor() as cur:
         cur.execute(
             """
@@ -355,9 +385,8 @@ def delete_employee_document(
             """,
             (tenant_id, employee_id, document_id),
         )
-        if cur.rowcount == 0:
-            raise LookupError("document not found")
         conn.commit()
+    delete_stored_file(existing.get("storage_path"))
 
 
 def _row_to_tenant_document(row: tuple[Any, ...]) -> dict[str, Any]:
@@ -374,12 +403,18 @@ def _row_to_tenant_document(row: tuple[Any, ...]) -> dict[str, Any]:
         "created_at": _iso(row[9]),
         "updated_at": _iso(row[10]),
         "employee_id": row[11],
+        "storage_path": row[12],
+        "content_sha256": row[13],
+        "content_type": row[14],
+        "file_size_bytes": row[15],
+        "has_file": bool(row[12]),
     }
 
 
 TENANT_DOCUMENT_SELECT = """
     id, title, category, lifecycle_stage, document_url, notes, uploaded_by,
-    expires_at, original_filename, created_at, updated_at, employee_id
+    expires_at, original_filename, created_at, updated_at, employee_id,
+    storage_path, content_sha256, content_type, file_size_bytes
 """
 
 
@@ -418,6 +453,20 @@ def list_tenant_documents(
         return [_row_to_tenant_document(row) for row in cur.fetchall()]
 
 
+def get_tenant_document(*, tenant_id: int, document_id: int, conn: Any) -> dict[str, Any] | None:
+    with conn.cursor() as cur:
+        cur.execute(
+            f"""
+            SELECT {TENANT_DOCUMENT_SELECT}
+            FROM tenant_documents
+            WHERE tenant_id = %s AND id = %s
+            """,
+            (tenant_id, document_id),
+        )
+        row = cur.fetchone()
+    return _row_to_tenant_document(row) if row else None
+
+
 def create_tenant_document(
     *,
     tenant_id: int,
@@ -431,9 +480,10 @@ def create_tenant_document(
             """
             INSERT INTO tenant_documents (
               tenant_id, title, category, lifecycle_stage, document_url, notes,
-              uploaded_by, expires_at, original_filename, employee_id
+              uploaded_by, expires_at, original_filename, employee_id,
+              storage_path, content_sha256, content_type, file_size_bytes
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING """
             + TENANT_DOCUMENT_SELECT,
             (
@@ -447,6 +497,10 @@ def create_tenant_document(
                 payload.get("expires_at"),
                 payload.get("original_filename"),
                 payload.get("employee_id"),
+                payload.get("storage_path"),
+                payload.get("content_sha256"),
+                payload.get("content_type"),
+                payload.get("file_size_bytes"),
             ),
         )
         row = cur.fetchone()
@@ -474,6 +528,10 @@ def update_tenant_document(
             "expires_at",
             "original_filename",
             "employee_id",
+            "storage_path",
+            "content_sha256",
+            "content_type",
+            "file_size_bytes",
         )
     }
     if not allowed:
@@ -502,11 +560,58 @@ def update_tenant_document(
 
 
 def delete_tenant_document(*, tenant_id: int, document_id: int, conn: Any) -> None:
+    from modules.documents.storage import delete_stored_file
+
     with conn.cursor() as cur:
+        cur.execute(
+            f"""
+            SELECT storage_path FROM tenant_documents
+            WHERE tenant_id = %s AND id = %s
+            """,
+            (tenant_id, document_id),
+        )
+        row = cur.fetchone()
+        if not row:
+            raise LookupError("document not found")
+        storage_path = row[0]
         cur.execute(
             "DELETE FROM tenant_documents WHERE tenant_id = %s AND id = %s RETURNING id",
             (tenant_id, document_id),
         )
-        if not cur.fetchone():
-            raise LookupError("document not found")
         conn.commit()
+    delete_stored_file(storage_path)
+
+
+def list_all_employee_documents(
+    *,
+    tenant_id: int,
+    conn: Any,
+    employee_id: int | None = None,
+    category: str | None = None,
+    lifecycle_stage: str | None = None,
+    limit: int = 500,
+) -> list[dict[str, Any]]:
+    clauses = ["tenant_id = %s"]
+    params: list[Any] = [tenant_id]
+    if employee_id is not None:
+        clauses.append("employee_id = %s")
+        params.append(employee_id)
+    if category:
+        clauses.append("category = %s")
+        params.append(category)
+    if lifecycle_stage:
+        clauses.append("lifecycle_stage = %s")
+        params.append(lifecycle_stage)
+    where = " AND ".join(clauses)
+    with conn.cursor() as cur:
+        cur.execute(
+            f"""
+            SELECT {EMPLOYEE_DOCUMENT_SELECT}
+            FROM employee_documents
+            WHERE {where}
+            ORDER BY created_at DESC
+            LIMIT %s
+            """,
+            [*params, limit],
+        )
+        return [_row_to_employee_document(row) for row in cur.fetchall()]

@@ -1,6 +1,6 @@
-/** Settings document store — filters, metadata, edit and delete. */
+/** Settings document store — upload, filters, export, edit and delete. */
 (function () {
-  const { apiFetch, escapeHtml, mountEditForm, renderTableBody } = window.Admin;
+  const { apiFetch, escapeHtml, mountEditForm, renderTableBody, downloadAuthenticated, authHeaders, API_BASE } = window.Admin;
 
   const FILTER_IDS = {
     category: "document-filter-category",
@@ -17,11 +17,31 @@
     return stages.find((item) => item.value === value)?.label || value;
   }
 
+  function buildQuery() {
+    const params = new URLSearchParams();
+    const category = document.getElementById(FILTER_IDS.category)?.value;
+    const stage = document.getElementById(FILTER_IDS.stage)?.value;
+    if (category) params.set("category", category);
+    if (stage) params.set("lifecycle_stage", stage);
+    const query = params.toString();
+    return query ? `?${query}` : "";
+  }
+
+  function buildExportQuery(format) {
+    const params = new URLSearchParams(buildQuery().replace(/^\?/, ""));
+    params.set("format", format);
+    params.set("include_employee_documents", "true");
+    if (document.getElementById("documents-export-include-rtw")?.checked) {
+      params.set("include_rtw", "true");
+    }
+    return `?${params.toString()}`;
+  }
+
   function documentFormSchema() {
     return {
       id: "document",
       columns: 2,
-      submitLabel: "Add document",
+      submitLabel: "Add link record",
       successMessage: "Document saved.",
       fields: [
         { name: "title", label: "Title", type: "text", required: true },
@@ -57,21 +77,69 @@
     };
   }
 
-  function buildQuery() {
-    const params = new URLSearchParams();
-    const category = document.getElementById(FILTER_IDS.category)?.value;
-    const stage = document.getElementById(FILTER_IDS.stage)?.value;
-    if (category) params.set("category", category);
-    if (stage) params.set("lifecycle_stage", stage);
-    const query = params.toString();
-    return query ? `?${query}` : "";
+  function mountUploadForm() {
+    const form = document.getElementById("document-upload-form");
+    if (!form || form.dataset.ready === "true") return;
+    const categories = window.Admin.formOptions?.document_categories || [];
+    const stages = window.Admin.formOptions?.document_lifecycle_stages || [];
+    const categorySelect = document.getElementById("document-upload-category");
+    const stageSelect = document.getElementById("document-upload-stage");
+    if (categorySelect) {
+      categorySelect.innerHTML = categories
+        .map((item) => `<option value="${escapeHtml(item.value)}">${escapeHtml(item.label)}</option>`)
+        .join("");
+    }
+    if (stageSelect) {
+      stageSelect.innerHTML = stages
+        .map((item) => `<option value="${escapeHtml(item.value)}">${escapeHtml(item.label)}</option>`)
+        .join("");
+    }
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const status = form.querySelector("[data-status]");
+      if (status) status.textContent = "Uploading…";
+      const fd = new FormData(form);
+      try {
+        const res = await fetch(`${API_BASE}/admin/documents/upload`, {
+          method: "POST",
+          headers: authHeaders(false),
+          body: fd,
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Upload failed");
+        form.reset();
+        if (status) status.textContent = "Uploaded.";
+        await refreshDocuments();
+      } catch (error) {
+        if (status) status.textContent = error.message;
+      }
+    });
+    form.dataset.ready = "true";
   }
+
+  let refreshDocuments = async () => {};
 
   async function loadSettingsDocuments() {
     const tbody = document.getElementById("documents-table-body");
     const formHost = document.getElementById("document-form");
     const filtersHost = document.getElementById("document-filters");
     if (!tbody && !formHost) return;
+
+    await window.Admin.loadFormOptions();
+    mountUploadForm();
+
+    document.getElementById("documents-export-csv")?.addEventListener("click", async () => {
+      await downloadAuthenticated(
+        `/admin/documents/export${buildExportQuery("csv")}`,
+        `shiftswift-documents-${window.Admin.TENANT_ID}.csv`
+      );
+    });
+    document.getElementById("documents-export-zip")?.addEventListener("click", async () => {
+      await downloadAuthenticated(
+        `/admin/documents/export${buildExportQuery("zip")}`,
+        `shiftswift-documents-${window.Admin.TENANT_ID}.zip`
+      );
+    });
 
     if (filtersHost && !filtersHost.dataset.ready) {
       const categories = window.Admin.formOptions?.document_categories || [];
@@ -99,7 +167,7 @@
       });
     }
 
-    async function refreshDocuments() {
+    refreshDocuments = async () => {
       try {
         const res = await apiFetch(`/admin/documents${buildQuery()}`);
         if (!res.ok) throw new Error("Load failed");
@@ -112,10 +180,17 @@
             { key: "category", render: (row) => escapeHtml(categoryLabel(row.category)) },
             { key: "lifecycle_stage", render: (row) => escapeHtml(stageLabel(row.lifecycle_stage || "general")) },
             {
+              key: "has_file",
+              render: (row) =>
+                row.has_file
+                  ? `<button type="button" class="btn ghost" data-download-doc="${row.id}">Download</button>`
+                  : "<span class='muted'>No file</span>",
+            },
+            {
               key: "document_url",
               render: (row) =>
                 row.document_url
-                  ? `<a href="${escapeHtml(row.document_url)}" target="_blank" rel="noopener">Open</a>`
+                  ? `<a href="${escapeHtml(row.document_url)}" target="_blank" rel="noopener">Open link</a>`
                   : "<span class='muted'>None</span>",
             },
             {
@@ -133,6 +208,14 @@
             },
           ],
           rows: data.items || [],
+        });
+
+        tbody.querySelectorAll("[data-download-doc]").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const row = (data.items || []).find((item) => String(item.id) === btn.dataset.downloadDoc);
+            const name = row?.original_filename || `${row?.title || "document"}.bin`;
+            await downloadAuthenticated(`/admin/documents/${btn.dataset.downloadDoc}/file`, name);
+          });
         });
 
         tbody.querySelectorAll("[data-delete-doc]").forEach((btn) => {
@@ -187,12 +270,12 @@
         });
       } catch {
         renderTableBody(tbody, {
-          columns: [{ key: "a" }, { key: "b" }, { key: "c" }, { key: "d" }, { key: "e" }, { key: "f" }, { key: "g" }],
+          columns: [{ key: "a" }, { key: "b" }, { key: "c" }, { key: "d" }, { key: "e" }, { key: "f" }, { key: "g" }, { key: "h" }],
           rows: [],
           emptyMessage: "Could not load documents.",
         });
       }
-    }
+    };
 
     if (formHost && !formHost.dataset.ready) {
       mountEditForm(formHost, documentFormSchema(), {

@@ -32,6 +32,7 @@ id -u "${APP_USER}" >/dev/null 2>&1 || useradd --system --create-home --home-dir
 install -d -o "${APP_USER}" -g "${APP_USER}" \
   "${APP_ROOT}" \
   "${APP_ROOT}/uploads/rtw_immutable" \
+  "${APP_ROOT}/uploads/documents" \
   /var/log/shiftswift-hr
 
 echo "==> Sync application"
@@ -83,6 +84,7 @@ LOGIN_RATE_WINDOW_SECONDS=900
 MAX_UPLOAD_BYTES=10485760
 ENCRYPTION_KEY=${ENCRYPTION_KEY}
 RTW_STORAGE_DIR=${APP_ROOT}/uploads/rtw_immutable
+DOCUMENTS_STORAGE_DIR=${APP_ROOT}/uploads/documents
 EMAIL_ADMIN=admin@${DOMAIN}
 EMAIL_HR=hr@${DOMAIN}
 EMAIL_EMPLOYEE=employee@${DOMAIN}

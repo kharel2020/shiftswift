@@ -1,6 +1,6 @@
 /** Employee workspace — lifecycle flow aligned to HR chart (recruitment → off-boarding). */
 (function () {
-  const { apiFetch, escapeHtml, mountEditForm, renderTableBody, statusPill, loadFormOptions, isFeatureEnabled } = window.Admin;
+  const { apiFetch, escapeHtml, mountEditForm, renderTableBody, statusPill, loadFormOptions, isFeatureEnabled, downloadAuthenticated, authHeaders, API_BASE } = window.Admin;
 
   const SECTION_SCHEMAS = {
     recruitment: {
@@ -287,6 +287,13 @@
         ${renderRequirementsChecklist(requirements)}
       </div>
       <div id="employee-document-form"></div>
+      <form id="employee-document-upload-form" class="edit-form edit-form--cols-2" enctype="multipart/form-data" style="margin-bottom:1rem;">
+        <label class="edit-field"><span class="edit-label">Upload title</span><input name="title" required placeholder="e.g. Signed contract" /></label>
+        <label class="edit-field"><span class="edit-label">File</span><input name="file" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,application/pdf,image/*" required /></label>
+        <label class="edit-field"><span class="edit-label">Category</span><select name="category"><option value="contract">Employment contract</option><option value="id">ID / passport</option><option value="rtw">Right to work</option><option value="qualification">Qualification</option><option value="policy">Signed policy / handbook</option><option value="general">General</option><option value="other">Other</option></select></label>
+        <label class="edit-field"><span class="edit-label">Expiry date</span><input name="expires_at" type="date" /></label>
+        <div class="edit-form-actions" data-span="2"><button class="btn secondary" type="submit">Upload file</button><p class="edit-form-status muted" data-upload-status></p></div>
+      </form>
       <div class="table-wrap">
         <table class="data-table">
           <thead><tr><th>Title</th><th>Category</th><th>Expires</th><th>Added</th><th></th></tr></thead>
@@ -349,7 +356,8 @@
           key: "actions",
           render: (row) =>
             `<div class="table-actions">
-              ${row.document_url ? `<a class="btn ghost" href="${escapeHtml(row.document_url)}" target="_blank" rel="noopener">Open</a>` : ""}
+              ${row.has_file ? `<button type="button" class="btn ghost" data-download-doc="${row.id}">Download</button>` : ""}
+              ${row.document_url ? `<a class="btn ghost" href="${escapeHtml(row.document_url)}" target="_blank" rel="noopener">Open link</a>` : ""}
               <button type="button" class="btn ghost" data-delete-doc="${row.id}">Remove</button>
             </div>`,
         },
@@ -370,6 +378,39 @@
         }
         await openEmployee(activeEmployeeId, "document_store");
       });
+    });
+
+    container.querySelectorAll("[data-download-doc]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const row = docs.find((item) => String(item.id) === btn.dataset.downloadDoc);
+        const name = row?.original_filename || `${row?.title || "document"}.bin`;
+        await downloadAuthenticated(
+          `/admin/employees/${activeEmployeeId}/documents/${btn.dataset.downloadDoc}/file`,
+          name
+        );
+      });
+    });
+
+    const uploadForm = container.querySelector("#employee-document-upload-form");
+    uploadForm?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const status = uploadForm.querySelector("[data-upload-status]");
+      if (status) status.textContent = "Uploading…";
+      const fd = new FormData(uploadForm);
+      try {
+        const res = await fetch(`${API_BASE}/admin/employees/${activeEmployeeId}/documents/upload`, {
+          method: "POST",
+          headers: authHeaders(false),
+          body: fd,
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Upload failed");
+        uploadForm.reset();
+        if (status) status.textContent = "Uploaded.";
+        await openEmployee(activeEmployeeId, "document_store");
+      } catch (error) {
+        if (status) status.textContent = error.message;
+      }
     });
   }
 

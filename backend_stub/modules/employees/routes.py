@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Request, UploadFile
 from pydantic import BaseModel, EmailStr, Field
 
 from auth_service import AuthUser
@@ -18,6 +18,7 @@ from modules.employees.repository import fetch_employee
 from modules.documents.service import (
     create_employee_document,
     delete_employee_document,
+    get_employee_document,
     list_employee_documents,
     requirements_status,
     update_employee_document,
@@ -206,6 +207,121 @@ def read_employee_documents(
     finally:
         conn.close()
     return {"items": items, "count": len(items)}
+
+
+@router.post("/{employee_id}/documents/upload")
+async def upload_employee_document(
+    employee_id: int,
+    request: Request,
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    file: UploadFile = File(...),
+    title: str = Form(...),
+    category: str = Form(default="general"),
+    lifecycle_stage: str = Form(default="document_store"),
+    notes: str | None = Form(default=None),
+    expires_at: date | None = Form(default=None),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, object]:
+    from modules.documents.storage import read_validated_upload, write_document_file
+
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    file_bytes, content_type, ext = await read_validated_upload(file, max_bytes=settings.max_upload_bytes)
+    conn = get_connection()
+    try:
+        if not fetch_employee(tenant_id=tenant_id, employee_id=employee_id, conn=conn):
+            raise HTTPException(status_code=404, detail="employee not found")
+        doc = create_employee_document(
+            tenant_id=tenant_id,
+            employee_id=employee_id,
+            data={
+                "title": title.strip(),
+                "category": category,
+                "lifecycle_stage": lifecycle_stage,
+                "notes": notes or "File stored on ShiftSwift HR",
+                "expires_at": expires_at,
+                "original_filename": file.filename,
+            },
+            uploaded_by=current_user.username,
+            conn=conn,
+        )
+        storage_path, content_sha256, file_size = write_document_file(
+            tenant_id=tenant_id,
+            document_id=int(doc["id"]),
+            title=title.strip(),
+            original_filename=file.filename,
+            data=file_bytes,
+            content_type=content_type,
+            ext=ext,
+            scope="employee",
+            employee_id=employee_id,
+        )
+        doc = update_employee_document(
+            tenant_id=tenant_id,
+            employee_id=employee_id,
+            document_id=int(doc["id"]),
+            updates={
+                "storage_path": storage_path,
+                "content_sha256": content_sha256,
+                "content_type": content_type,
+                "file_size_bytes": file_size,
+                "original_filename": file.filename,
+            },
+            conn=conn,
+        )
+        log_employee_data_event(
+            tenant_id=tenant_id,
+            actor_username=current_user.username,
+            actor_role=current_user.role,
+            action="upload",
+            entity_type="employee_document",
+            entity_id=doc["id"],
+            field_name=f"employee_id={employee_id}",
+            ip_address=client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+            conn=conn,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    finally:
+        conn.close()
+    return doc
+
+
+@router.get("/{employee_id}/documents/{document_id}/file")
+def download_employee_document_file(
+    employee_id: int,
+    document_id: int,
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+):
+    from fastapi.responses import FileResponse
+
+    from modules.documents.storage import download_filename, resolve_stored_file
+
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = get_connection()
+    try:
+        doc = get_employee_document(
+            tenant_id=tenant_id,
+            employee_id=employee_id,
+            document_id=document_id,
+            conn=conn,
+        )
+    finally:
+        conn.close()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    path = resolve_stored_file(tenant_id=tenant_id, storage_path=doc.get("storage_path"))
+    filename = download_filename(
+        title=str(doc.get("title") or "document"),
+        original_filename=doc.get("original_filename"),
+        storage_path=doc.get("storage_path"),
+    )
+    return FileResponse(
+        path,
+        media_type=doc.get("content_type") or "application/octet-stream",
+        filename=filename,
+    )
 
 
 @router.post("/{employee_id}/documents")

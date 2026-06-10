@@ -6,7 +6,7 @@ import os
 from datetime import date
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Request, UploadFile
 from pydantic import BaseModel, EmailStr, Field
 
 from modules.documents.constants import DOCUMENT_LIFECYCLE_STAGES
@@ -59,6 +59,7 @@ from payroll_plans import list_payroll_plans
 from contracts_service import TEMPLATE_REGISTRY
 from deps import client_ip, get_admin_user, get_hr_user, require_tenant_subscription, resolve_tenant_id
 from config import load_settings
+from employee_audit import log_employee_data_event
 from sponsor_licence_compliance import absence_type_catalog
 from brand import brand_payload
 
@@ -387,6 +388,203 @@ def read_documents(
     finally:
         conn.close()
     return {"items": items, "count": len(items)}
+
+
+@router.get("/documents/export")
+def export_documents(
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+    format: str = "csv",
+    category: str | None = None,
+    lifecycle_stage: str | None = None,
+    employee_id: int | None = None,
+    include_employee_documents: bool = True,
+    include_rtw: bool = False,
+):
+    from fastapi.responses import Response
+
+    from modules.documents.export import build_documents_csv, build_documents_zip
+    from modules.documents.service import list_all_employee_documents, list_tenant_documents
+
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = _db_conn()
+    try:
+        tenant_docs = list_tenant_documents(
+            tenant_id=tenant_id,
+            conn=conn,
+            category=category,
+            lifecycle_stage=lifecycle_stage,
+            employee_id=employee_id,
+            limit=500,
+        )
+        employee_docs: list[dict[str, Any]] = []
+        if include_employee_documents:
+            employee_docs = list_all_employee_documents(
+                tenant_id=tenant_id,
+                conn=conn,
+                employee_id=employee_id,
+                category=category,
+                lifecycle_stage=lifecycle_stage,
+                limit=500,
+            )
+        rtw_checks: list[dict[str, Any]] = []
+        if include_rtw:
+            with conn.cursor() as cur:
+                query = """
+                    SELECT id, employee_id, check_date, content_sha256, storage_path
+                    FROM right_to_work_checks
+                    WHERE tenant_id = %s
+                """
+                params: list[Any] = [tenant_id]
+                if employee_id is not None:
+                    query += " AND employee_id = %s"
+                    params.append(employee_id)
+                query += " ORDER BY check_date DESC LIMIT 500"
+                cur.execute(query, params)
+                rtw_checks = [
+                    {
+                        "id": row[0],
+                        "employee_id": row[1],
+                        "check_date": row[2].isoformat() if row[2] else None,
+                        "content_sha256": row[3],
+                        "storage_path": row[4],
+                    }
+                    for row in cur.fetchall()
+                ]
+    finally:
+        conn.close()
+
+    if format.lower() == "zip":
+        payload = build_documents_zip(
+            tenant_id=tenant_id,
+            tenant_documents=tenant_docs,
+            employee_documents=employee_docs,
+            rtw_checks=rtw_checks if include_rtw else None,
+        )
+        filename = f"shiftswift-documents-tenant-{tenant_id}.zip"
+        return Response(
+            content=payload,
+            media_type="application/zip",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+
+    csv_body = build_documents_csv(
+        tenant_id=tenant_id,
+        tenant_documents=tenant_docs,
+        employee_documents=employee_docs,
+    )
+    filename = f"shiftswift-documents-tenant-{tenant_id}.csv"
+    return Response(
+        content=csv_body,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.post("/documents/upload")
+async def upload_tenant_document(
+    request: Request,
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    file: UploadFile = File(...),
+    title: str = Form(...),
+    category: str = Form(default="general"),
+    lifecycle_stage: str = Form(default="general"),
+    notes: str | None = Form(default=None),
+    expires_at: date | None = Form(default=None),
+    employee_id: int | None = Form(default=None),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, object]:
+    from modules.documents.service import create_tenant_document, update_tenant_document
+    from modules.documents.storage import read_validated_upload, write_document_file
+
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    file_bytes, content_type, ext = await read_validated_upload(file, max_bytes=settings.max_upload_bytes)
+    conn = _db_conn()
+    try:
+        doc = create_tenant_document(
+            tenant_id=tenant_id,
+            data={
+                "title": title.strip(),
+                "category": category,
+                "lifecycle_stage": lifecycle_stage,
+                "notes": notes or "File stored on ShiftSwift HR",
+                "expires_at": expires_at,
+                "original_filename": file.filename,
+            },
+            uploaded_by=current_user.username,
+            conn=conn,
+        )
+        storage_path, content_sha256, file_size = write_document_file(
+            tenant_id=tenant_id,
+            document_id=int(doc["id"]),
+            title=title.strip(),
+            original_filename=file.filename,
+            data=file_bytes,
+            content_type=content_type,
+            ext=ext,
+            scope="tenant",
+        )
+        doc = update_tenant_document(
+            tenant_id=tenant_id,
+            document_id=int(doc["id"]),
+            updates={
+                "storage_path": storage_path,
+                "content_sha256": content_sha256,
+                "content_type": content_type,
+                "file_size_bytes": file_size,
+                "original_filename": file.filename,
+                "employee_id": employee_id,
+            },
+            conn=conn,
+        )
+        log_employee_data_event(
+            tenant_id=tenant_id,
+            actor_username=current_user.username,
+            actor_role=current_user.role,
+            action="upload",
+            entity_type="tenant_document",
+            entity_id=doc["id"],
+            ip_address=client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+            conn=conn,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    finally:
+        conn.close()
+    return doc
+
+
+@router.get("/documents/{document_id}/file")
+def download_tenant_document_file(
+    document_id: int,
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+):
+    from fastapi.responses import FileResponse
+
+    from modules.documents.service import get_tenant_document
+    from modules.documents.storage import download_filename, resolve_stored_file
+
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = _db_conn()
+    try:
+        doc = get_tenant_document(tenant_id=tenant_id, document_id=document_id, conn=conn)
+    finally:
+        conn.close()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    path = resolve_stored_file(tenant_id=tenant_id, storage_path=doc.get("storage_path"))
+    filename = download_filename(
+        title=str(doc.get("title") or "document"),
+        original_filename=doc.get("original_filename"),
+        storage_path=doc.get("storage_path"),
+    )
+    return FileResponse(
+        path,
+        media_type=doc.get("content_type") or "application/octet-stream",
+        filename=filename,
+    )
 
 
 @router.post("/documents")

@@ -210,6 +210,40 @@ async def create_rtw_check(
     }
 
 
+@router.get("/rtw-checks/{check_id}/file")
+def download_rtw_check_file(
+    check_id: int,
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+):
+    from fastapi.responses import FileResponse
+
+    from modules.documents.storage import resolve_rtw_file
+
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = _db_conn()
+    try:
+        _require_sponsor_compliance_access(tenant_id=tenant_id, conn=conn)
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT employee_id, check_date, storage_path, content_sha256
+                FROM right_to_work_checks
+                WHERE tenant_id = %s AND id = %s
+                """,
+                (tenant_id, check_id),
+            )
+            row = cur.fetchone()
+    finally:
+        conn.close()
+    if not row:
+        raise HTTPException(status_code=404, detail="RTW check not found")
+    employee_id, check_date, storage_path, _digest = row
+    path = resolve_rtw_file(tenant_id=tenant_id, storage_path=storage_path)
+    filename = f"rtw-check-employee-{employee_id}-{check_date.isoformat()}.pdf"
+    return FileResponse(path, media_type="application/pdf", filename=filename)
+
+
 @router.post("/absence-alerts/run")
 def run_absence_alerts(
     current_user: Annotated[AuthUser, Depends(get_hr_user)],

@@ -26,6 +26,7 @@ LOGIN_RATE_LIMIT=10
 LOGIN_RATE_WINDOW_SECONDS=900
 MAX_UPLOAD_BYTES=10485760
 RTW_STORAGE_DIR=/var/lib/shiftswift-hr/rtw
+DOCUMENTS_STORAGE_DIR=/var/lib/shiftswift-hr/documents
 EOF
 
 echo "Generated ${ENV_FILE}"
