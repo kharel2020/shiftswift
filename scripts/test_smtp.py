@@ -21,6 +21,10 @@ def load_env_file(path: Path) -> None:
         line = line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
+        if " #" in line:
+            line = line.split(" #", 1)[0].rstrip()
+        elif line.endswith("#"):
+            pass
         key, _, value = line.partition("=")
         key = key.strip()
         value = value.strip().strip('"').strip("'")
