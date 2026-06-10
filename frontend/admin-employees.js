@@ -89,7 +89,7 @@
     recruitment: "Set employee type here. Sponsor compliance (step 9) unlocks only for sponsored workers.",
     onboarding: "Set status to <strong>Onboarding</strong> for new starters. Probation end must be on or after start date.",
     induction: "Phone, home address, and emergency contact are required. NI number is validated when provided.",
-    job_performance: "Salary is exported to BrightPay or Xero with employee CSV.",
+    job_performance: "Salary and job details are stored on the employee HR record.",
     compliance_reporting: "Visa type plus a GOV.UK share code <em>or</em> CoS reference required.",
     offboarding: "Set employee status to <strong>Terminated</strong> in on-boarding (or off-boarding workflow) to unlock this step.",
   };
@@ -157,10 +157,8 @@
     const host = $("employee-advanced-link-row");
     if (!host) return;
     const sponsored = Boolean(employee?.is_sponsored);
-    const payroll = isFeatureEnabled("payroll");
     host.innerHTML = `
       ${sponsored ? '<a href="#compliance" class="btn ghost">Sponsor compliance</a>' : ""}
-      ${payroll ? '<a href="#payroll" class="btn ghost">Payroll</a>' : ""}
       <a href="#grievance" class="btn ghost">Grievance cases</a>
       <a href="#offboarding" class="btn ghost">Off-boarding workflow</a>
       <a href="#time-punch" class="btn ghost">Time punch</a>`;
@@ -396,7 +394,6 @@
       intro += `<p class="employee-section-hint">${hint}</p>`;
     }
     if (section.key === "job_performance") {
-      intro += `<p class="employee-section-hint">Include salary here so payroll CSV exports are ready for BrightPay or Xero.</p>`;
     }
     return intro;
   }

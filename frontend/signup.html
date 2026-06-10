@@ -22,18 +22,18 @@
       <div class="signup-layout">
         <section class="signup-form-panel" aria-labelledby="form-heading">
           <h1 id="form-heading">Start your free 14-day trial</h1>
-          <p class="muted signup-form-panel__lead">No card required · export to BrightPay or Xero · cancel anytime</p>
+          <p class="muted signup-form-panel__lead">No card required · UK HR &amp; compliance · cancel anytime</p>
 
           <ul class="signup-trust-inline" aria-label="Why sign up">
             <li>No card required for trial</li>
-            <li>UK-hosted · GDPR compliant</li>
+            <li>UK-hosted · Built for UK GDPR</li>
             <li>Setup in under 5 minutes</li>
           </ul>
 
           <div id="signup-plan-summary" class="signup-summary">
             <div class="signup-summary-label">Your selection</div>
             <div class="signup-summary-plan" id="signup-summary-hr">Compliance · HR platform</div>
-            <div class="signup-summary-payroll" id="signup-summary-payroll">Payroll via BrightPay or Xero export</div>
+            <div class="signup-summary-payroll" id="signup-summary-payroll" hidden></div>
             <div class="signup-summary-price" id="signup-summary-price">From £19 + £3/active employee · capped at £79 + VAT / month</div>
           </div>
 
@@ -70,7 +70,6 @@
                   <span class="signup-field__label">Select HR plan <span class="signup-field__required">(required)</span></span>
                   <select id="signup-hr-plan-select" name="hr_plan_select" required aria-describedby="signup-summary-hr"></select>
                 </label>
-                <p class="signup-field__hint">Run payroll in BrightPay or Xero? Employee CSV export is included — no payroll add-on to buy.</p>
               </div>
             </fieldset>
 
@@ -125,8 +124,7 @@
           <details class="signup-plan-compare">
             <summary>Compare all plans in detail</summary>
             <div id="signup-pricing-plans" class="pricing-grid signup-plan-compare__grid"></div>
-            <h3 class="signup-payroll-heading">Payroll partners <span class="pricing-model-tag">Included</span></h3>
-            <div id="signup-payroll-plans" class="pricing-grid pricing-grid--payroll signup-plan-compare__grid"></div>
+            <div id="signup-payroll-plans" class="pricing-grid pricing-grid--payroll signup-plan-compare__grid" hidden></div>
           </details>
         </section>
 
@@ -135,7 +133,7 @@
           <ul class="signup-trust-list">
             <li><strong>No card required</strong> for your 14-day trial</li>
             <li><strong>Cancel anytime</strong> on monthly plans</li>
-            <li><strong>UK-hosted data</strong> · GDPR compliant</li>
+            <li><strong>UK-hosted data</strong> · Built for UK GDPR</li>
             <li><strong>Setup in under 5 minutes</strong> — we create your workspace instantly</li>
           </ul>
           <p class="signup-trust-panel__note muted">Sign in anytime at business login with your billing email and the password you set here.</p>
@@ -168,5 +166,6 @@
     <script src="./brand-config.js?v=brand-v5"></script>
     <script src="./pricing.js?v=6"></script>
     <script src="./signup.js?v=6"></script>
+      <script src="./cookie-consent.js?v=1"></script>
   </body>
 </html>

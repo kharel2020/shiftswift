@@ -1,6 +1,6 @@
 # Privacy Policy | ShiftSwift HR
 
-**Last updated:** 9 June 2026  
+**Last updated:** 10 June 2026  
 **Applies to:** ShiftSwift HR (https://www.shiftswifthr.co.uk) and the ShiftSwift HR admin application (https://app.shiftswifthr.co.uk)
 
 ---
@@ -23,6 +23,7 @@ This policy explains how we collect and use personal data when you:
 - Visit our marketing website  
 - Register for a trial or subscription  
 - Sign in to the ShiftSwift HR admin or employee portal  
+- Use the Time Clock app to clock in or out at a work site  
 - Contact us by email
 
 It does not cover third-party websites linked from our site.
@@ -37,13 +38,31 @@ It does not cover third-party websites linked from our site.
 | Sign-up | Business name, billing email, VAT number | Create your workspace and billing account |
 | Admin users | Name, email, role, sign-in logs | Authentication, audit, support |
 | Employee records | Identity, employment, RTW documents, absence data | HR administration for your organisation (processor role) |
+| Time Clock | GPS coordinates, location accuracy, distance from site, punch times | Geofenced attendance when employees clock in or out |
 | Billing | Stripe customer ID, payment method metadata | Subscriptions and invoices (not full card numbers) |
 
 We do not sell personal data.
 
 ---
 
-## 4. Legal bases (UK GDPR)
+## 4. Time Clock and location data
+
+When an employee uses the **Time Clock** app (web or installed home-screen app) to clock in or out, the device browser asks for **location permission**. If granted, we receive:
+
+- Latitude and longitude at the time of the punch  
+- Reported accuracy (metres), where available  
+- Calculated distance from the assigned punch site  
+- Clock-in / clock-out time and linked employee and site identifiers  
+
+We use this to confirm the employee is within the geofence configured by their employer. We do **not** track continuous location in the background — location is read only when the employee taps clock in or out.
+
+For employee HR and punch data, your **employer** is usually the data controller and determines the lawful basis (often contract or legitimate interests for attendance). Datasoftware Analytics Ltd processes this data on the employer's instructions under the DPA.
+
+Employees who deny location permission cannot complete a geofenced punch until permission is granted.
+
+---
+
+## 5. Legal bases (UK GDPR)
 
 Depending on the activity, we rely on:
 
@@ -56,7 +75,7 @@ Employers determine the legal basis for employee HR data in the platform.
 
 ---
 
-## 5. How we store and protect data
+## 6. How we store and protect data
 
 - UK/EU hosting with logical tenant isolation per business  
 - Encryption in transit (TLS)  
@@ -67,27 +86,28 @@ Details of technical measures are in our [Cyber Essentials readiness notes](./cy
 
 ---
 
-## 6. Retention
+## 7. Retention
 
 - Account and billing records: for the subscription term plus statutory retention (typically up to 7 years for financial records)  
 - Employee HR records: as configured by your organisation and described in the DPA  
+- Time punch records (including location): retained with employment/attendance records per your organisation's settings and the DPA  
 - Server logs: typically 90 days unless needed for security investigation
 
 ---
 
-## 7. Sub-processors
+## 8. Sub-processors
 
 We use trusted providers for hosting, email delivery, and payment processing (e.g. Stripe for billing metadata). A current list is available on request at legal@datasoftwareanalytics.co.uk.
 
 ---
 
-## 8. International transfers
+## 9. International transfers
 
 We aim to keep HR data in the UK/EEA. If data is transferred outside the UK, we use appropriate safeguards (UK IDTA / Standard Contractual Clauses).
 
 ---
 
-## 9. Your rights
+## 10. Your rights
 
 If we process your data as **controller** (e.g. your sign-up details), you may request access, correction, erasure, restriction, or portability where applicable. Contact legal@datasoftwareanalytics.co.uk.
 
@@ -97,7 +117,7 @@ You may complain to the **Information Commissioner's Office (ICO)**: https://ico
 
 ---
 
-## 10. Changes
+## 11. Changes
 
 We may update this policy. Material changes will be posted on this page with an updated date.
 

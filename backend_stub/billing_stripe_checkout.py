@@ -81,10 +81,10 @@ def create_direct_debit_mandate_session(
     """Collect a UK Bacs Direct Debit mandate via Stripe Checkout (setup mode)."""
     stripe = _configure_stripe()
     success = success_url or _app_success_url(
-        f"{os.getenv('LOCAL_APP_URL', 'http://localhost:5173')}/admin.html?mandate=confirmed#payroll"
+        f"{os.getenv('LOCAL_APP_URL', 'http://localhost:5173')}/admin.html?mandate=confirmed#overview"
     )
     cancel = cancel_url or _app_cancel_url(
-        f"{os.getenv('LOCAL_APP_URL', 'http://localhost:5173')}/admin.html?mandate=cancelled#payroll"
+        f"{os.getenv('LOCAL_APP_URL', 'http://localhost:5173')}/admin.html?mandate=cancelled#overview"
     )
 
     return stripe.checkout.Session.create(

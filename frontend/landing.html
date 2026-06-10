@@ -35,11 +35,11 @@
       <main>
         <section class="hero hero--animated">
           <div class="hero-copy">
-            <div class="badge badge--pulse hero-in hero-in--1">Built for UK compliance • HMRC + Home Office ready</div>
+            <div class="badge badge--pulse hero-in hero-in--1">Built for UK compliance • HR-only platform</div>
             <h1 class="hero-in hero-in--2">Your complete people & workforce platform.</h1>
             <p class="hero-in hero-in--3">
-              Replace scattered spreadsheets with one modern HR hub. Run payroll, manage right-to-work,
-              track performance, and keep every document in one secure place.
+              Replace scattered spreadsheets with one modern HR hub. Track attendance, manage right-to-work,
+              and keep every document in one secure place.
             </p>
             <div class="hero-actions hero-in hero-in--4">
               <a class="btn" href="./signup.html">Start 14-day free trial</a>
@@ -48,7 +48,7 @@
           </div>
           <div class="hero-panel hero-panel--pulse hero-in hero-in--6">
             <div class="phone-header">ShiftSwift HR</div>
-            <p>Onboarding, attendance, payroll, RTW checks, and compliance exports, aligned to your brand colours and workflows.</p>
+            <p>Onboarding, attendance, RTW checks, and compliance exports — HR records in one place.</p>
           </div>
         </section>
 
@@ -60,8 +60,8 @@
               <p>Onboarding, documents, contracts, and profile management in one place.</p>
             </article>
             <article class="feature-card feature-card--animated">
-              <h3>Payroll & RTI</h3>
-              <p>Pay cycles, payslips, and HMRC RTI workflows for UK employers.</p>
+              <h3>Time clock &amp; rota</h3>
+              <p>Geofenced clock-in on mobile, weekly rotas, and attendance linked to sponsor day-9 alerts.</p>
             </article>
             <article class="feature-card feature-card--animated">
               <h3>Compliance</h3>
@@ -73,37 +73,23 @@
         <section id="compliance" class="section">
           <div class="feature-card">
             <h3>UK compliance ready</h3>
-            <p>ShiftSwift HR keeps your business aligned with HMRC RTI requirements and Home Office checks, with retention and audit tooling built in.</p>
+            <p>ShiftSwift HR keeps your business aligned with Home Office checks and UK employment compliance, with retention and audit tooling built in.</p>
           </div>
         </section>
 
         <section id="pricing" class="section pricing-section">
-          <div class="pricing-intro">
-            <div class="badge">B2B pricing for hospitality</div>
-            <h2>Simple plans for restaurants, cafés & pubs</h2>
-            <p>
-              One flat price per site with no per-seat surprises. UK VAT is calculated at checkout.
-              Every plan includes a <strong>14-day free trial</strong>.
-            </p>
-          </div>
-          <div id="pricing-plans" class="pricing-grid"></div>
-          <p class="pricing-footnote">
-            Prices exclude VAT unless stated. Business subscriptions are non-refundable.
-            <a href="./payment-terms.html" target="_blank" rel="noopener">Payment terms</a>
-          </p>
+          <h2>Simple pricing</h2>
+          <div id="pricing-plans" class="pricing-grid pricing-grid--platform"></div>
         </section>
       </main>
-
-      <footer class="footer">
-        <strong>ShiftSwift HR</strong> · UK HR & sponsor licence compliance
-      </footer>
     </div>
-    <script src="./landing-animations.js?v=1"></script>
-    <script src="./pricing.js?v=1"></script>
+    <script src="./brand-config.js?v=brand-v4"></script>
+    <script src="./pricing.js?v=10"></script>
     <script>
       document.addEventListener("DOMContentLoaded", () => {
-        window.ShiftSwiftPricing?.initMarketing("pricing-plans");
+        window.ShiftSwiftPricing?.initMarketing("pricing-plans", null);
       });
     </script>
+    <script src="./cookie-consent.js?v=1"></script>
   </body>
 </html>

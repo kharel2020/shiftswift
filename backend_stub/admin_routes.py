@@ -521,10 +521,20 @@ def export_introducer_commission_csv(
 
 
 @router.get("/payroll-export/info")
-def payroll_export_metadata() -> dict[str, object]:
+def payroll_export_metadata(
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, object]:
     from modules.payroll_export.service import payroll_export_info
+    from plan_features import assert_tenant_feature
 
-    return payroll_export_info()
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = _db_conn()
+    try:
+        assert_tenant_feature(tenant_id=tenant_id, feature="payroll", conn=conn)
+        return payroll_export_info()
+    finally:
+        conn.close()
 
 
 @router.get("/payroll-export/employees.csv")
@@ -535,10 +545,12 @@ def payroll_export_employees_csv(
     from fastapi.responses import Response
 
     from modules.payroll_export.service import build_employees_csv
+    from plan_features import assert_tenant_feature
 
     tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
     conn = _db_conn()
     try:
+        assert_tenant_feature(tenant_id=tenant_id, feature="payroll", conn=conn)
         csv_body = build_employees_csv(tenant_id=tenant_id, conn=conn)
     finally:
         conn.close()
@@ -560,10 +572,12 @@ def payroll_export_hours_csv(
     from fastapi.responses import Response
 
     from modules.payroll_export.service import build_hours_csv
+    from plan_features import assert_tenant_feature
 
     tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
     conn = _db_conn()
     try:
+        assert_tenant_feature(tenant_id=tenant_id, feature="payroll", conn=conn)
         csv_body = build_hours_csv(
             tenant_id=tenant_id,
             conn=conn,

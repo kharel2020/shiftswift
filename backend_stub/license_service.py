@@ -20,7 +20,7 @@ PAYMENT_HOLD_STATUS = "payment_hold"
 
 
 def _billing_page_url() -> str:
-    return os.getenv("BILLING_UPGRADE_URL", f"{_app_url()}/admin.html#payroll")
+    return os.getenv("BILLING_UPGRADE_URL", f"{_app_url()}/admin.html#overview")
 
 
 def _failure_row(cur: Any, tenant_id: int) -> tuple[Any, ...] | None:

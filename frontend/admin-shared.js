@@ -69,7 +69,6 @@ window.Admin = (() => {
   };
 
   const FEATURE_UPGRADE_LABELS = {
-    payroll: "Payroll export is included on all plans.",
     "sponsor-compliance": "Sponsor licence compliance is included on Growth and Scale plans.",
     grievance: "Grievance workflows are included on Growth and Scale plans.",
     "audit-export": "Home Office audit export is included on Growth and Scale plans.",
@@ -142,7 +141,7 @@ window.Admin = (() => {
     if (!notice) {
       notice = document.createElement("div");
       notice.className = "feature-upgrade-notice promo-result";
-      notice.innerHTML = `<p><strong>${escapeHtml(FEATURE_UPGRADE_LABELS[feature] || "Upgrade your plan to unlock this feature.")}</strong> <a href="#payroll">View plans &amp; upgrade</a></p>`;
+      notice.innerHTML = `<p><strong>${escapeHtml(FEATURE_UPGRADE_LABELS[feature] || "Upgrade your plan to unlock this feature.")}</strong> <a href="./index.html#pricing">View plans</a></p>`;
       const header = section.querySelector(".section-header");
       section.insertBefore(notice, header ? header.nextSibling : section.firstChild);
     }
@@ -199,6 +198,7 @@ window.Admin = (() => {
 
   function resolveSectionFromHash(rawHash) {
     const { baseSection } = parseHashPath(rawHash);
+    if (baseSection === "payroll" || baseSection === "export") return "overview";
     return baseSection || "overview";
   }
 

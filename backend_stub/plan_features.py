@@ -42,7 +42,7 @@ def features_for_plan(
     return {
         "plan_tier": tier,
         "plan_display_name": plan_display_name(plan_id),
-        "payroll_enabled": True,
+        "payroll_enabled": False,
         "trial_active": bool(trial_active),
         "sponsor_compliance_enabled": growth_plus,
         "grievance_enabled": growth_plus,
@@ -109,6 +109,7 @@ def assert_tenant_feature(
 
 
 UPGRADE_MESSAGES = {
+    "payroll": "Staff CSV export is not available on your plan yet.",
     "grievance": "Grievance workflows are included on Growth and Scale plans.",
     "audit_export": "Home Office audit export is included on Growth and Scale plans.",
     "sponsor_compliance": "Sponsor licence compliance is included on Growth and Scale plans.",

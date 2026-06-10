@@ -1,4 +1,4 @@
-/** Admin workspace sections — overview, employees, payroll, settings. */
+/** Admin workspace sections — overview, employees, staff export, settings. */
 (async function initAdminWorkspace() {
   const {
     apiFetch,
@@ -146,9 +146,9 @@
           <span>Stored documents</span>
         </article>
         <article class="metric-card">
-          <strong>Export</strong>
-          <span>Payroll partners</span>
-          <p class="muted">BrightPay &amp; Xero CSV export included</p>
+          <strong>HR</strong>
+          <span>Platform focus</span>
+          <p class="muted">Records, time clock, RTW &amp; sponsor compliance</p>
         </article>`;
     } catch (error) {
       grid.innerHTML = `<p class="muted">${escapeHtml(error.message || "Could not load overview.")}</p>`;
@@ -184,69 +184,11 @@
     }
   }
 
-  async function loadPayrollExportPanel() {
-    const panel = document.getElementById("payroll-export-panel");
-    if (!panel) return;
-    const today = new Date();
-    const monthStart = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-01`;
-    const monthEnd = today.toISOString().slice(0, 10);
-    panel.innerHTML = `
-      <div class="promo-result" style="margin-bottom:1rem;">
-        <p><strong>Bring your own payroll.</strong> Most UK SMEs already use BrightPay, Xero, or a bureau.
-        ShiftSwift HR keeps HR &amp; compliance records — export CSV when you need to sync employees or hours.</p>
-      </div>
-      <div class="detail-grid">
-        <div><span class="muted">BrightPay</span><strong>CSV employee import</strong></div>
-        <div><span class="muted">Xero Payroll</span><strong>Manual / CSV add employees</strong></div>
-        <div><span class="muted">RTI &amp; payslips</span><strong>In your payroll software</strong></div>
-      </div>
-      <p class="link-row" style="margin-top:1rem;">
-        <button type="button" class="btn" id="payroll-export-employees-btn">Download employee CSV</button>
-        <button type="button" class="btn secondary" id="payroll-export-hours-btn">Download hours CSV</button>
-        <a class="btn ghost" href="./payroll-export-guide.html" target="_blank" rel="noopener">BrightPay setup guide</a>
-      </p>
-      <label class="edit-field" style="margin-top:1rem;max-width:320px;">
-        <span class="edit-label">Hours export — from date</span>
-        <input type="date" id="payroll-hours-from" value="${monthStart}" />
-      </label>
-      <label class="edit-field" style="max-width:320px;">
-        <span class="edit-label">Hours export — to date</span>
-        <input type="date" id="payroll-hours-to" value="${monthEnd}" />
-      </label>
-      <p class="muted">Include NI numbers and start dates in employee profiles before exporting for smoother payroll import.</p>`;
-
-    document.getElementById("payroll-export-employees-btn")?.addEventListener("click", async () => {
-      try {
-        await downloadAuthenticated("/admin/payroll-export/employees.csv", "shiftswift-employees.csv");
-      } catch (error) {
-        alert(error.message || "Export failed");
-      }
-    });
-    document.getElementById("payroll-export-hours-btn")?.addEventListener("click", async () => {
-      const from = document.getElementById("payroll-hours-from")?.value;
-      const to = document.getElementById("payroll-hours-to")?.value;
-      let path = "/admin/payroll-export/hours.csv";
-      const params = new URLSearchParams();
-      if (from) params.set("from_date", from);
-      if (to) params.set("to_date", to);
-      if (params.toString()) path += `?${params.toString()}`;
-      try {
-        await downloadAuthenticated(path, "shiftswift-hours.csv");
-      } catch (error) {
-        alert(error.message || "Export failed");
-      }
-    });
-  }
-
   const sectionLoaded = new Set();
 
   window.addEventListener("admin:section", (event) => {
     const section = event.detail?.section;
     if (section === "overview") loadOverview();
-    if (section === "payroll" && !sectionLoaded.has("payroll")) {
-      sectionLoaded.add("payroll");
-      loadPayrollExportPanel();
-    }
     if (section === "settings" && !sectionLoaded.has("settings")) {
       sectionLoaded.add("settings");
       loadFormOptions().then(() => {

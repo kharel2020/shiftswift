@@ -18,7 +18,7 @@
 
       <main class="legal-doc">
         <h1>Cookie policy</h1>
-        <p class="legal-doc__meta">Last updated: 9 June 2026 · www.shiftswifthr.co.uk and app.shiftswifthr.co.uk</p>
+        <p class="legal-doc__meta">Last updated: 10 June 2026 · www.shiftswifthr.co.uk and app.shiftswifthr.co.uk</p>
 
         <h2>1. What are cookies?</h2>
         <p>
@@ -43,6 +43,7 @@
           <tbody>
             <tr><td>Session / auth tokens</td><td>Keep you signed in to the admin portal</td><td>Session or until sign-out</td></tr>
             <tr><td><code>apiBaseUrl</code>, <code>tenantId</code> (local storage)</td><td>Remember API endpoint and workspace after login</td><td>Until cleared</td></tr>
+            <tr><td><code>shiftswift_cookie_consent</code> (local storage)</td><td>Remember your cookie preference choice</td><td>Up to 12 months</td></tr>
             <tr><td>Security / load-balancer cookies</td><td>Protect against abuse and route traffic</td><td>Session</td></tr>
           </tbody>
         </table>
@@ -58,8 +59,17 @@
         </table>
         <p>We do not currently use third-party advertising cookies on ShiftSwift HR.</p>
 
+        <h2>Cookie consent banner</h2>
+        <p>
+          When you first visit our website or app, we show a cookie banner so you can accept all cookies and local storage
+          we use, or choose <strong>Essential only</strong>. You can reopen preferences by clearing site data or
+          contacting us. We do not set non-essential analytics cookies unless you accept them and we enable analytics in
+          future.
+        </p>
+
         <h2>4. How to control cookies</h2>
         <ul>
+          <li><strong>Cookie banner:</strong> Use <strong>Accept all</strong> or <strong>Essential only</strong> on first visit.</li>
           <li><strong>Browser settings:</strong> Most browsers let you block or delete cookies. Blocking strictly necessary cookies may prevent sign-in.</li>
           <li><strong>Local storage:</strong> Clear site data for shiftswifthr.co.uk in your browser to reset stored API/workspace settings.</li>
           <li><strong>Admin portal:</strong> Sign out to clear session tokens.</li>
@@ -84,5 +94,6 @@
         <p>&copy; 2026 Datasoftware Analytics Ltd. All rights reserved.</p>
       </footer>
     </div>
+    <script src="./cookie-consent.js?v=1"></script>
   </body>
 </html>

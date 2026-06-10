@@ -30,7 +30,7 @@ PLANS: tuple[SubscriptionPlan, ...] = (
     SubscriptionPlan(
         id="site_starter_monthly",
         name="Essentials",
-        description="HR records, RTW checks, geofenced time clock, payroll export.",
+        description="HR records, RTW checks, and geofenced time clock.",
         stripe_price_id_env="STRIPE_PRICE_ESSENTIALS_BASE_MONTHLY",
         stripe_seat_price_id_env="STRIPE_PRICE_ESSENTIALS_SEAT_MONTHLY",
         billing_interval="month",

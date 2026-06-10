@@ -4,6 +4,8 @@ const SHELL = [
   "./punch.html",
   "./punch.css",
   "./theme.css",
+  "./cookie-consent.js",
+  "./cookie-consent.css",
   "./punch.js",
   "./brand-config.js",
   "./punch-manifest.webmanifest",

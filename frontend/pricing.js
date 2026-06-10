@@ -1,5 +1,5 @@
 /**
- * Shared subscription pricing — platform HR plans + payroll partner export messaging
+ * Shared subscription pricing — platform HR plans only
  */
 (function () {
   function resolveApiBase() {
@@ -14,7 +14,7 @@
     {
       id: "site_starter_monthly",
       name: "Essentials",
-      description: "HR records, RTW checks, geofenced time clock, payroll export.",
+      description: "HR records, RTW checks, and geofenced time clock.",
       billing_interval: "month",
       max_employees: 40,
       billing_model: "base_plus_per_head",
@@ -27,7 +27,6 @@
         "Employee records & lifecycle",
         "Right-to-work checks",
         "Geofenced time clock (mobile PWA)",
-        "Payroll CSV export · BrightPay & Xero",
         "Document storage",
         "Email support",
       ],
@@ -75,35 +74,11 @@
     },
   ];
 
-  function renderPayrollPartners(container) {
-    if (!container) return;
-    container.innerHTML = `
-      <article class="pricing-card pricing-card--integration">
-        <div class="pricing-card-head">
-          <span class="pricing-badge pricing-badge--muted">Included with every plan</span>
-          <div class="pricing-plan-name">Payroll export · BrightPay &amp; Xero</div>
-          <p class="pricing-plan-desc">ShiftSwift HR does not run HMRC RTI or payslips. Export employee data from admin and continue pay runs in the software you already use.</p>
-        </div>
-        <div class="pricing-integration-grid">
-          <ul class="pricing-features">
-            <li>Employee CSV export (NI, start date, salary)</li>
-            <li>Hours CSV from Time punch (optional)</li>
-            <li>Step-by-step BrightPay import guide in admin</li>
-            <li>No payroll add-on subscription</li>
-          </ul>
-          <div class="pricing-integration-split" aria-label="What stays where">
-            <div class="pricing-integration-split__col">
-              <strong>In ShiftSwift HR</strong>
-              <p>Employee records, right-to-work, geofenced clock-in, sponsor compliance</p>
-            </div>
-            <div class="pricing-integration-split__col">
-              <strong>In BrightPay, Xero, or your bureau</strong>
-              <p>RTI submissions, payslips, P45s, and pay runs</p>
-            </div>
-          </div>
-        </div>
-      </article>`;
+  function renderExportPartners(container) {
+    if (container) container.hidden = true;
   }
+
+  const renderPayrollPartners = renderExportPartners;
 
   let cachedCatalog = null;
 
@@ -253,7 +228,7 @@
 
     if (payrollSelect) {
       payrollSelect.innerHTML =
-        `<option value="">HR only — no payroll add-on</option>` +
+        `<option value="">HR only</option>` +
         payrollPlans
           .map(
             (plan) =>
@@ -335,7 +310,7 @@
       actions = `
         <div class="pricing-card-actions">
           <button type="button" class="btn ${selected ? "" : "ghost"}" data-select-payroll="${plan.id}">
-            ${selected ? "Selected" : "Add payroll"}
+            ${selected ? "Selected" : "Add integration"}
           </button>
         </div>`;
     } else {
@@ -352,7 +327,7 @@
                data-plan-id="${plan.id}" data-card-type="${cardType}">
         <div class="pricing-card-head">
           ${featured ? '<span class="pricing-badge">Best for hospitality &amp; sponsors</span>' : ""}
-          ${cardType === "payroll" ? '<span class="pricing-badge pricing-badge--payroll">Payroll add-on</span>' : ""}
+          ${cardType === "payroll" ? '<span class="pricing-badge pricing-badge--payroll">Legacy add-on</span>' : ""}
           <div class="pricing-plan-name">${plan.name}</div>
           <p class="pricing-plan-desc">${plan.description}</p>
         </div>
@@ -371,16 +346,16 @@
                data-plan-id="" data-card-type="payroll-skip">
         <div class="pricing-card-head">
           <div class="pricing-plan-name">HR only</div>
-          <p class="pricing-plan-desc">Platform subscription without payroll processing.</p>
+          <p class="pricing-plan-desc">Platform subscription — HR and compliance in ShiftSwift.</p>
         </div>
         <div class="pricing-amount">
           <span class="value" style="font-size:1.5rem;">£0</span>
-          <span class="interval">payroll add-on</span>
+          <span class="interval">HR platform</span>
         </div>
-        <p class="pricing-staff-cap">Payroll export to BrightPay or Xero is included</p>
+        <p class="pricing-staff-cap">HR records, time clock, and compliance tools</p>
         <div class="pricing-card-actions">
           <button type="button" class="btn ${selected ? "" : "ghost"}" data-select-payroll="">
-            ${selected ? "Selected" : "No payroll"}
+            ${selected ? "Selected" : "HR only"}
           </button>
         </div>
       </article>`;
@@ -435,7 +410,7 @@
 
     if (hrLine) hrLine.textContent = `${plan.name} · HR platform`;
     if (payrollLine) {
-      payrollLine.textContent = "Payroll via BrightPay or Xero export (included)";
+      payrollLine.hidden = true;
     }
     if (priceLine) {
       if (usesPerHeadPricing(plan)) {
@@ -489,7 +464,7 @@
 
     renderPlatformPlans();
     if (payrollContainer) {
-      renderPayrollPartners(payrollContainer);
+      payrollContainer.hidden = true;
     }
 
     if (toggle) {
@@ -589,7 +564,7 @@
         });
       }
       if (payrollContainer) {
-        renderPayrollPartners(payrollContainer);
+        payrollContainer.hidden = true;
       }
     }
 

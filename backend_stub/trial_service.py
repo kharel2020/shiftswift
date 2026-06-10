@@ -28,7 +28,7 @@ def _app_url() -> str:
 
 
 def _upgrade_page_url() -> str:
-    return os.getenv("BILLING_UPGRADE_URL", f"{_app_url()}/admin.html#payroll")
+    return os.getenv("BILLING_UPGRADE_URL", f"{_app_url()}/admin.html#overview")
 
 
 def days_until_trial_end(*, trial_ends_at: datetime | None, as_of: datetime | None = None) -> int | None:
@@ -290,7 +290,7 @@ def create_upgrade_checkout(
 
     success = success_url or os.getenv(
         "BILLING_UPGRADE_SUCCESS_URL",
-        f"{_app_url()}/admin.html?upgraded=1#payroll",
+        f"{_app_url()}/admin.html?upgraded=1#overview",
     )
     cancel = cancel_url or os.getenv(
         "BILLING_UPGRADE_CANCEL_URL",

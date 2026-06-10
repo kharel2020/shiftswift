@@ -143,7 +143,7 @@ def build_hours_csv(
 
 def payroll_export_info() -> dict[str, object]:
     return {
-        "message": "ShiftSwift HR does not run payroll. Export employee data to your existing payroll software.",
+        "message": "Download CSV files from ShiftSwift HR and import into BrightPay, Xero, or your accountant's tools.",
         "partners": [
             {
                 "id": "brightpay",

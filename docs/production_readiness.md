@@ -164,7 +164,8 @@ See [server_installation.md](./server_installation.md) for step-by-step staging 
 - [ ] Privacy policy on marketing site
 - [ ] Payment / refund terms — `docs/b2b_payment_terms.md`
 - [ ] Cyber Essentials organisational controls — `docs/cyber_essentials_readiness.md`
-- [ ] ICO registration (if required)
+- [ ] ICO registration current (annual fee)
+- [ ] **Compliance checklist** — `docs/compliance_checklist.md`
 - [ ] Cyber / professional indemnity insurance
 
 ---

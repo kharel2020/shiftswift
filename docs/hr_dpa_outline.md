@@ -22,6 +22,7 @@
 ## 5. Categories of personal data
 
 - Identity, contact, employment, salary, disciplinary, right-to-work, sponsorship status
+- Where Time Clock is enabled: geolocation at punch time (coordinates, accuracy, distance from site, punch timestamps)
 
 ## 6. **Data silo / segregation (critical clause)**
 
