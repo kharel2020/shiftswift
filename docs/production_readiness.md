@@ -36,6 +36,7 @@ Checklist for going live on **shiftswifthr.co.uk** with real customer data. Use 
 - [ ] **Privacy notice live** on www (solicitor-reviewed)
 - [ ] **MSA + DPA signed** with customers (see `docs/hr_msa_outline.md`, `docs/hr_dpa_outline.md`)
 - [ ] **Stripe live mode** (if billing at launch) — live keys, webhook secret, VAT/tax configured
+- [ ] **Marketing honesty** — no template testimonials; UI mocks labelled; claims match shipped features ([go_to_market_credibility.md](./go_to_market_credibility.md))
 
 ### Pre-flight (run on staging)
 
@@ -111,7 +112,7 @@ curl -s http://127.0.0.1:8000/health
 | Offboarding / ACAS | ✅ | Spot-check deadlines |
 | B2B billing / trial | ⚠️ | End-to-end Stripe test checkout |
 | HR templates + AI | ⚠️ | Set `AI_ENABLED=0` if no API key |
-| SMTP notifications | ❌ | Compliance alerts, future password reset |
+| SMTP notifications | ✅ | Password reset + signup mail — verify Brevo on each deploy |
 | GDPR retention / deletion process | ⚠️ | Operational process beyond code |
 | RTW immutable storage backup | ❌ | Backup `RTW_STORAGE_DIR` with database |
 | DineSwift EPOS punch integration | ❌ | Phase 2 — optional at HR-only launch |
@@ -200,6 +201,21 @@ See [server_installation.md](./server_installation.md) for step-by-step staging 
 5. Configure **daily Postgres backup** and test restore
 6. Add **uptime monitor** on `https://api.shiftswifthr.co.uk/health`
 7. **Pilot one real business** — HR login, employee login, on-site time punch
+
+---
+
+## 11. Marketing credibility (before paid acquisition)
+
+See **[go_to_market_credibility.md](./go_to_market_credibility.md)** for the full checklist.
+
+| Item | Status |
+|------|--------|
+| Template customer quotes removed | ✅ |
+| Product previews labelled (not “demo business”) | ✅ |
+| Feature claims match codebase (no fake rota/RTI) | ✅ |
+| Real admin screenshots on homepage | ❌ |
+| First named case study with permission | ❌ |
+| Stripe live checkout verified | ⚠️ |
 
 ---
 

@@ -30,9 +30,13 @@ PLANS_SEED = [
         "description": plan.description,
         "billing_interval": plan.billing_interval,
         "max_employees": plan.max_employees,
-        "price_gbp_ex_vat": plan.price_gbp_ex_vat,
+        "price_gbp_ex_vat": plan.base_price_gbp_ex_vat,
+        "base_price_gbp_ex_vat": plan.base_price_gbp_ex_vat,
+        "price_per_active_employee_gbp_ex_vat": plan.price_per_active_employee_gbp_ex_vat,
+        "monthly_cap_gbp_ex_vat": plan.monthly_cap_gbp_ex_vat,
         "features": list(plan.features),
         "stripe_price_id_env": plan.stripe_price_id_env,
+        "stripe_seat_price_id_env": plan.stripe_seat_price_id_env,
         "sort_order": idx,
     }
     for idx, plan in enumerate(PLANS)
@@ -79,18 +83,25 @@ def main() -> None:
                     """
                     INSERT INTO subscription_plans (
                       id, name, description, billing_interval, max_employees,
-                      price_gbp_ex_vat, features, stripe_price_id_env, sort_order
+                      price_gbp_ex_vat, base_price_gbp_ex_vat, price_per_active_employee_gbp_ex_vat,
+                      monthly_cap_gbp_ex_vat, features, stripe_price_id_env,
+                      stripe_seat_price_id_env, sort_order
                     )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s, %s)
                     ON CONFLICT (id) DO UPDATE SET
                       name = EXCLUDED.name,
                       description = EXCLUDED.description,
                       billing_interval = EXCLUDED.billing_interval,
                       max_employees = EXCLUDED.max_employees,
                       price_gbp_ex_vat = EXCLUDED.price_gbp_ex_vat,
+                      base_price_gbp_ex_vat = EXCLUDED.base_price_gbp_ex_vat,
+                      price_per_active_employee_gbp_ex_vat = EXCLUDED.price_per_active_employee_gbp_ex_vat,
+                      monthly_cap_gbp_ex_vat = EXCLUDED.monthly_cap_gbp_ex_vat,
                       features = EXCLUDED.features,
                       stripe_price_id_env = EXCLUDED.stripe_price_id_env,
+                      stripe_seat_price_id_env = EXCLUDED.stripe_seat_price_id_env,
                       sort_order = EXCLUDED.sort_order,
+                      is_active = TRUE,
                       updated_at = NOW()
                     """,
                     (
@@ -100,11 +111,24 @@ def main() -> None:
                         item["billing_interval"],
                         item["max_employees"],
                         item["price_gbp_ex_vat"],
+                        item["base_price_gbp_ex_vat"],
+                        item["price_per_active_employee_gbp_ex_vat"],
+                        item["monthly_cap_gbp_ex_vat"],
                         json.dumps(item["features"]),
                         item["stripe_price_id_env"],
+                        item["stripe_seat_price_id_env"],
                         item["sort_order"],
                     ),
                 )
+
+            cur.execute(
+                """
+                UPDATE subscription_plans
+                SET is_active = FALSE, updated_at = NOW()
+                WHERE billing_interval = 'year'
+                   OR id LIKE '%annual%'
+                """
+            )
 
             for item in PAYROLL_PLANS_SEED:
                 cur.execute(

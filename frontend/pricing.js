@@ -1,5 +1,5 @@
 /**
- * Shared subscription pricing — platform HR + optional payroll add-ons
+ * Shared subscription pricing — platform HR plans + payroll partner export messaging
  */
 (function () {
   function resolveApiBase() {
@@ -13,32 +13,40 @@
   const FALLBACK_PLATFORM_PLANS = [
     {
       id: "site_starter_monthly",
-      name: "Starter",
-      description: "Up to 15 staff at one site.",
+      name: "Essentials",
+      description: "HR records, RTW checks, geofenced time clock, payroll export.",
       billing_interval: "month",
-      max_employees: 15,
-      price_gbp_ex_vat: 29,
-      price_gbp_inc_vat: 34.8,
+      max_employees: 40,
+      billing_model: "base_plus_per_head",
+      base_price_gbp_ex_vat: 9,
+      price_per_active_employee_gbp_ex_vat: 2,
+      monthly_cap_gbp_ex_vat: 49,
+      price_gbp_ex_vat: 9,
+      price_gbp_inc_vat: 10.8,
       features: [
-        "Employee records",
+        "Employee records & lifecycle",
         "Right-to-work checks",
+        "Geofenced time clock (mobile PWA)",
+        "Payroll CSV export · BrightPay & Xero",
         "Document storage",
-        "Rota builder",
-        "Self-service portal",
         "Email support",
       ],
     },
     {
       id: "site_medium_monthly",
-      name: "Growth",
-      description: "Up to 40 staff at one site.",
+      name: "Compliance",
+      description: "Sponsor licence duties, day-9 absence alerts, Home Office audit exports.",
       billing_interval: "month",
-      max_employees: 40,
-      price_gbp_ex_vat: 59,
-      price_gbp_inc_vat: 70.8,
+      max_employees: 100,
+      billing_model: "base_plus_per_head",
+      base_price_gbp_ex_vat: 19,
+      price_per_active_employee_gbp_ex_vat: 3,
+      monthly_cap_gbp_ex_vat: 79,
+      price_gbp_ex_vat: 19,
+      price_gbp_inc_vat: 22.8,
       features: [
-        "Everything in Starter",
-        "Day-9 absence alerts",
+        "Everything in Essentials",
+        "Day-9 absence alerts (clock-in linked)",
         "Sponsor licence compliance",
         "Home Office audit export",
         "Grievance workflows",
@@ -47,64 +55,18 @@
     },
     {
       id: "site_growth_monthly",
-      name: "Scale",
-      description: "Up to 100 staff at one site.",
+      name: "Multi-site",
+      description: "Consolidated compliance across locations — API and account support.",
       billing_interval: "month",
-      max_employees: 100,
-      price_gbp_ex_vat: 99,
-      price_gbp_inc_vat: 118.8,
+      max_employees: 200,
+      billing_model: "base_plus_per_head",
+      base_price_gbp_ex_vat: 29,
+      price_per_active_employee_gbp_ex_vat: 2,
+      monthly_cap_gbp_ex_vat: 129,
+      price_gbp_ex_vat: 29,
+      price_gbp_inc_vat: 34.8,
       features: [
-        "Everything in Growth",
-        "Multi-site dashboard",
-        "Custom onboarding workflows",
-        "API access",
-        "Dedicated account manager",
-      ],
-    },
-    {
-      id: "site_starter_annual",
-      name: "Starter (annual)",
-      description: "Up to 15 staff. Save £58 vs monthly.",
-      billing_interval: "year",
-      max_employees: 15,
-      price_gbp_ex_vat: 290,
-      price_gbp_inc_vat: 348,
-      features: [
-        "Employee records",
-        "Right-to-work checks",
-        "Document storage",
-        "Rota builder",
-        "Self-service portal",
-        "Email support",
-      ],
-    },
-    {
-      id: "site_medium_annual",
-      name: "Growth (annual)",
-      description: "Up to 40 staff. Save £118 vs monthly.",
-      billing_interval: "year",
-      max_employees: 40,
-      price_gbp_ex_vat: 590,
-      price_gbp_inc_vat: 708,
-      features: [
-        "Everything in Starter",
-        "Day-9 absence alerts",
-        "Sponsor licence compliance",
-        "Home Office audit export",
-        "Grievance workflows",
-        "SMS alerts · Priority support",
-      ],
-    },
-    {
-      id: "site_growth_annual",
-      name: "Scale (annual)",
-      description: "Up to 100 staff. Save £198 vs monthly.",
-      billing_interval: "year",
-      max_employees: 100,
-      price_gbp_ex_vat: 990,
-      price_gbp_inc_vat: 1188,
-      features: [
-        "Everything in Growth",
+        "Everything in Compliance",
         "Multi-site dashboard",
         "Custom onboarding workflows",
         "API access",
@@ -113,48 +75,23 @@
     },
   ];
 
-  const FALLBACK_PAYROLL_PLANS = [
-    {
-      id: "payroll_starter_monthly",
-      name: "1–10 employees",
-      description: "Pay cycles, payslips, HMRC RTI, P60/P45 generation.",
-      billing_interval: "month",
-      max_employees: 10,
-      price_gbp_ex_vat: 19,
-      price_gbp_inc_vat: 22.8,
-      features: ["HMRC RTI submissions", "Payslips & P60s", "P45 generation"],
-    },
-    {
-      id: "payroll_standard_monthly",
-      name: "11–25 employees",
-      description: "All Starter features plus auto-enrolment pension reporting.",
-      billing_interval: "month",
-      max_employees: 25,
-      price_gbp_ex_vat: 35,
-      price_gbp_inc_vat: 42,
-      features: ["Everything in 1–10 band", "Auto-enrolment pension reporting"],
-    },
-    {
-      id: "payroll_growth_monthly",
-      name: "26–50 employees",
-      description: "All Standard features plus multi-site payroll runs.",
-      billing_interval: "month",
-      max_employees: 50,
-      price_gbp_ex_vat: 55,
-      price_gbp_inc_vat: 66,
-      features: ["Everything in 11–25 band", "Multi-site payroll runs"],
-    },
-    {
-      id: "payroll_scale_monthly",
-      name: "51–100 employees",
-      description: "All Growth features plus dedicated payroll support line.",
-      billing_interval: "month",
-      max_employees: 100,
-      price_gbp_ex_vat: 85,
-      price_gbp_inc_vat: 102,
-      features: ["Everything in 26–50 band", "Dedicated payroll support line"],
-    },
-  ];
+  function renderPayrollPartners(container) {
+    if (!container) return;
+    container.innerHTML = `
+      <article class="pricing-card pricing-card--payroll pricing-card--partners">
+        <div class="pricing-card-head">
+          <div class="pricing-plan-name">Works with BrightPay &amp; Xero</div>
+          <p class="pricing-plan-desc">ShiftSwift HR does not run payroll or RTI. Export employee CSV from admin and continue pay runs in the software you already use.</p>
+        </div>
+        <ul class="pricing-features">
+          <li>Employee CSV export (NI, start date, salary)</li>
+          <li>Hours CSV from Time punch (optional)</li>
+          <li>Step-by-step BrightPay import guide</li>
+          <li>No payroll add-on subscription</li>
+        </ul>
+        <p class="pricing-staff-cap muted">HMRC RTI, payslips, and P45s stay in BrightPay, Xero, or your bureau.</p>
+      </article>`;
+  }
 
   let cachedCatalog = null;
 
@@ -162,36 +99,69 @@
     return Number(value).toFixed(2).replace(/\.00$/, "");
   }
 
+  function planBasePrice(plan) {
+    return Number(plan.base_price_gbp_ex_vat ?? plan.price_gbp_ex_vat ?? 0);
+  }
+
+  function planPerHeadPrice(plan) {
+    return Number(plan.price_per_active_employee_gbp_ex_vat ?? 0);
+  }
+
+  function planMonthlyCap(plan) {
+    const cap = plan.monthly_cap_gbp_ex_vat;
+    return cap == null ? null : Number(cap);
+  }
+
+  function usesPerHeadPricing(plan) {
+    return planPerHeadPrice(plan) > 0 || plan.billing_model === "base_plus_per_head";
+  }
+
+  function estimateMonthlyBill(plan, activeEmployees) {
+    const seats = Math.max(0, Number(activeEmployees) || 0);
+    const base = planBasePrice(plan);
+    const perHead = planPerHeadPrice(plan);
+    const subtotal = base + seats * perHead;
+    const cap = planMonthlyCap(plan);
+    return cap != null ? Math.min(subtotal, cap) : subtotal;
+  }
+
+  function pricingExamplesHtml(plan) {
+    const samples = [5, 10, 20].filter((n) => n <= plan.max_employees);
+    if (!samples.length) samples.push(Math.min(5, plan.max_employees));
+    return samples
+      .map(
+        (n) =>
+          `<li><strong>${n} staff</strong> ≈ £${formatMoney(estimateMonthlyBill(plan, n))} + VAT / month</li>`
+      )
+      .join("");
+  }
+
+  function perHeadPricingHtml(plan) {
+    const base = formatMoney(planBasePrice(plan));
+    const perHead = formatMoney(planPerHeadPrice(plan));
+    const cap = planMonthlyCap(plan);
+    const capLine = cap != null ? `<p class="pricing-staff-cap">Capped at £${formatMoney(cap)} + VAT / month</p>` : "";
+    return `
+        <div class="pricing-amount">
+          <span class="currency">£</span>
+          <span class="value">${base}</span>
+          <span class="interval">base + VAT / month</span>
+        </div>
+        <p class="pricing-vat">+ <strong>£${perHead}</strong> per active employee / month (ex VAT)</p>
+        ${capLine}
+        <ul class="pricing-examples">${pricingExamplesHtml(plan)}</ul>`;
+  }
+
   function intervalLabel(interval) {
     return interval === "year" ? "/ year" : "/ month";
   }
 
   function isFeatured(plan) {
-    return plan.id === "site_medium_monthly" || plan.id === "site_medium_annual";
+    return plan.id === "site_medium_monthly";
   }
 
   function plansForBillingInterval(plans, billing) {
-    const monthly = plans.filter((p) => p.billing_interval === "month");
-    if (billing === "month") return monthly;
-
-    const annualByCap = Object.fromEntries(
-      plans.filter((p) => p.billing_interval === "year").map((p) => [p.max_employees, p])
-    );
-
-    return monthly.map((plan) => {
-      const existing = annualByCap[plan.max_employees];
-      if (existing) return existing;
-      const annualPrice = Math.round(plan.price_gbp_ex_vat * 10 * 100) / 100;
-      return {
-        ...plan,
-        id: plan.id.replace("_monthly", "_annual"),
-        name: `${plan.name} (annual)`,
-        billing_interval: "year",
-        price_gbp_ex_vat: annualPrice,
-        price_gbp_inc_vat: Math.round(annualPrice * 1.2 * 100) / 100,
-        description: `${plan.description} Billed annually (2 months free vs monthly).`,
-      };
-    });
+    return plans.filter((p) => p.billing_interval === "month");
   }
 
   function suggestedPayrollPlan(platformPlanId, payrollPlans) {
@@ -213,9 +183,12 @@
     if (exact) return exact.id;
 
     const slugMap = {
+      essentials: "site_starter_monthly",
       starter: "site_starter_monthly",
+      compliance: "site_medium_monthly",
       growth: "site_medium_monthly",
       medium: "site_medium_monthly",
+      multisite: "site_growth_monthly",
       scale: "site_growth_monthly",
     };
     if (slugMap[key]) {
@@ -230,6 +203,11 @@
   }
 
   function planSelectLabel(plan) {
+    if (usesPerHeadPricing(plan)) {
+      const cap = planMonthlyCap(plan);
+      const capText = cap != null ? ` · cap £${formatMoney(cap)}` : "";
+      return `${plan.name} · £${formatMoney(planBasePrice(plan))} + £${formatMoney(planPerHeadPrice(plan))}/head${capText}`;
+    }
     const interval = plan.billing_interval === "year" ? "/ year" : "/ month";
     return `${plan.name} · £${formatMoney(plan.price_gbp_ex_vat)} + VAT ${interval} · up to ${plan.max_employees} staff`;
   }
@@ -274,12 +252,12 @@
       );
       cachedCatalog = {
         platform_plans: platform.length ? platform : FALLBACK_PLATFORM_PLANS,
-        payroll_plans: payroll.length ? payroll : FALLBACK_PAYROLL_PLANS,
+        payroll_plans: [],
       };
     } catch {
       cachedCatalog = {
         platform_plans: FALLBACK_PLATFORM_PLANS,
-        payroll_plans: FALLBACK_PAYROLL_PLANS,
+        payroll_plans: [],
       };
     }
     return cachedCatalog;
@@ -291,9 +269,9 @@
   }
 
   function planSignupParam(plan) {
-    if (plan.id === "site_starter_monthly") return "starter";
-    if (plan.id === "site_medium_monthly") return "growth";
-    if (plan.id === "site_growth_monthly") return "scale";
+    if (plan.id === "site_starter_monthly") return "essentials";
+    if (plan.id === "site_medium_monthly") return "compliance";
+    if (plan.id === "site_growth_monthly") return "multisite";
     return plan.id;
   }
 
@@ -306,15 +284,23 @@
         : options.selectedPlanId === plan.id;
     const featured = cardType === "platform" && isFeatured(plan);
     const interval = intervalLabel(plan.billing_interval);
-    const exVat = formatMoney(plan.price_gbp_ex_vat);
-    const incVat = formatMoney(plan.price_gbp_inc_vat || plan.price_gbp_ex_vat * 1.2);
+    const perHead = usesPerHeadPricing(plan);
+    const exVat = formatMoney(planBasePrice(plan));
+    const incVat = formatMoney(planBasePrice(plan) * 1.2);
+    const pricingBlock = perHead
+      ? perHeadPricingHtml(plan)
+      : `
+        <div class="pricing-amount">
+          <span class="currency">£</span>
+          <span class="value">${exVat}</span>
+          <span class="interval">+ VAT ${interval}</span>
+        </div>
+        <p class="pricing-vat"><strong>£${incVat}</strong> inc. 20% VAT ${interval.replace("/", "per")}</p>
+        <p class="pricing-staff-cap">Up to ${plan.max_employees} employees · one site</p>`;
 
     let actions = "";
     if (mode === "marketing") {
-      const query =
-        cardType === "payroll"
-          ? `plan=${encodeURIComponent(options.platformPlanId || "site_starter_monthly")}&payroll=${encodeURIComponent(plan.id)}`
-          : `plan=${encodeURIComponent(planSignupParam(plan))}`;
+      const query = `plan=${encodeURIComponent(planSignupParam(plan))}`;
       actions = `
         <div class="pricing-card-actions">
           <a class="btn" href="./signup.html?${query}">Start 14-day trial</a>
@@ -340,19 +326,12 @@
       <article class="pricing-card ${featured ? "is-featured" : ""} ${selected ? "is-selected" : ""} pricing-card--${cardType}"
                data-plan-id="${plan.id}" data-card-type="${cardType}">
         <div class="pricing-card-head">
-          ${featured ? '<span class="pricing-badge">Most popular</span>' : ""}
+          ${featured ? '<span class="pricing-badge">Best for hospitality &amp; sponsors</span>' : ""}
           ${cardType === "payroll" ? '<span class="pricing-badge pricing-badge--payroll">Payroll add-on</span>' : ""}
-          ${plan.billing_interval === "year" ? '<span class="pricing-badge pricing-badge--muted">Save 2 months</span>' : ""}
           <div class="pricing-plan-name">${plan.name}</div>
           <p class="pricing-plan-desc">${plan.description}</p>
         </div>
-        <div class="pricing-amount">
-          <span class="currency">£</span>
-          <span class="value">${exVat}</span>
-          <span class="interval">+ VAT ${interval}</span>
-        </div>
-        <p class="pricing-vat"><strong>£${incVat}</strong> inc. 20% VAT ${interval.replace("/", "per")}</p>
-        <p class="pricing-staff-cap">Up to ${plan.max_employees} employees · one site</p>
+        ${pricingBlock}
         <ul class="pricing-features">
           ${(plan.features || []).map((f) => `<li>${f}</li>`).join("")}
         </ul>
@@ -373,7 +352,7 @@
           <span class="value" style="font-size:1.5rem;">£0</span>
           <span class="interval">payroll add-on</span>
         </div>
-        <p class="pricing-staff-cap">Add payroll later from admin billing</p>
+        <p class="pricing-staff-cap">Payroll export to BrightPay or Xero is included</p>
         <div class="pricing-card-actions">
           <button type="button" class="btn ${selected ? "" : "ghost"}" data-select-payroll="">
             ${selected ? "Selected" : "No payroll"}
@@ -431,28 +410,27 @@
 
     if (hrLine) hrLine.textContent = `${plan.name} · HR platform`;
     if (payrollLine) {
-      payrollLine.textContent = payroll
-        ? `${payroll.name} payroll · £${formatMoney(payroll.price_gbp_ex_vat)} + VAT / month`
-        : "No payroll add-on";
+      payrollLine.textContent = "Payroll via BrightPay or Xero export (included)";
     }
     if (priceLine) {
-      let priceText = `£${formatMoney(plan.price_gbp_ex_vat)} + VAT ${interval} · up to ${plan.max_employees} staff`;
-      if (payroll) {
-        priceText += ` · + payroll £${formatMoney(payroll.price_gbp_ex_vat)} + VAT/mo`;
+      if (usesPerHeadPricing(plan)) {
+        const base = formatMoney(planBasePrice(plan));
+        const perHead = formatMoney(planPerHeadPrice(plan));
+        const cap = planMonthlyCap(plan);
+        priceLine.textContent = cap
+          ? `From £${base} + £${perHead}/active employee · capped at £${formatMoney(cap)} + VAT / month`
+          : `From £${base} + £${perHead}/active employee + VAT / month`;
+      } else {
+        priceLine.textContent = `£${formatMoney(plan.price_gbp_ex_vat)} + VAT ${interval} · up to ${plan.max_employees} staff`;
       }
-      priceLine.textContent = priceText;
     }
 
     summary.hidden = false;
     const hiddenPlan = document.getElementById("selected-plan-id");
     if (hiddenPlan) hiddenPlan.value = plan.id;
-    const hiddenPayroll = document.getElementById("selected-payroll-plan-id");
-    if (hiddenPayroll) hiddenPayroll.value = payrollPlanId || "";
 
     const hrSelect = document.getElementById("signup-hr-plan-select");
     if (hrSelect && hrSelect.value !== plan.id) hrSelect.value = plan.id;
-    const payrollSelect = document.getElementById("signup-payroll-plan-select");
-    if (payrollSelect && payrollSelect.value !== (payrollPlanId || "")) payrollSelect.value = payrollPlanId || "";
   }
 
   async function initMarketing(platformContainerId, payrollContainerId) {
@@ -462,7 +440,7 @@
     // Marketing page uses strategy pricing — signup/billing API may lag until catalog is re-seeded.
     const catalog = {
       platform_plans: FALLBACK_PLATFORM_PLANS,
-      payroll_plans: FALLBACK_PAYROLL_PLANS,
+      payroll_plans: [],
     };
     let billing = "month";
 
@@ -477,30 +455,16 @@
       renderPlatformPlans();
     }
     if (payrollContainer) {
-      payrollContainer.innerHTML = '<div class="pricing-loading">Loading payroll…</div>';
-      renderPayrollPlans(payrollContainer, catalog.payroll_plans, {
-        mode: "marketing",
-        cardType: "payroll",
-        platformPlanId: "site_starter_monthly",
-      });
+      renderPayrollPartners(payrollContainer);
     }
 
     if (toggle) {
-      toggle.querySelectorAll("[data-billing]").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          billing = btn.getAttribute("data-billing") || "month";
-          toggle.querySelectorAll("[data-billing]").forEach((el) => {
-            const active = el === btn;
-            el.classList.toggle("is-active", active);
-            el.setAttribute("aria-pressed", active ? "true" : "false");
-          });
-          renderPlatformPlans();
-        });
-      });
+      toggle.hidden = true;
+      toggle.setAttribute("aria-hidden", "true");
     }
   }
 
-  let currentSelectedPlan = "site_starter_monthly";
+  let currentSelectedPlan = "site_medium_monthly";
   let currentSelectedPayroll = null;
 
   async function initSignup(platformContainerId, payrollContainerId) {
@@ -514,28 +478,26 @@
       selectedPayrollPlanId = null;
     }
 
-    populateSignupSelects(catalog.platform_plans, catalog.payroll_plans, selectedPlanId, selectedPayrollPlanId);
+    populateSignupSelects(catalog.platform_plans, [], selectedPlanId, null);
 
     function syncFromSelects() {
       const hrSelect = document.getElementById("signup-hr-plan-select");
-      const payrollSelect = document.getElementById("signup-payroll-plan-select");
       selectedPlanId = hrSelect?.value || selectedPlanId;
-      selectedPayrollPlanId = payrollSelect?.value || null;
+      selectedPayrollPlanId = null;
       currentSelectedPlan = selectedPlanId;
-      currentSelectedPayroll = selectedPayrollPlanId;
+      currentSelectedPayroll = null;
       const url = new URL(window.location.href);
       url.searchParams.set("plan", selectedPlanId);
-      if (selectedPayrollPlanId) url.searchParams.set("payroll", selectedPayrollPlanId);
-      else url.searchParams.delete("payroll");
+      url.searchParams.delete("payroll");
       window.history.replaceState({}, "", url);
-      updateSummary(selectedPlanId, catalog.platform_plans, selectedPayrollPlanId, catalog.payroll_plans);
+      updateSummary(selectedPlanId, catalog.platform_plans, null, []);
       if (platformContainer) {
         renderPlans(platformContainer, catalog.platform_plans.filter((p) => p.billing_interval === "month"), {
           mode: "selectable",
           cardType: "platform",
           selectedPlanId,
           platformPlans: catalog.platform_plans,
-          payrollPlans: catalog.payroll_plans,
+          payrollPlans: [],
           onSelect: (id) => {
             selectedPlanId = id;
             if (hrSelect) hrSelect.value = id;
@@ -544,24 +506,11 @@
         });
       }
       if (payrollContainer) {
-        renderPayrollPlans(payrollContainer, catalog.payroll_plans, {
-          mode: "selectable",
-          cardType: "payroll",
-          selectedPlanId,
-          selectedPayrollPlanId,
-          platformPlans: catalog.platform_plans,
-          payrollPlans: catalog.payroll_plans,
-          onPayrollSelect: (id) => {
-            selectedPayrollPlanId = id;
-            if (payrollSelect) payrollSelect.value = id || "";
-            syncFromSelects();
-          },
-        });
+        renderPayrollPartners(payrollContainer);
       }
     }
 
     document.getElementById("signup-hr-plan-select")?.addEventListener("change", syncFromSelects);
-    document.getElementById("signup-payroll-plan-select")?.addEventListener("change", syncFromSelects);
 
     syncFromSelects();
 

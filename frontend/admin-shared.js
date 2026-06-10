@@ -17,6 +17,13 @@ window.Admin = (() => {
     return stored;
   }
 
+  function isPlatformAdmin() {
+    const role = localStorage.getItem("userRole") || "";
+    const tenantId = localStorage.getItem("tenantId") || "";
+    const masterId = localStorage.getItem("masterTenantId") || "999";
+    return role === "admin" && tenantId === masterId;
+  }
+
   const TOKEN = localStorage.getItem("token") || "";
   const TENANT_ID = resolveWorkspaceTenantId();
   const API_BASE = getApiBase();
@@ -62,7 +69,7 @@ window.Admin = (() => {
   };
 
   const FEATURE_UPGRADE_LABELS = {
-    payroll: "Payroll is an optional add-on.",
+    payroll: "Payroll export is included on all plans.",
     "sponsor-compliance": "Sponsor licence compliance is included on Growth and Scale plans.",
     grievance: "Grievance workflows are included on Growth and Scale plans.",
     "audit-export": "Home Office audit export is included on Growth and Scale plans.",
@@ -659,6 +666,7 @@ window.Admin = (() => {
     isFeatureEnabled,
     loadEmployees,
     downloadAuthenticated,
+    isPlatformAdmin,
     escapeHtml,
     statusClass,
     statusPill,

@@ -21,6 +21,11 @@ class SubscriptionPlan:
     price_gbp_ex_vat: float
     features: tuple[str, ...]
     stripe_price_id: str | None = None
+    base_price_gbp_ex_vat: float | None = None
+    price_per_active_employee_gbp_ex_vat: float = 0.0
+    monthly_cap_gbp_ex_vat: float | None = None
+    stripe_seat_price_id_env: str = ""
+    stripe_seat_price_id: str | None = None
 
 
 def _db_conn() -> Any:
@@ -33,7 +38,26 @@ def _db_conn() -> Any:
 
 
 def _row_to_plan(row: tuple) -> SubscriptionPlan:
-    plan_id, name, description, interval, max_emp, price, features, env_key, stripe_price = row
+    if len(row) >= 13:
+        (
+            plan_id,
+            name,
+            description,
+            interval,
+            max_emp,
+            price,
+            features,
+            env_key,
+            stripe_price,
+            base_price,
+            per_head,
+            monthly_cap,
+            seat_env,
+            seat_price,
+        ) = row
+    else:
+        plan_id, name, description, interval, max_emp, price, features, env_key, stripe_price = row
+        base_price, per_head, monthly_cap, seat_env, seat_price = None, 0, None, "", None
     if isinstance(features, str):
         feature_list = json.loads(features)
     else:
@@ -48,6 +72,11 @@ def _row_to_plan(row: tuple) -> SubscriptionPlan:
         price_gbp_ex_vat=float(price),
         features=tuple(feature_list),
         stripe_price_id=stripe_price,
+        base_price_gbp_ex_vat=float(base_price) if base_price is not None else None,
+        price_per_active_employee_gbp_ex_vat=float(per_head or 0),
+        monthly_cap_gbp_ex_vat=float(monthly_cap) if monthly_cap is not None else None,
+        stripe_seat_price_id_env=seat_env or "",
+        stripe_seat_price_id=seat_price,
     )
 
 
@@ -59,7 +88,9 @@ def list_plans_from_db(active_only: bool = True) -> list[SubscriptionPlan]:
         with conn.cursor() as cur:
             sql = """
                 SELECT id, name, description, billing_interval, max_employees,
-                       price_gbp_ex_vat, features, stripe_price_id_env, stripe_price_id
+                       price_gbp_ex_vat, features, stripe_price_id_env, stripe_price_id,
+                       base_price_gbp_ex_vat, price_per_active_employee_gbp_ex_vat,
+                       monthly_cap_gbp_ex_vat, stripe_seat_price_id_env, stripe_seat_price_id
                 FROM subscription_plans
             """
             if active_only:
@@ -82,7 +113,9 @@ def get_plan(plan_id: str) -> SubscriptionPlan | None:
                 cur.execute(
                     """
                     SELECT id, name, description, billing_interval, max_employees,
-                           price_gbp_ex_vat, features, stripe_price_id_env, stripe_price_id
+                           price_gbp_ex_vat, features, stripe_price_id_env, stripe_price_id,
+                           base_price_gbp_ex_vat, price_per_active_employee_gbp_ex_vat,
+                           monthly_cap_gbp_ex_vat, stripe_seat_price_id_env, stripe_seat_price_id
                     FROM subscription_plans
                     WHERE id = %s AND is_active = TRUE
                     """,
@@ -107,6 +140,10 @@ def get_plan(plan_id: str) -> SubscriptionPlan | None:
                 max_employees=plan.max_employees,
                 price_gbp_ex_vat=plan.price_gbp_ex_vat,
                 features=plan.features,
+                base_price_gbp_ex_vat=plan.base_price_gbp_ex_vat,
+                price_per_active_employee_gbp_ex_vat=plan.price_per_active_employee_gbp_ex_vat,
+                monthly_cap_gbp_ex_vat=plan.monthly_cap_gbp_ex_vat,
+                stripe_seat_price_id_env=plan.stripe_seat_price_id_env,
             )
     return None
 
@@ -125,6 +162,10 @@ def list_plans() -> list[SubscriptionPlan]:
             max_employees=plan.max_employees,
             price_gbp_ex_vat=plan.price_gbp_ex_vat,
             features=plan.features,
+            base_price_gbp_ex_vat=plan.base_price_gbp_ex_vat,
+            price_per_active_employee_gbp_ex_vat=plan.price_per_active_employee_gbp_ex_vat,
+            monthly_cap_gbp_ex_vat=plan.monthly_cap_gbp_ex_vat,
+            stripe_seat_price_id_env=plan.stripe_seat_price_id_env,
         )
         for plan in DEFAULT_PLANS
     ]
@@ -135,4 +176,12 @@ def resolve_stripe_price_id(plan: SubscriptionPlan) -> str | None:
         return plan.stripe_price_id
     if plan.stripe_price_id_env:
         return os.getenv(plan.stripe_price_id_env) or None
+    return None
+
+
+def resolve_stripe_seat_price_id(plan: SubscriptionPlan) -> str | None:
+    if plan.stripe_seat_price_id:
+        return plan.stripe_seat_price_id
+    if plan.stripe_seat_price_id_env:
+        return os.getenv(plan.stripe_seat_price_id_env) or None
     return None

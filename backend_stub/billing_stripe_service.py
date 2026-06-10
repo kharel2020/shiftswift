@@ -6,7 +6,7 @@ import os
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from billing_plans import SubscriptionPlan, resolve_stripe_price_id
+from billing_plans import SubscriptionPlan, resolve_stripe_price_id, resolve_stripe_seat_price_id
 from billing_promotions import PromotionResult, record_promotion_redemption
 from billing_config import stripe_settings
 from billing_stripe_checkout import create_direct_debit_mandate_session
@@ -64,9 +64,12 @@ def provision_tenant_billing(
             except Exception:
                 pass
 
-        line_items: list[dict[str, str]] = [{"price": price_id}]
+        line_items: list[dict[str, object]] = [{"price": price_id, "quantity": 1}]
+        seat_price_id = resolve_stripe_seat_price_id(plan)
+        if seat_price_id:
+            line_items.append({"price": seat_price_id, "quantity": 1})
         if payroll_price_id:
-            line_items.append({"price": payroll_price_id})
+            line_items.append({"price": payroll_price_id, "quantity": 1})
 
         subscription_kwargs: dict[str, object] = {
             "customer": stripe_customer_id,

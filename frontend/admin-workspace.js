@@ -146,9 +146,9 @@
           <span>Stored documents</span>
         </article>
         <article class="metric-card">
-          <strong>${data.payroll_enabled ? "On" : "Off"}</strong>
-          <span>Payroll add-on</span>
-          <p class="muted">${escapeHtml(data.payroll_plan_id || "Not configured")}</p>
+          <strong>Export</strong>
+          <span>Payroll partners</span>
+          <p class="muted">BrightPay &amp; Xero CSV export included</p>
         </article>`;
     } catch (error) {
       grid.innerHTML = `<p class="muted">${escapeHtml(error.message || "Could not load overview.")}</p>`;
@@ -184,59 +184,58 @@
     }
   }
 
-  async function loadPayrollPanel() {
-    const panel = document.getElementById("payroll-details");
-    const enrollPanel = document.getElementById("payroll-enroll-panel");
-    const activePanel = document.getElementById("payroll-active-panel");
+  async function loadPayrollExportPanel() {
+    const panel = document.getElementById("payroll-export-panel");
     if (!panel) return;
+    const today = new Date();
+    const monthStart = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-01`;
+    const monthEnd = today.toISOString().slice(0, 10);
+    panel.innerHTML = `
+      <div class="promo-result" style="margin-bottom:1rem;">
+        <p><strong>Bring your own payroll.</strong> Most UK SMEs already use BrightPay, Xero, or a bureau.
+        ShiftSwift HR keeps HR &amp; compliance records — export CSV when you need to sync employees or hours.</p>
+      </div>
+      <div class="detail-grid">
+        <div><span class="muted">BrightPay</span><strong>CSV employee import</strong></div>
+        <div><span class="muted">Xero Payroll</span><strong>Manual / CSV add employees</strong></div>
+        <div><span class="muted">RTI &amp; payslips</span><strong>In your payroll software</strong></div>
+      </div>
+      <p class="link-row" style="margin-top:1rem;">
+        <button type="button" class="btn" id="payroll-export-employees-btn">Download employee CSV</button>
+        <button type="button" class="btn secondary" id="payroll-export-hours-btn">Download hours CSV</button>
+        <a class="btn ghost" href="./payroll-export-guide.html" target="_blank" rel="noopener">BrightPay setup guide</a>
+      </p>
+      <label class="edit-field" style="margin-top:1rem;max-width:320px;">
+        <span class="edit-label">Hours export — from date</span>
+        <input type="date" id="payroll-hours-from" value="${monthStart}" />
+      </label>
+      <label class="edit-field" style="max-width:320px;">
+        <span class="edit-label">Hours export — to date</span>
+        <input type="date" id="payroll-hours-to" value="${monthEnd}" />
+      </label>
+      <p class="muted">Include NI numbers and start dates in employee profiles before exporting for smoother payroll import.</p>`;
 
-    if (!isFeatureEnabled("payroll")) {
-      enrollPanel?.removeAttribute("hidden");
-      activePanel?.setAttribute("hidden", "");
-      document.getElementById("payroll-enroll-upgrade-btn")?.addEventListener("click", startUpgrade, { once: true });
-      return;
-    }
-
-    enrollPanel?.setAttribute("hidden", "");
-    activePanel?.removeAttribute("hidden");
-
-    try {
-      const [statusRes, meta] = await Promise.all([
-        apiFetch("/billing/status"),
-        window.Admin.formOptions ? Promise.resolve(window.Admin.formOptions) : loadFormOptions(),
-      ]);
-      if (!statusRes.ok) throw new Error("Billing unavailable");
-      const status = await statusRes.json();
-      const payrollPlan = (meta.payroll_plans || []).find((p) => p.value === status.payroll_plan_id);
-      const platformPlan = (meta.platform_plans || []).find((p) => p.value === status.subscription_plan);
-      const mandateLabel = status.direct_debit_active
-        ? `Active · ${status.mandate_sort_code || "Not set"} · ${status.mandate_account_last4 || "****"}`
-        : status.direct_debit_pending
-          ? "Pending confirmation (Bacs)"
-          : status.mandate_status && status.mandate_status !== "none"
-            ? String(status.mandate_status)
-            : "Not set up";
-      panel.innerHTML = `
-        <div class="detail-grid">
-          <div><span class="muted">Platform plan</span><strong>${escapeHtml(platformPlan?.label || status.subscription_plan || "Not set")}</strong></div>
-          <div><span class="muted">Status</span><strong>${escapeHtml(status.subscription_status || "Not set")}</strong></div>
-          <div><span class="muted">Trial</span><strong>${status.days_remaining != null ? `${escapeHtml(status.days_remaining)} days left` : status.subscription_status === "active" ? "Subscribed" : "Not set"}</strong></div>
-          <div><span class="muted">Direct Debit</span><strong>${escapeHtml(mandateLabel)}</strong></div>
-          <div><span class="muted">Employee band</span><strong>${escapeHtml(status.max_employees)} max</strong></div>
-          <div><span class="muted">Payroll add-on</span><strong>${status.payroll_enabled ? "Enabled" : "Not enabled"}</strong></div>
-          <div><span class="muted">Payroll plan</span><strong>${escapeHtml(payrollPlan?.label || status.payroll_plan_id || "Not set")}</strong></div>
-          <div><span class="muted">Billing email</span><strong>${escapeHtml(status.billing_email || "Not set")}</strong></div>
-        </div>
-        <p class="link-row" style="margin-top:0.75rem;">
-          <button type="button" class="btn" id="payroll-upgrade-btn">Upgrade subscription</button>
-          ${!status.direct_debit_active ? '<button type="button" class="btn secondary" id="payroll-dd-btn">Set up Direct Debit</button>' : ""}
-        </p>
-        <p class="muted">Monthly billing via UK Bacs Direct Debit (Stripe mandate) or card at checkout. First Direct Debit payment may take a few working days.</p>`;
-      document.getElementById("payroll-upgrade-btn")?.addEventListener("click", startUpgrade);
-      document.getElementById("payroll-dd-btn")?.addEventListener("click", startDirectDebitSetup);
-    } catch {
-      panel.innerHTML = `<p class="muted">Billing details unavailable. Sign in and ensure the API is running.</p>`;
-    }
+    document.getElementById("payroll-export-employees-btn")?.addEventListener("click", async () => {
+      try {
+        await downloadAuthenticated("/admin/payroll-export/employees.csv", "shiftswift-employees.csv");
+      } catch (error) {
+        alert(error.message || "Export failed");
+      }
+    });
+    document.getElementById("payroll-export-hours-btn")?.addEventListener("click", async () => {
+      const from = document.getElementById("payroll-hours-from")?.value;
+      const to = document.getElementById("payroll-hours-to")?.value;
+      let path = "/admin/payroll-export/hours.csv";
+      const params = new URLSearchParams();
+      if (from) params.set("from_date", from);
+      if (to) params.set("to_date", to);
+      if (params.toString()) path += `?${params.toString()}`;
+      try {
+        await downloadAuthenticated(path, "shiftswift-hours.csv");
+      } catch (error) {
+        alert(error.message || "Export failed");
+      }
+    });
   }
 
   const sectionLoaded = new Set();
@@ -246,7 +245,7 @@
     if (section === "overview") loadOverview();
     if (section === "payroll" && !sectionLoaded.has("payroll")) {
       sectionLoaded.add("payroll");
-      loadPayrollPanel();
+      loadPayrollExportPanel();
     }
     if (section === "settings" && !sectionLoaded.has("settings")) {
       sectionLoaded.add("settings");

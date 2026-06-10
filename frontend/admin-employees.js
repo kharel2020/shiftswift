@@ -89,7 +89,7 @@
     recruitment: "Set employee type here. Sponsor compliance (step 9) unlocks only for sponsored workers.",
     onboarding: "Set status to <strong>Onboarding</strong> for new starters. Probation end must be on or after start date.",
     induction: "Phone, home address, and emergency contact are required. NI number is validated when provided.",
-    job_performance: "Requires the payroll add-on on your subscription.",
+    job_performance: "Salary is exported to BrightPay or Xero with employee CSV.",
     compliance_reporting: "Visa type plus a GOV.UK share code <em>or</em> CoS reference required.",
     offboarding: "Set employee status to <strong>Terminated</strong> in on-boarding (or off-boarding workflow) to unlock this step.",
   };
@@ -395,8 +395,8 @@
     if (hint) {
       intro += `<p class="employee-section-hint">${hint}</p>`;
     }
-    if (section.key === "job_performance" && !workspace.payroll_enabled) {
-      intro += `<p class="employee-section-hint employee-section-hint--warn">Payroll add-on is not active. This step is hidden until payroll is enabled.</p>`;
+    if (section.key === "job_performance") {
+      intro += `<p class="employee-section-hint">Include salary here so payroll CSV exports are ready for BrightPay or Xero.</p>`;
     }
     return intro;
   }

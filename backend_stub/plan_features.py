@@ -42,7 +42,7 @@ def features_for_plan(
     return {
         "plan_tier": tier,
         "plan_display_name": plan_display_name(plan_id),
-        "payroll_enabled": bool(payroll_enabled),
+        "payroll_enabled": True,
         "trial_active": bool(trial_active),
         "sponsor_compliance_enabled": growth_plus,
         "grievance_enabled": growth_plus,

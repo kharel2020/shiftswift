@@ -136,6 +136,15 @@ if ! grep -q 'forgot-password.html' "${APP_ROOT}/business-login.html" 2>/dev/nul
 fi
 echo "    password reset pages OK"
 
+echo "==> verify payroll export guide (App)"
+for root in "${APP_ROOT}" "${WWW_ROOT}"; do
+  if [ ! -f "${root}/payroll-export-guide.html" ]; then
+    echo "ERROR: missing ${root}/payroll-export-guide.html after rsync"
+    exit 1
+  fi
+done
+echo "    payroll export guide OK"
+
 echo "==> health check"
 if command -v curl >/dev/null 2>&1; then
   health_ok=0

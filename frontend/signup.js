@@ -21,8 +21,7 @@ function friendlySignupError(message) {
   return message || "Signup failed. Please try again.";
 }
 
-let currentPlanId = "site_starter_monthly";
-let currentPayrollPlanId = null;
+let currentPlanId = "site_medium_monthly";
 
 function parsePromoCode(raw) {
   const code = String(raw || "").trim();
@@ -101,7 +100,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   readUrlPromos();
   const result = await window.ShiftSwiftPricing?.initSignup("signup-pricing-plans", "signup-payroll-plans");
   if (result?.selectedPlanId) currentPlanId = result.selectedPlanId;
-  if (result?.selectedPayrollPlanId) currentPayrollPlanId = result.selectedPayrollPlanId;
 
   document.getElementById("apply-promo-btn")?.addEventListener("click", applyPromoCodes);
   if (document.getElementById("promo-code")?.value) applyPromoCodes();
@@ -112,7 +110,6 @@ document.getElementById("signup-form")?.addEventListener("submit", async (event)
   const status = document.getElementById("signup-status");
   const form = event.currentTarget;
   const planId = document.getElementById("selected-plan-id")?.value || currentPlanId;
-  const payrollPlanId = document.getElementById("selected-payroll-plan-id")?.value.trim() || null;
 
   if (!planId) {
     if (status) status.textContent = "Please select an HR plan.";
@@ -137,7 +134,6 @@ document.getElementById("signup-form")?.addEventListener("submit", async (event)
     billing_email: form.billing_email.value.trim(),
     admin_password: password,
     plan_id: planId,
-    payroll_plan_id: payrollPlanId || null,
     vat_number: form.vat_number?.value.trim() || null,
     start_trial: form.start_trial.checked,
     discount_code,
@@ -179,7 +175,6 @@ document.getElementById("signup-form")?.addEventListener("submit", async (event)
     localStorage.setItem("tenantId", String(data.tenant_id));
     localStorage.setItem("businessName", payload.business_name);
     localStorage.setItem("subscriptionPlan", data.plan_id);
-    if (data.payroll_plan_id) localStorage.setItem("payrollPlan", data.payroll_plan_id);
 
     if (data.checkout_url) {
       window.location.href = data.checkout_url;

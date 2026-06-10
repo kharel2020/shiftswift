@@ -79,7 +79,7 @@ SECTION_DESCRIPTIONS = {
     "induction": "Contact details, NI number, address, and emergency contact.",
     "document_store": "Contracts, ID, policies, and required HR evidence.",
     "development": "Training plans and career progression (guidance).",
-    "job_performance": "Salary and performance records (payroll add-on).",
+    "job_performance": "Salary and annual pay records — included in payroll CSV export.",
     "support": "Wellbeing and workplace support (guidance).",
     "performance_improvement": "Reviews, feedback, and CPD (guidance).",
     "compliance_reporting": "Visa, CoS, and right-to-work reporting for sponsored workers.",

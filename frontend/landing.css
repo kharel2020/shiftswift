@@ -969,6 +969,51 @@ body.is-loading .page {
   margin: 0 auto 24px;
 }
 
+.social-proof__eyebrow {
+  display: inline-block;
+  margin: 0 0 12px;
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--green-700);
+  background: var(--green-50);
+  border: 1px solid var(--green-100);
+  border-radius: 999px;
+}
+
+.social-proof__lead {
+  max-width: 720px;
+  margin: 0 auto 28px;
+}
+
+.social-proof-list {
+  margin: 0;
+  padding-left: 1.15rem;
+  color: var(--gray-700);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+
+.social-proof-list li + li {
+  margin-top: 0.45rem;
+}
+
+.social-proof-card--honest h3 {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  color: var(--gray-900);
+}
+
+.social-proof-card--placeholder p {
+  margin: 0 0 12px;
+}
+
+.social-proof-card--placeholder .btn {
+  margin-top: 4px;
+}
+
 .social-proof-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

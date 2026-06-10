@@ -1,6 +1,6 @@
 /** Admin promotions — validate discount/referral codes and browse catalogs. */
 (async function initAdminPromotions() {
-  const { apiFetch, loadFormOptions, mountEditForm, renderTableBody, FORM_SCHEMAS, escapeHtml, statusPill, parseHashBaseSection } = window.Admin;
+  const { apiFetch, loadFormOptions, mountEditForm, renderTableBody, FORM_SCHEMAS, escapeHtml, statusPill, parseHashBaseSection, downloadAuthenticated, isPlatformAdmin } = window.Admin;
 
   let validateForm = null;
 
@@ -156,6 +156,28 @@
     }
   }
 
+  function setupIntroducerExports() {
+    const toolbar = document.getElementById("introducer-export-actions");
+    if (!toolbar || !isPlatformAdmin()) return;
+    toolbar.hidden = false;
+
+    document.getElementById("export-all-introducers-btn")?.addEventListener("click", async () => {
+      try {
+        await downloadAuthenticated("/admin/billing/introducer-commission.csv", "shiftswift-introducers-all.csv");
+      } catch (error) {
+        alert(error.message || "Export failed");
+      }
+    });
+  }
+
+  async function exportIntroducerCode(code) {
+    const safe = encodeURIComponent(code);
+    await downloadAuthenticated(
+      `/admin/billing/introducer-commission.csv?referral_code=${safe}`,
+      `shiftswift-introducer-${code}.csv`
+    );
+  }
+
   async function loadReferralCodes() {
     const tbody = document.getElementById("referral-codes-body");
     if (!tbody) return;
@@ -171,7 +193,7 @@
           { key: "reward", render: (row) => escapeHtml(formatReferralReward(row)) },
           {
             key: "commission",
-            render: (row) => `${escapeHtml(row.referrer_commission_percent)}% commission`,
+            render: (row) => `${escapeHtml(row.referrer_commission_percent)}% (manual)`,
           },
           { key: "usage", render: (row) => escapeHtml(formatUsage(row.use_count, row.max_uses)) },
           {
@@ -180,8 +202,13 @@
           },
           {
             key: "actions",
-            render: (row) =>
-              `<button type="button" class="btn ghost" data-use-referral="${escapeHtml(row.code)}">Test</button>`,
+            render: (row) => {
+              const testBtn = `<button type="button" class="btn ghost" data-use-referral="${escapeHtml(row.code)}">Test</button>`;
+              const exportBtn = isPlatformAdmin()
+                ? ` <button type="button" class="btn ghost" data-export-referral="${escapeHtml(row.code)}">CSV</button>`
+                : "";
+              return testBtn + exportBtn;
+            },
           },
         ],
         rows: data.items || [],
@@ -190,6 +217,15 @@
       tbody.querySelectorAll("[data-use-referral]").forEach((btn) => {
         btn.addEventListener("click", () => {
           prefillValidator({ referralCode: btn.dataset.useReferral });
+        });
+      });
+      tbody.querySelectorAll("[data-export-referral]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          try {
+            await exportIntroducerCode(btn.dataset.exportReferral);
+          } catch (error) {
+            alert(error.message || "Export failed");
+          }
         });
       });
     } catch {
@@ -202,6 +238,7 @@
   }
 
   async function loadPromotionsSection() {
+    setupIntroducerExports();
     await mountPromoValidator();
     await Promise.all([loadDiscountCodes(), loadReferralCodes()]);
   }

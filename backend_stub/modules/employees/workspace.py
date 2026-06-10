@@ -104,7 +104,7 @@ def _section_applicable(section: str, employee: dict[str, Any]) -> bool:
     if section == "compliance_reporting":
         return bool(employee.get("is_sponsored"))
     if section == "job_performance":
-        return bool(employee.get("_payroll_enabled"))
+        return True
     if section == "offboarding":
         return employee.get("status") == "terminated"
     return True

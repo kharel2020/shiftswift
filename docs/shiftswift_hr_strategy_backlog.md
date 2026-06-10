@@ -49,7 +49,7 @@ support@shiftswifthr.co.uk · legal@datasoftwareanalytics.co.uk
 | Meta title | UK HR Software for SMEs & Sponsor Licence Holders | `index.html` `<title>` + meta description | **TODO** |
 | Hero | “HR software that keeps you compliant…” | `index.html` hero | **Review** — align exact copy |
 | Trust strip | GDPR · UK-hosted · RTI · audit exports · cancel anytime | trust strip | **Partial** |
-| Social proof | 3 named quotes (Midlands / Yorkshire / London) | `index.html` | **TODO** — replace weak/anon quote |
+| Social proof | Early-access honesty block (no template quotes) | `index.html` | **Done** — add named case study when pilot completes |
 | Features | 6 cards (RTW, sponsor, payroll add-on, rota, lifecycle, audit export) | features section | **Review** |
 | Comparison table | Spreadsheets vs ShiftSwift HR | new section or expand FAQ | **TODO** |
 | FAQ | 7 questions from strategy (RTI add-on, trial no card, payroll later, sponsor, UK data, cancel, multi-site) | `index.html` / FAQ | **TODO** — fix dev-facing Stripe answer |
@@ -66,9 +66,11 @@ Strategy tiers (per **site**, ex VAT):
 
 | Plan | Price/mo | Staff cap | Key unlocks |
 |------|----------|-----------|-------------|
-| Starter | £29 | 15 | Records, RTW, docs, rota, portal, email support |
-| Growth | £59 | 40 | + Day-9, sponsor compliance, audit export, grievance, SMS, priority support |
-| Scale | £99 | 100 | + Multi-site dashboard, custom onboarding, API, account manager |
+| Plan | Pricing | Cap | Highlights |
+|------|---------|-----|------------|
+| Essentials | £9 + £2/active employee | £49/mo | Records, RTW, **geofenced time clock**, payroll export |
+| Compliance | £19 + £3/active employee | £79/mo | + Day-9 (clock-linked), sponsor compliance, audit export |
+| Multi-site | £29 + £2/active employee | £129/mo | + Multi-site dashboard, API |
 | Enterprise | Custom | 100+ | SLA, procurement |
 
 **Annual:** 2 months free (~17%) — show savings prominently.
@@ -106,7 +108,7 @@ What the strategy **claims** vs what the **app already has**:
 - [x] **Pricing table visible** on www with Starter / Growth / Scale + payroll bands
 - [x] **FAQ:** trial without card copy (removed dev Stripe message)
 - [x] **Footer** — full trading-name block
-- [x] **Social proof** — 3 strategy quotes (template — replace with real customers when available)
+- [x] **Social proof** — early-access honesty (no template quotes until real case study)
 - [x] **Hero meta** title + description from strategy
 - [x] **Screenshots** — product showcase section with UI mocks (replace with real captures when ready)
 - [x] **Signup page** — strategy copy + legal footer
@@ -147,6 +149,6 @@ Multi-site dashboard, rota (if not built), API docs for Scale tier.
 ## Notes
 
 - **Do not** paste DineSwift copy onto ShiftSwift HR — different tone and buyer fear.
-- **Payroll is always an add-on** in messaging; HR-only trial is valid.
-- When customer quotes are real, replace template quotes and add permission on file.
+- **Payroll export** (not in-app RTI) in messaging; HR-only trial is valid.
+- When a pilot completes, publish one named case study with permission — see `docs/go_to_market_credibility.md`.
 - After each website change: `git push` → `pull-production.sh` on server → hard-refresh www/app.

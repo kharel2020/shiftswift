@@ -213,6 +213,29 @@
   color: var(--gray-700);
 }
 
+.pricing-model-note {
+  max-width: 640px;
+  margin: 0 auto 1rem;
+  font-size: var(--text-caption-size);
+}
+
+.pricing-examples {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.pricing-examples li {
+  font-size: var(--text-caption-size);
+  color: var(--gray-700);
+}
+
+.pricing-examples strong {
+  color: var(--gray-900);
+}
+
 .pricing-features {
   list-style: none;
   margin: 0;

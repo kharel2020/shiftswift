@@ -22,7 +22,7 @@
       <div class="signup-layout">
         <section class="signup-form-panel" aria-labelledby="form-heading">
           <h1 id="form-heading">Start your free 14-day trial</h1>
-          <p class="muted signup-form-panel__lead">No card required · add payroll later · cancel anytime</p>
+          <p class="muted signup-form-panel__lead">No card required · export to BrightPay or Xero · cancel anytime</p>
 
           <ul class="signup-trust-inline" aria-label="Why sign up">
             <li>No card required for trial</li>
@@ -32,14 +32,13 @@
 
           <div id="signup-plan-summary" class="signup-summary">
             <div class="signup-summary-label">Your selection</div>
-            <div class="signup-summary-plan" id="signup-summary-hr">Starter · HR platform</div>
-            <div class="signup-summary-payroll" id="signup-summary-payroll">No payroll add-on</div>
-            <div class="signup-summary-price" id="signup-summary-price">£29 + VAT / month · up to 15 staff</div>
+            <div class="signup-summary-plan" id="signup-summary-hr">Compliance · HR platform</div>
+            <div class="signup-summary-payroll" id="signup-summary-payroll">Payroll via BrightPay or Xero export</div>
+            <div class="signup-summary-price" id="signup-summary-price">From £19 + £3/active employee · capped at £79 + VAT / month</div>
           </div>
 
           <form id="signup-form" class="signup-form">
-            <input type="hidden" id="selected-plan-id" name="plan_id" value="site_starter_monthly" />
-            <input type="hidden" id="selected-payroll-plan-id" name="payroll_plan_id" value="" />
+            <input type="hidden" id="selected-plan-id" name="plan_id" value="site_medium_monthly" />
 
             <fieldset class="signup-form__section">
               <legend class="signup-form__legend">Your business</legend>
@@ -71,11 +70,7 @@
                   <span class="signup-field__label">Select HR plan <span class="signup-field__required">(required)</span></span>
                   <select id="signup-hr-plan-select" name="hr_plan_select" required aria-describedby="signup-summary-hr"></select>
                 </label>
-                <label class="signup-field" for="signup-payroll-plan-select">
-                  <span class="signup-field__label">Add payroll band <span class="signup-field__optional">(optional)</span></span>
-                  <select id="signup-payroll-plan-select" name="payroll_plan_select" aria-describedby="signup-summary-payroll"></select>
-                  <span class="signup-field__hint">Payroll is billed separately. Choose HR only to add payroll later.</span>
-                </label>
+                <p class="signup-field__hint">Run payroll in BrightPay or Xero? Employee CSV export is included — no payroll add-on to buy.</p>
               </div>
             </fieldset>
 
@@ -92,11 +87,12 @@
               </div>
 
               <details class="signup-promo-details">
-                <summary>Have a promo or referral code?</summary>
+                <summary>Have an introducer or promo code?</summary>
                 <label class="signup-field">
-                  <span class="signup-field__label">Promo / referral code</span>
-                  <input name="promo_code" id="promo-code" placeholder="e.g. LAUNCH20 or REF-PUB" autocomplete="off" />
+                  <span class="signup-field__label">Introducer / promo code</span>
+                  <input name="promo_code" id="promo-code" placeholder="From your HR advisor or launch offer" autocomplete="off" />
                 </label>
+                <p class="muted signup-field__hint">Optional. If an HR consultant or partner referred you, they will give you a code — not a separate login.</p>
                 <button type="button" class="btn ghost signup-form__apply" id="apply-promo-btn">Apply code</button>
                 <p id="promo-message" class="promo-message muted" role="status"></p>
               </details>
@@ -129,7 +125,7 @@
           <details class="signup-plan-compare">
             <summary>Compare all plans in detail</summary>
             <div id="signup-pricing-plans" class="pricing-grid signup-plan-compare__grid"></div>
-            <h3 class="signup-payroll-heading">Payroll add-on <span class="pricing-model-tag">Optional</span></h3>
+            <h3 class="signup-payroll-heading">Payroll partners <span class="pricing-model-tag">Included</span></h3>
             <div id="signup-payroll-plans" class="pricing-grid pricing-grid--payroll signup-plan-compare__grid"></div>
           </details>
         </section>

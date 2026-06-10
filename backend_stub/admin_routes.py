@@ -50,9 +50,14 @@ from admin_service import (
 from auth_service import AuthUser
 from billing_plans import list_plans
 from billing_promotions import list_discount_codes, list_referral_codes
+from partner_commission_service import (
+    build_introducer_commission_csv,
+    fetch_introducer_commission_rows,
+    introducer_export_filename,
+)
 from payroll_plans import list_payroll_plans
 from contracts_service import TEMPLATE_REGISTRY
-from deps import client_ip, get_hr_user, require_tenant_subscription, resolve_tenant_id
+from deps import client_ip, get_admin_user, get_hr_user, require_tenant_subscription, resolve_tenant_id
 from config import load_settings
 from sponsor_licence_compliance import absence_type_catalog
 from brand import brand_payload
@@ -491,3 +496,85 @@ def read_referral_codes(
     finally:
         conn.close()
     return {"items": items, "count": len(items)}
+
+
+@router.get("/billing/introducer-commission.csv")
+def export_introducer_commission_csv(
+    current_user: Annotated[AuthUser, Depends(get_admin_user)],
+    referral_code: str | None = None,
+):
+    """Platform admin only — estimated introducer commissions for manual payout."""
+    from fastapi.responses import Response
+
+    conn = _db_conn()
+    try:
+        rows = fetch_introducer_commission_rows(conn=conn, referral_code=referral_code)
+    finally:
+        conn.close()
+    csv_body = build_introducer_commission_csv(rows)
+    filename = introducer_export_filename(referral_code=referral_code)
+    return Response(
+        content=csv_body,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/payroll-export/info")
+def payroll_export_metadata() -> dict[str, object]:
+    from modules.payroll_export.service import payroll_export_info
+
+    return payroll_export_info()
+
+
+@router.get("/payroll-export/employees.csv")
+def payroll_export_employees_csv(
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+):
+    from fastapi.responses import Response
+
+    from modules.payroll_export.service import build_employees_csv
+
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = _db_conn()
+    try:
+        csv_body = build_employees_csv(tenant_id=tenant_id, conn=conn)
+    finally:
+        conn.close()
+    filename = f"shiftswift-employees-tenant-{tenant_id}.csv"
+    return Response(
+        content=csv_body,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/payroll-export/hours.csv")
+def payroll_export_hours_csv(
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+    from_date: date | None = None,
+    to_date: date | None = None,
+):
+    from fastapi.responses import Response
+
+    from modules.payroll_export.service import build_hours_csv
+
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = _db_conn()
+    try:
+        csv_body = build_hours_csv(
+            tenant_id=tenant_id,
+            conn=conn,
+            from_date=from_date,
+            to_date=to_date,
+        )
+    finally:
+        conn.close()
+    filename = f"shiftswift-hours-tenant-{tenant_id}.csv"
+    return Response(
+        content=csv_body,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

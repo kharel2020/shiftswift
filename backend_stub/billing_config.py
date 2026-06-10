@@ -5,6 +5,8 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
+from billing_pricing import plan_pricing_payload
+
 
 @dataclass(frozen=True)
 class SubscriptionPlan:
@@ -16,38 +18,51 @@ class SubscriptionPlan:
     max_employees: int
     price_gbp_ex_vat: float
     features: tuple[str, ...]
+    base_price_gbp_ex_vat: float
+    price_per_active_employee_gbp_ex_vat: float
+    monthly_cap_gbp_ex_vat: float | None
+    stripe_seat_price_id_env: str = ""
 
 
-# Per-site flat pricing — strategy doc (ShiftSwift HR, 2026).
+# Base + per active employee, hard monthly cap (strategy 2026).
+# Stripe: each plan uses two recurring Prices — base + per-seat (quantity = active employees).
 PLANS: tuple[SubscriptionPlan, ...] = (
     SubscriptionPlan(
         id="site_starter_monthly",
-        name="Starter",
-        description="Up to 15 staff at one site.",
-        stripe_price_id_env="STRIPE_PRICE_SITE_STARTER_MONTHLY",
+        name="Essentials",
+        description="HR records, RTW checks, geofenced time clock, payroll export.",
+        stripe_price_id_env="STRIPE_PRICE_ESSENTIALS_BASE_MONTHLY",
+        stripe_seat_price_id_env="STRIPE_PRICE_ESSENTIALS_SEAT_MONTHLY",
         billing_interval="month",
-        max_employees=15,
-        price_gbp_ex_vat=29.0,
+        max_employees=40,
+        price_gbp_ex_vat=9.0,
+        base_price_gbp_ex_vat=9.0,
+        price_per_active_employee_gbp_ex_vat=2.0,
+        monthly_cap_gbp_ex_vat=49.0,
         features=(
-            "Employee records",
+            "Employee records & lifecycle",
             "Right-to-work checks",
+            "Geofenced time clock (mobile PWA)",
+            "Payroll CSV export · BrightPay & Xero",
             "Document storage",
-            "Rota builder",
-            "Self-service portal",
             "Email support",
         ),
     ),
     SubscriptionPlan(
         id="site_medium_monthly",
-        name="Growth",
-        description="Up to 40 staff at one site.",
-        stripe_price_id_env="STRIPE_PRICE_SITE_MEDIUM_MONTHLY",
+        name="Compliance",
+        description="Sponsor licence duties, day-9 absence alerts, and Home Office audit exports.",
+        stripe_price_id_env="STRIPE_PRICE_COMPLIANCE_BASE_MONTHLY",
+        stripe_seat_price_id_env="STRIPE_PRICE_COMPLIANCE_SEAT_MONTHLY",
         billing_interval="month",
-        max_employees=40,
-        price_gbp_ex_vat=59.0,
+        max_employees=100,
+        price_gbp_ex_vat=19.0,
+        base_price_gbp_ex_vat=19.0,
+        price_per_active_employee_gbp_ex_vat=3.0,
+        monthly_cap_gbp_ex_vat=79.0,
         features=(
-            "Everything in Starter",
-            "Day-9 absence alerts",
+            "Everything in Essentials",
+            "Day-9 absence alerts (clock-in linked)",
             "Sponsor licence compliance",
             "Home Office audit export",
             "Grievance workflows",
@@ -56,64 +71,18 @@ PLANS: tuple[SubscriptionPlan, ...] = (
     ),
     SubscriptionPlan(
         id="site_growth_monthly",
-        name="Scale",
-        description="Up to 100 staff at one site.",
-        stripe_price_id_env="STRIPE_PRICE_SITE_GROWTH_MONTHLY",
+        name="Multi-site",
+        description="Consolidated compliance across locations — API and account support.",
+        stripe_price_id_env="STRIPE_PRICE_MULTISITE_BASE_MONTHLY",
+        stripe_seat_price_id_env="STRIPE_PRICE_MULTISITE_SEAT_MONTHLY",
         billing_interval="month",
-        max_employees=100,
-        price_gbp_ex_vat=99.0,
+        max_employees=200,
+        price_gbp_ex_vat=29.0,
+        base_price_gbp_ex_vat=29.0,
+        price_per_active_employee_gbp_ex_vat=2.0,
+        monthly_cap_gbp_ex_vat=129.0,
         features=(
-            "Everything in Growth",
-            "Multi-site dashboard",
-            "Custom onboarding workflows",
-            "API access",
-            "Dedicated account manager",
-        ),
-    ),
-    SubscriptionPlan(
-        id="site_starter_annual",
-        name="Starter (annual)",
-        description="Up to 15 staff, billed annually (2 months free).",
-        stripe_price_id_env="STRIPE_PRICE_SITE_STARTER_ANNUAL",
-        billing_interval="year",
-        max_employees=15,
-        price_gbp_ex_vat=290.0,
-        features=(
-            "Employee records",
-            "Right-to-work checks",
-            "Document storage",
-            "Rota builder",
-            "Self-service portal",
-            "Email support",
-        ),
-    ),
-    SubscriptionPlan(
-        id="site_medium_annual",
-        name="Growth (annual)",
-        description="Up to 40 staff, billed annually (2 months free).",
-        stripe_price_id_env="STRIPE_PRICE_SITE_MEDIUM_ANNUAL",
-        billing_interval="year",
-        max_employees=40,
-        price_gbp_ex_vat=590.0,
-        features=(
-            "Everything in Starter",
-            "Day-9 absence alerts",
-            "Sponsor licence compliance",
-            "Home Office audit export",
-            "Grievance workflows",
-            "SMS alerts · Priority support",
-        ),
-    ),
-    SubscriptionPlan(
-        id="site_growth_annual",
-        name="Scale (annual)",
-        description="Up to 100 staff, billed annually (2 months free).",
-        stripe_price_id_env="STRIPE_PRICE_SITE_GROWTH_ANNUAL",
-        billing_interval="year",
-        max_employees=100,
-        price_gbp_ex_vat=990.0,
-        features=(
-            "Everything in Growth",
+            "Everything in Compliance",
             "Multi-site dashboard",
             "Custom onboarding workflows",
             "API access",
@@ -125,6 +94,16 @@ PLANS: tuple[SubscriptionPlan, ...] = (
 
 def get_plan(plan_id: str) -> SubscriptionPlan | None:
     return next((plan for plan in PLANS if plan.id == plan_id), None)
+
+
+def resolve_stripe_seat_price_id(plan: SubscriptionPlan) -> str | None:
+    seat = getattr(plan, "stripe_seat_price_id", None)
+    if seat:
+        return seat
+    env_key = getattr(plan, "stripe_seat_price_id_env", "") or ""
+    if env_key:
+        return os.getenv(env_key) or None
+    return None
 
 
 def stripe_payment_method_types() -> list[str]:
@@ -150,6 +129,8 @@ def plan_catalog() -> list[dict[str, object]]:
     items: list[dict[str, object]] = []
     for plan in PLANS:
         price_id = os.getenv(plan.stripe_price_id_env, "")
+        seat_price_id = resolve_stripe_seat_price_id(plan) or ""
+        payload = plan_pricing_payload(plan)
         items.append(
             {
                 "id": plan.id,
@@ -157,17 +138,22 @@ def plan_catalog() -> list[dict[str, object]]:
                 "description": plan.description,
                 "billing_interval": plan.billing_interval,
                 "max_employees": plan.max_employees,
-                "price_gbp_ex_vat": plan.price_gbp_ex_vat,
-                "price_gbp_inc_vat": round(plan.price_gbp_ex_vat * 1.2, 2),
+                "price_gbp_ex_vat": plan.base_price_gbp_ex_vat,
+                "price_gbp_inc_vat": round(plan.base_price_gbp_ex_vat * 1.2, 2),
                 "vat_rate": "20%",
                 "features": list(plan.features),
                 "stripe_price_configured": bool(price_id),
+                "stripe_seat_price_configured": bool(seat_price_id),
+                **payload,
             }
         )
     items.append(
         {
-            "billing_model": "flat_per_site",
-            "note": "UK B2B SaaS. VAT at 20% is added at checkout via Stripe Tax when enabled.",
+            "billing_model": "base_plus_per_head",
+            "note": (
+                "UK B2B SaaS — base fee plus per active employee, capped monthly. "
+                "VAT at 20% via Stripe Tax when enabled."
+            ),
             "stripe_configured": settings["configured"],
             "stripe_tax_enabled": settings["tax_enabled"],
         }

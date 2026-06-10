@@ -11,7 +11,8 @@ from pydantic import BaseModel, EmailStr, Field
 
 from auth_service import AuthUser
 from billing_config import stripe_payment_method_types, stripe_settings
-from billing_plans import get_plan, list_plans, resolve_stripe_price_id
+from billing_plans import get_plan, list_plans, resolve_stripe_price_id, resolve_stripe_seat_price_id
+from billing_pricing import plan_pricing_payload
 from billing_promotions import validate_promotions
 from billing_stripe_checkout import (
     create_mandate_checkout_for_tenant,
@@ -82,19 +83,24 @@ class MandateSetupRequest(BaseModel):
 
 def _plan_item(plan, *, category: str) -> dict[str, object]:
     price_id = resolve_stripe_price_id(plan) if category == "platform" else resolve_payroll_stripe_price_id(plan)
+    seat_price_id = resolve_stripe_seat_price_id(plan) if category == "platform" else None
+    payload = plan_pricing_payload(plan) if category == "platform" else {}
+    base = float(getattr(plan, "base_price_gbp_ex_vat", None) or plan.price_gbp_ex_vat)
     return {
         "id": plan.id,
         "name": plan.name,
         "description": plan.description,
         "billing_interval": plan.billing_interval,
         "max_employees": plan.max_employees,
-        "price_gbp_ex_vat": plan.price_gbp_ex_vat,
-        "price_gbp_inc_vat": round(plan.price_gbp_ex_vat * 1.2, 2),
+        "price_gbp_ex_vat": base,
+        "price_gbp_inc_vat": round(base * 1.2, 2),
         "vat_rate": "20%",
         "features": list(plan.features),
         "stripe_price_configured": bool(price_id),
+        "stripe_seat_price_configured": bool(seat_price_id),
         "editable": True,
         "category": category,
+        **payload,
     }
 
 

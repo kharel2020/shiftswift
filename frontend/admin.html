@@ -25,7 +25,7 @@
           <a class="nav-link" href="#recruitment" data-section="recruitment">Recruitment</a>
           <a class="nav-link" href="#grievance" data-section="grievance" data-feature="grievance">Grievance</a>
           <a class="nav-link" href="#offboarding" data-section="offboarding">Offboarding</a>
-          <a class="nav-link" href="#payroll" data-section="payroll" data-feature="payroll">Payroll</a>
+          <a class="nav-link" href="#payroll" data-section="payroll">Payroll export</a>
           <a class="nav-link" href="#promotions" data-section="promotions">Promotions</a>
           <a class="nav-link" href="#templates" data-section="templates">HR Templates & AI</a>
           <a class="nav-link" href="#compliance" data-section="compliance" data-feature="sponsor-compliance">Sponsor Compliance</a>
@@ -248,20 +248,17 @@
           </article>
         </section>
 
-        <section id="payroll" class="admin-section" hidden data-feature="payroll">
+        <section id="payroll" class="admin-section" hidden>
           <header class="section-header">
             <div>
-              <h2>Payroll</h2>
-              <p class="muted">Payroll add-on billing is separate from your HR platform subscription.</p>
+              <h2>Payroll export</h2>
+              <p class="muted">Works with BrightPay &amp; Xero — export employee data to your existing payroll setup. ShiftSwift HR does not run RTI or payslips.</p>
             </div>
           </header>
-          <article class="card" id="payroll-enroll-panel" hidden>
-            <h3>Payroll add-on not active</h3>
-            <p class="muted">Payroll features unlock when you add a payroll plan to your subscription. Upgrade your package to run pay runs, RTI, and payslips.</p>
-            <p class="link-row"><button type="button" class="btn" id="payroll-enroll-upgrade-btn">Add payroll to subscription</button></p>
-          </article>
-          <article class="card edit-panel" id="payroll-active-panel">
-            <div id="payroll-details"><p class="muted">Loading payroll details…</p></div>
+          <article class="card edit-panel">
+            <div id="payroll-export-panel">
+              <p class="muted">Loading export options…</p>
+            </div>
           </article>
         </section>
 
@@ -303,7 +300,15 @@
           </article>
 
           <article class="card">
-            <h3>Referral codes</h3>
+            <div class="section-header section-header--compact">
+              <div>
+                <h3>Referral codes</h3>
+                <p class="muted">Introducer codes for HR consultants and partners. Commission is paid manually — confirm against Stripe before payout.</p>
+              </div>
+              <div id="introducer-export-actions" class="link-row" hidden>
+                <button type="button" class="btn secondary" id="export-all-introducers-btn">Export all introducers (CSV)</button>
+              </div>
+            </div>
             <div class="table-wrap">
               <table class="data-table">
                 <thead>
@@ -311,7 +316,7 @@
                     <th>Code</th>
                     <th>Partner</th>
                     <th>Reward</th>
-                    <th>Commission</th>
+                    <th>Agreed % (manual payout)</th>
                     <th>Usage</th>
                     <th>Status</th>
                     <th></th>
