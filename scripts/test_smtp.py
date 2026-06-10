@@ -32,6 +32,10 @@ def main() -> int:
 
     host = os.getenv("SMTP_HOST", "")
     from_addr = os.getenv("SMTP_FROM", "")
+    port = int(os.getenv("SMTP_PORT", "587"))
+    user = os.getenv("SMTP_USER", "")
+    password = os.getenv("SMTP_PASSWORD", "")
+    use_tls = os.getenv("SMTP_USE_TLS", "1").strip().lower() in {"1", "true", "yes"}
     to_addr = (
         (sys.argv[1] if len(sys.argv) > 1 else "")
         or os.getenv("SMTP_TEST_TO", "")
@@ -39,22 +43,32 @@ def main() -> int:
         or os.getenv("SMTP_USER", "")
     )
 
-    print(f"SMTP_HOST: {'set' if host else 'MISSING'}")
+    print(f"SMTP_HOST: {host or 'MISSING'}")
+    print(f"SMTP_PORT: {port}")
     print(f"SMTP_FROM: {from_addr or 'MISSING'}")
-    print(f"SMTP_USER: {'set' if os.getenv('SMTP_USER') else 'MISSING'}")
-    print(f"SMTP_PASSWORD: {'set' if os.getenv('SMTP_PASSWORD') else 'MISSING'}")
+    print(f"SMTP_USER: {user or 'MISSING'}")
+    if password:
+        print(f"SMTP_PASSWORD: set ({len(password)} chars)")
+        if password.startswith("xkeysib-"):
+            print("NOTE: This looks like a Brevo API key (xkeysib-). Use an SMTP key (xsmtpsib-) instead.")
+    else:
+        print("SMTP_PASSWORD: MISSING")
+    print(f"SMTP_USE_TLS: {use_tls}")
+    if user.startswith("noreply@"):
+        print(
+            "\nNOTE: SMTP_USER is usually your Brevo account login email, "
+            "not noreply@. SMTP_FROM is the sender address."
+        )
 
     if not host or not from_addr:
         print("\nFAIL: Set SMTP_HOST and SMTP_FROM in backend_stub/.env")
         return 1
+    if not user or not password:
+        print("\nFAIL: Set SMTP_USER and SMTP_PASSWORD in backend_stub/.env")
+        return 1
     if not to_addr:
         print("\nFAIL: Pass recipient email or set EMAIL_SUPPORT / SMTP_TEST_TO")
         return 1
-
-    port = int(os.getenv("SMTP_PORT", "587"))
-    user = os.getenv("SMTP_USER", "")
-    password = os.getenv("SMTP_PASSWORD", "")
-    use_tls = os.getenv("SMTP_USE_TLS", "1").strip().lower() in {"1", "true", "yes"}
 
     from core.email_templates import render_email
     from core.notifications import format_from_header, format_reply_to_header, resolve_reply_to
@@ -78,12 +92,21 @@ def main() -> int:
     msg.add_alternative(html, subtype="html", charset="utf-8")
 
     print(f"\nConnecting to {host}:{port} ...")
-    with smtplib.SMTP(host, port, timeout=30) as server:
-        if use_tls:
-            server.starttls()
-        if user and password:
+    try:
+        with smtplib.SMTP(host, port, timeout=30) as server:
+            if use_tls:
+                server.starttls()
             server.login(user, password)
-        server.send_message(msg)
+            server.send_message(msg)
+    except smtplib.SMTPAuthenticationError:
+        print(
+            "\nFAIL: SMTP authentication rejected (535).\n"
+            "Check in Brevo → Settings → SMTP & API → SMTP:\n"
+            "  • SMTP_USER = your Brevo login email (not noreply@)\n"
+            "  • SMTP_PASSWORD = SMTP key (xsmtpsib-...), not API key (xkeysib-)\n"
+            "  • Generate a new SMTP key if unsure, update .env, restart API"
+        )
+        return 1
 
     print(f"OK: test email sent to {to_addr}")
     return 0
