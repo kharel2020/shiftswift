@@ -1,6 +1,6 @@
 /** Admin — weekly rota builder with validated save and publish. */
 (async function initAdminRota() {
-  const { apiFetch, renderTableBody, escapeHtml, parseHashBaseSection, loadEmployees, statusPill } = window.Admin;
+  const { apiFetch, renderTableBody, escapeHtml, parseHashBaseSection, statusPill } = window.Admin;
 
   let sectionReady = false;
   let currentWeekStart = mondayIso(new Date());
@@ -160,7 +160,10 @@
 
   async function loadEmployeesList() {
     try {
-      employees = await loadEmployees();
+      const res = await apiFetch("/admin/employees");
+      if (!res.ok) throw new Error("Could not load employees");
+      const data = await res.json();
+      employees = data.items || [];
     } catch {
       employees = [];
     }
