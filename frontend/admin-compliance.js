@@ -187,6 +187,18 @@
     if (meta) meta.textContent = when ? `Enabled ${when} by ${who}` : `Enabled by ${who}`;
   }
 
+  function applyAcknowledgedLayout(acknowledged) {
+    const panel = document.getElementById("sponsor-licence-ack-panel");
+    const content = document.getElementById("compliance-tools-content");
+    if (acknowledged) {
+      panel?.setAttribute("hidden", "");
+      content?.removeAttribute("hidden");
+    } else {
+      panel?.removeAttribute("hidden");
+      content?.setAttribute("hidden", "");
+    }
+  }
+
   function showEnabledOverview(ackData, dashboardData) {
     lastAckData = ackData;
     lastDashboardData = dashboardData;
@@ -209,8 +221,16 @@
       ]);
       if (!ackRes.ok) return;
       const ackData = await ackRes.json();
-      const dashboardData = dashRes.ok ? await dashRes.json() : null;
-      if (ackData.acknowledged) showEnabledOverview(ackData, dashboardData);
+      lastAckData = ackData;
+      const dashboardData = dashRes.ok ? await dashRes.json() : lastDashboardData;
+      if (dashboardData) lastDashboardData = dashboardData;
+      if (ackData.acknowledged) {
+        applyAcknowledgedLayout(true);
+        showEnabledOverview(ackData, dashboardData);
+      } else {
+        applyAcknowledgedLayout(false);
+        hideEnabledOverview();
+      }
     } catch {
       /* overview is optional */
     }
@@ -266,16 +286,24 @@
       const data = await res.json();
       lastAckData = data;
       if (data.acknowledged) {
-        panel.hidden = true;
-        content.hidden = false;
+        applyAcknowledgedLayout(true);
         populateAckPanel(data);
-        await refreshSponsorOverview();
+        let dashboardData = lastDashboardData;
+        try {
+          const dashRes = await apiFetch("/compliance/sponsor-licence/dashboard");
+          if (dashRes.ok) {
+            dashboardData = await dashRes.json();
+            lastDashboardData = dashboardData;
+          }
+        } catch {
+          /* dashboard optional */
+        }
+        showEnabledOverview(data, dashboardData);
         return true;
       }
       hideEnabledOverview();
+      applyAcknowledgedLayout(false);
       populateAckPanel(data);
-      panel.hidden = false;
-      content.hidden = true;
       bindAckPanel();
       return false;
     } catch {
@@ -287,11 +315,27 @@
     if (document.body.dataset.sponsorOverviewBound === "true") return;
     document.body.dataset.sponsorOverviewBound = "true";
 
-    document.getElementById("sponsor-reread-duties")?.addEventListener("click", () => {
+    document.getElementById("sponsor-reread-duties")?.addEventListener("click", async () => {
+      const section = document.getElementById("sponsor-duties-section");
       const cards = document.getElementById("sponsor-duty-cards");
-      cards?.scrollIntoView({ behavior: "smooth", block: "start" });
-      cards?.classList.add("sponsor-duties-grid--highlight");
-      window.setTimeout(() => cards?.classList.remove("sponsor-duties-grid--highlight"), 1200);
+      const status = document.getElementById("sponsor-licence-ack-status");
+      if (status) status.textContent = "";
+
+      if (lastAckData?.acknowledged) {
+        applyAcknowledgedLayout(true);
+      }
+
+      if (lastAckData?.duties?.length) {
+        renderDutyCards(lastAckData.duties, lastDashboardData?.duty_overview);
+        renderSetupChecklist(lastAckData, lastDashboardData?.duty_overview);
+        renderEnabledBanner(lastAckData);
+      } else {
+        await refreshSponsorOverview();
+      }
+
+      (section || cards)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      section?.classList.add("sponsor-duties-grid--highlight");
+      window.setTimeout(() => section?.classList.remove("sponsor-duties-grid--highlight"), 1200);
     });
 
     document.getElementById("sponsor-banner-export-btn")?.addEventListener("click", () => {
@@ -327,7 +371,11 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || "Could not save confirmation");
         if (status) status.textContent = "Confirmed. Loading compliance tools…";
+        applyAcknowledgedLayout(true);
+        lastAckData = data;
+        showEnabledOverview(data, lastDashboardData);
         await initComplianceTools(true);
+        if (status) status.textContent = "";
       } catch (error) {
         if (status) status.textContent = error.message;
       }
@@ -657,11 +705,13 @@
       if (!ready) return;
     }
     mountRtwUploadForm();
-    await mountShareCodeForm();
-    await mountAbsenceDayForm();
-    await mountWorkingCalendarForm();
-    await loadWorkingCalendar();
-    await loadReportingTriggers();
+    await Promise.all([
+      mountShareCodeForm(),
+      mountAbsenceDayForm(),
+      mountWorkingCalendarForm(),
+      loadWorkingCalendar(),
+      loadReportingTriggers(),
+    ]);
 
     document.getElementById("audit-export-json")?.addEventListener("click", async () => {
       const employeeId = document.getElementById("audit-export-employee")?.value;
