@@ -100,9 +100,9 @@ def _employee_for_user(*, tenant_id: int, user: AuthUser, conn) -> dict:
 @admin_router.get("/weeks/{week_start}")
 def get_week_rota(
     week_start: str,
-    include_attendance: bool = Query(default=True),
     current_user: Annotated[AuthUser, Depends(get_hr_user)],
     x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+    include_attendance: bool = Query(default=True),
 ) -> dict[str, object]:
     check_permission(current_user, "employees.read")
     tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)

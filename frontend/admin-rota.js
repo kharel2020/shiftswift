@@ -11,6 +11,7 @@
   let dirty = false;
   let activeView = "grid";
   let dragShiftIndex = null;
+  let editingShiftIndex = null;
 
   const ATTENDANCE_LABELS = {
     scheduled: "Scheduled",
@@ -20,6 +21,8 @@
     no_show: "No show",
     missing_clock_out: "No clock-out",
   };
+
+  const DEFAULT_ROLE_SUGGESTIONS = ["Floor", "Bar", "Kitchen", "Front of house", "Management"];
 
   function mondayIso(date) {
     const d = new Date(date);
@@ -48,8 +51,83 @@
     return `${emp.first_name || ""} ${emp.last_name || ""}`.trim() || emp.email || `#${id}`;
   }
 
+  function employeeById(id) {
+    return employees.find((e) => Number(e.id) === Number(id));
+  }
+
   function activeEmployees() {
     return employees.filter((e) => ["active", "onboarding", "suspended"].includes(e.status));
+  }
+
+  function hasActiveEmployees() {
+    return activeEmployees().length > 0;
+  }
+
+  function timeSelectOptions(selected = "09:00") {
+    const parts = [];
+    for (let hour = 0; hour < 24; hour += 1) {
+      for (const minute of [0, 30]) {
+        const value = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+        parts.push(
+          `<option value="${value}"${value === selected.slice(0, 5) ? " selected" : ""}>${value}</option>`
+        );
+      }
+    }
+    return parts.join("");
+  }
+
+  function populateTimeSelects(start = "09:00", end = "17:00") {
+    const startEl = document.getElementById("rota-add-start");
+    const endEl = document.getElementById("rota-add-end");
+    if (startEl) startEl.innerHTML = timeSelectOptions(start);
+    if (endEl) endEl.innerHTML = timeSelectOptions(end);
+    updateShiftDurationLabel();
+  }
+
+  function shiftDurationMinutes(start, end) {
+    const [sh, sm] = start.split(":").map(Number);
+    const [eh, em] = end.split(":").map(Number);
+    let mins = eh * 60 + em - (sh * 60 + sm);
+    if (mins <= 0) mins += 24 * 60;
+    return mins;
+  }
+
+  function formatDuration(mins) {
+    const hours = Math.floor(mins / 60);
+    const minutes = mins % 60;
+    if (minutes === 0) return `${hours} hour${hours === 1 ? "" : "s"}`;
+    return `${hours}h ${minutes}m`;
+  }
+
+  function updateShiftDurationLabel() {
+    const el = document.getElementById("rota-shift-duration");
+    const start = document.getElementById("rota-add-start")?.value;
+    const end = document.getElementById("rota-add-end")?.value;
+    if (!el || !start || !end) return;
+    el.textContent = `Shift duration: ${formatDuration(shiftDurationMinutes(start, end))}`;
+  }
+
+  function roleSuggestions() {
+    const values = new Set(DEFAULT_ROLE_SUGGESTIONS);
+    employees.forEach((emp) => {
+      if (emp.job_title) values.add(emp.job_title);
+      if (emp.department) values.add(emp.department);
+    });
+    return [...values].sort((a, b) => a.localeCompare(b));
+  }
+
+  function populateRoleSuggestions() {
+    const list = document.getElementById("rota-role-suggestions");
+    if (!list) return;
+    list.innerHTML = roleSuggestions().map((value) => `<option value="${escapeHtml(value)}"></option>`).join("");
+  }
+
+  function prefillRoleFromEmployee(employeeId) {
+    const roleInput = document.getElementById("rota-add-role");
+    if (!roleInput || roleInput.value.trim()) return;
+    const emp = employeeById(employeeId);
+    if (!emp) return;
+    roleInput.value = emp.job_title || emp.department || "";
   }
 
   function setMessage(text, type = "info") {
@@ -67,12 +145,60 @@
     dirty = false;
   }
 
+  function renderStatusBadge() {
+    const status = document.getElementById("rota-week-status");
+    if (!status) return;
+    if (weekMeta?.status === "published") {
+      status.innerHTML = '<span class="rota-status-badge rota-status-badge--published">Published</span>';
+      return;
+    }
+    status.innerHTML = '<span class="rota-status-badge rota-status-badge--draft">Draft</span>';
+  }
+
   function updateHeader() {
     document.getElementById("rota-week-label").textContent = formatWeekLabel(currentWeekStart);
-    const status = document.getElementById("rota-week-status");
-    if (status) status.innerHTML = statusPill(weekMeta?.status === "published" ? "published" : "draft");
+    renderStatusBadge();
     const publishBtn = document.getElementById("rota-publish-btn");
-    if (publishBtn) publishBtn.disabled = !weekMeta || weekMeta.status === "published" || !shifts.length;
+    const canPublish = Boolean(weekMeta?.version && weekMeta.status !== "published" && shifts.length && !dirty);
+    if (publishBtn) {
+      publishBtn.disabled = !canPublish;
+      publishBtn.title = canPublish
+        ? "Publish so staff see shifts in Time Clock"
+        : dirty
+          ? "Save the rota before publishing"
+          : !shifts.length
+            ? "Add shifts before publishing"
+            : weekMeta?.status === "published"
+              ? "Already published"
+              : "Save the rota before publishing";
+    }
+  }
+
+  function renderWeekSummary() {
+    const el = document.getElementById("rota-week-summary");
+    if (!el) return;
+    const staff = activeEmployees();
+    const shiftCount = shifts.length;
+    const scheduledStaff = new Set(shifts.map((s) => s.employee_id)).size;
+    if (!staff.length) {
+      el.textContent = "";
+      return;
+    }
+    if (!shiftCount) {
+      el.textContent = `No shifts yet · ${staff.length} active staff available`;
+      return;
+    }
+    el.textContent = `${shiftCount} shift${shiftCount === 1 ? "" : "s"} · Mon–Sun · ${scheduledStaff} staff scheduled`;
+  }
+
+  function renderEmptyState() {
+    const empty = document.getElementById("rota-empty-state");
+    const grid = document.getElementById("rota-grid");
+    const popover = document.getElementById("rota-shift-popover");
+    const hasStaff = hasActiveEmployees();
+    if (empty) empty.hidden = hasStaff;
+    if (grid) grid.hidden = !hasStaff;
+    if (popover && !hasStaff) closeShiftPopover();
   }
 
   function attendanceForShift(shift) {
@@ -119,7 +245,9 @@
     const tbody = document.getElementById("rota-shifts-body");
     if (!tbody) return;
     renderTableBody(tbody, {
-      emptyMessage: "No shifts this week — add one below or use the grid.",
+      emptyMessage: hasActiveEmployees()
+        ? "No shifts this week — click + in the grid to add one."
+        : "No active employees — open the Employees section to add team members.",
       columns: [
         {
           key: "shift_date",
@@ -144,7 +272,7 @@
         {
           key: "actions",
           render: (r, index) =>
-            `<button type="button" class="btn ghost btn-sm" data-rota-remove="${index}">Remove</button>`,
+            `<button type="button" class="btn ghost btn-sm" data-rota-edit="${index}">Edit</button> <button type="button" class="btn ghost btn-sm" data-rota-remove="${index}">Remove</button>`,
         },
       ],
       rows: shifts,
@@ -156,24 +284,39 @@
         renderAll();
       });
     });
+    tbody.querySelectorAll("[data-rota-edit]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        openShiftPopover({ shiftIndex: Number(btn.getAttribute("data-rota-edit")) });
+      });
+    });
+  }
+
+  function shiftsOnDate(iso) {
+    return shifts.filter((s) => s.shift_date === iso).length;
   }
 
   function renderGrid() {
     const grid = document.getElementById("rota-grid");
     if (!grid) return;
+    renderEmptyState();
+    if (!hasActiveEmployees()) return;
+
     const days = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
     const dayLabels = days.map((iso) =>
       new Date(`${iso}T12:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric" })
     );
     const staff = activeEmployees();
-    if (!staff.length) {
-      grid.innerHTML = '<p class="muted">Add active employees before building a rota.</p>';
-      return;
-    }
 
-    let html = '<div class="rota-grid-table"><div class="rota-grid-row rota-grid-row--head"><div class="rota-grid-cell rota-grid-cell--name">Staff</div>';
-    dayLabels.forEach((label) => {
-      html += `<div class="rota-grid-cell rota-grid-cell--head">${escapeHtml(label)}</div>`;
+    let html =
+      '<div class="rota-grid-table"><div class="rota-grid-row rota-grid-row--head"><div class="rota-grid-cell rota-grid-cell--name">Staff</div>';
+    dayLabels.forEach((label, index) => {
+      const iso = days[index];
+      const count = shiftsOnDate(iso);
+      const coverageClass = count > 0 ? "rota-day-coverage--ok" : "rota-day-coverage--empty";
+      html += `<div class="rota-grid-cell rota-grid-cell--head">
+        <span>${escapeHtml(label)}</span>
+        <span class="rota-day-coverage ${coverageClass}" title="${count} shift${count === 1 ? "" : "s"} scheduled">${count}</span>
+      </div>`;
     });
     html += "</div>";
 
@@ -186,8 +329,11 @@
         html += `<div class="rota-grid-cell rota-grid-drop" data-employee-id="${emp.id}" data-shift-date="${iso}">`;
         cellShifts.forEach(({ s, index }) => {
           const a = attendanceForShift(s);
-          const flag = a?.attendance_status === "no_show" || a?.attendance_status === "late" ? ` rota-shift-chip--${a.attendance_status}` : "";
-          html += `<button type="button" class="rota-shift-chip${flag}" draggable="true" data-shift-index="${index}" title="${escapeHtml(s.start_time)}–${escapeHtml(s.end_time)}">${escapeHtml(s.start_time)}–${escapeHtml(s.end_time)}</button>`;
+          const flag =
+            a?.attendance_status === "no_show" || a?.attendance_status === "late"
+              ? ` rota-shift-chip--${a.attendance_status}`
+              : "";
+          html += `<button type="button" class="rota-shift-chip${flag}" draggable="true" data-shift-index="${index}" title="Edit shift — ${escapeHtml(s.start_time)}–${escapeHtml(s.end_time)}">${escapeHtml(s.start_time)}–${escapeHtml(s.end_time)}</button>`;
         });
         html += `<button type="button" class="rota-grid-add" data-add-employee="${emp.id}" data-add-date="${iso}" aria-label="Add shift">+</button>`;
         html += "</div>";
@@ -201,6 +347,10 @@
       chip.addEventListener("dragstart", (event) => {
         dragShiftIndex = Number(chip.getAttribute("data-shift-index"));
         event.dataTransfer?.setData("text/plain", String(dragShiftIndex));
+      });
+      chip.addEventListener("click", (event) => {
+        event.stopPropagation();
+        openShiftPopover({ shiftIndex: Number(chip.getAttribute("data-shift-index")) });
       });
     });
 
@@ -221,29 +371,28 @@
         markDirty();
         renderAll();
       });
+      cell.addEventListener("click", (event) => {
+        if (event.target.closest(".rota-shift-chip, .rota-grid-add")) return;
+        openShiftPopover({
+          employeeId: Number(cell.getAttribute("data-employee-id")),
+          shiftDate: cell.getAttribute("data-shift-date"),
+        });
+      });
     });
 
     grid.querySelectorAll(".rota-grid-add").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const employeeId = Number(btn.getAttribute("data-add-employee"));
-        const shiftDate = btn.getAttribute("data-add-date");
-        shifts.push({
-          employee_id: employeeId,
-          employee_name: employeeName(employeeId),
-          shift_date: shiftDate,
-          start_time: "09:00",
-          end_time: "17:00",
-          role_label: "",
-          notes: "",
+      btn.addEventListener("click", (event) => {
+        event.stopPropagation();
+        openShiftPopover({
+          employeeId: Number(btn.getAttribute("data-add-employee")),
+          shiftDate: btn.getAttribute("data-add-date"),
         });
-        markDirty();
-        renderAll();
-        setMessage("Default 09:00–17:00 shift added — save when ready.");
       });
     });
   }
 
   function renderAll() {
+    renderWeekSummary();
     renderGrid();
     renderShiftTable();
     updateHeader();
@@ -255,6 +404,64 @@
     document.getElementById("rota-list-panel").hidden = view !== "list";
     document.getElementById("rota-view-grid")?.classList.toggle("is-active", view === "grid");
     document.getElementById("rota-view-list")?.classList.toggle("is-active", view === "list");
+  }
+
+  function closeShiftPopover() {
+    editingShiftIndex = null;
+    document.getElementById("rota-shift-popover")?.setAttribute("hidden", "");
+    document.getElementById("rota-add-btn").textContent = "Add to rota";
+    document.getElementById("rota-shift-popover-title").textContent = "Add shift";
+  }
+
+  function openShiftPopover({ employeeId = null, shiftDate = null, shiftIndex = null } = {}) {
+    if (!hasActiveEmployees()) {
+      setMessage("Add active employees before building a rota.", "error");
+      return;
+    }
+    const popover = document.getElementById("rota-shift-popover");
+    const employeeSelect = document.getElementById("rota-add-employee");
+    const daySelect = document.getElementById("rota-add-day");
+    const roleInput = document.getElementById("rota-add-role");
+    const context = document.getElementById("rota-shift-popover-context");
+    const addBtn = document.getElementById("rota-add-btn");
+    const title = document.getElementById("rota-shift-popover-title");
+
+    populateEmployeeSelect();
+    populateDaySelect();
+
+    editingShiftIndex = shiftIndex;
+
+    if (shiftIndex != null && shifts[shiftIndex]) {
+      const shift = shifts[shiftIndex];
+      if (employeeSelect) employeeSelect.value = String(shift.employee_id);
+      if (daySelect) daySelect.value = shift.shift_date;
+      populateTimeSelects(shift.start_time, shift.end_time);
+      if (roleInput) roleInput.value = shift.role_label || "";
+      if (title) title.textContent = "Edit shift";
+      if (addBtn) addBtn.textContent = "Save shift";
+      if (context) {
+        context.textContent = `${employeeName(shift.employee_id)} · ${new Date(`${shift.shift_date}T12:00:00`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" })}`;
+      }
+    } else {
+      if (employeeSelect && employeeId) employeeSelect.value = String(employeeId);
+      if (daySelect && shiftDate) daySelect.value = shiftDate;
+      populateTimeSelects("09:00", "17:00");
+      if (roleInput) roleInput.value = "";
+      if (employeeSelect?.value) prefillRoleFromEmployee(Number(employeeSelect.value));
+      if (title) title.textContent = "Add shift";
+      if (addBtn) addBtn.textContent = "Add to rota";
+      const empId = Number(employeeSelect?.value);
+      const dateIso = daySelect?.value;
+      if (context && empId && dateIso) {
+        context.textContent = `${employeeName(empId)} · ${new Date(`${dateIso}T12:00:00`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" })}`;
+      } else if (context) {
+        context.textContent = "Choose employee and day, then set times.";
+      }
+    }
+
+    popover?.removeAttribute("hidden");
+    popover?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    updateShiftDurationLabel();
   }
 
   async function loadShiftRequests() {
@@ -319,11 +526,22 @@
 
   function populateEmployeeSelect() {
     const select = document.getElementById("rota-add-employee");
+    const hint = document.getElementById("rota-employee-empty-hint");
+    const staff = activeEmployees();
     if (!select) return;
-    select.innerHTML =
-      activeEmployees()
-        .map((e) => `<option value="${e.id}">${escapeHtml(employeeName(e.id))}</option>`)
-        .join("") || '<option value="">No active employees</option>';
+    if (!staff.length) {
+      select.innerHTML = '<option value="">No active employees</option>';
+      select.disabled = true;
+      hint?.removeAttribute("hidden");
+      document.getElementById("rota-add-btn")?.setAttribute("disabled", "");
+      return;
+    }
+    select.disabled = false;
+    hint?.setAttribute("hidden", "");
+    document.getElementById("rota-add-btn")?.removeAttribute("disabled");
+    select.innerHTML = staff
+      .map((e) => `<option value="${e.id}">${escapeHtml(employeeName(e.id))}</option>`)
+      .join("");
   }
 
   function populateDaySelect() {
@@ -355,11 +573,15 @@
       renderAttendanceTable(data.attendance?.items || []);
       renderAll();
       populateDaySelect();
-      setMessage(
-        weekMeta.status === "published"
-          ? "Published — punch vs rota flags update live."
-          : "Build the rota, save, then publish so staff see shifts in the Time Clock app."
-      );
+      if (weekMeta.status === "published") {
+        setMessage("Published — punch vs rota flags update live.");
+      } else if (!hasActiveEmployees()) {
+        setMessage("Add active employees before building a rota.");
+      } else if (!shifts.length) {
+        setMessage("Click + in the grid to add your first shift, then Save rota.");
+      } else {
+        setMessage("Unsaved changes? Save rota, then publish when ready.");
+      }
     } catch (error) {
       setMessage(error.message || "Could not load rota.", "error");
     }
@@ -374,6 +596,8 @@
       employees = [];
     }
     populateEmployeeSelect();
+    populateRoleSuggestions();
+    renderEmptyState();
   }
 
   function addShiftFromForm() {
@@ -386,7 +610,7 @@
       setMessage("Employee, day, start, and end are required.", "error");
       return;
     }
-    shifts.push({
+    const payload = {
       employee_id: Number(employeeId),
       employee_name: employeeName(employeeId),
       shift_date: shiftDate,
@@ -394,11 +618,31 @@
       end_time: endTime.slice(0, 5),
       role_label: roleLabel,
       notes: "",
-    });
+    };
+    if (editingShiftIndex != null && shifts[editingShiftIndex]) {
+      shifts[editingShiftIndex] = { ...shifts[editingShiftIndex], ...payload };
+      setMessage("Shift updated — click Save rota.");
+    } else {
+      shifts.push(payload);
+      setMessage("Shift added — click Save rota.");
+    }
     shifts.sort((a, b) => `${a.shift_date}${a.start_time}`.localeCompare(`${b.shift_date}${b.start_time}`));
     markDirty();
+    closeShiftPopover();
     renderAll();
-    setMessage("Shift added — click Save rota.");
+  }
+
+  function clearRota() {
+    if (!shifts.length) {
+      setMessage("No shifts to clear.");
+      return;
+    }
+    if (!window.confirm("Remove all shifts from this week? You still need to Save rota to persist.")) return;
+    shifts = [];
+    markDirty();
+    closeShiftPopover();
+    renderAll();
+    setMessage("Rota cleared — click Save rota to persist.");
   }
 
   async function saveRota() {
@@ -434,7 +678,7 @@
       shifts = data.shifts || [];
       markClean();
       renderAll();
-      setMessage(data.message || "Rota saved.");
+      setMessage(data.message || "Rota saved — publish when ready.");
     } catch (error) {
       setMessage(error.message || "Save failed.", "error");
     } finally {
@@ -443,7 +687,7 @@
   }
 
   async function copyPreviousWeek() {
-    if (!window.confirm("Copy all shifts from last week into this week? Current week must be empty.")) return;
+    if (!window.confirm("Copy all shifts from last week into this week? Unsaved changes will be lost.")) return;
     setMessage("Copying…");
     try {
       const res = await apiFetch(`/admin/rota/weeks/${currentWeekStart}/copy-previous`, {
@@ -496,28 +740,54 @@
 
   function changeWeek(delta) {
     if (dirty && !window.confirm("You have unsaved shifts. Change week anyway?")) return;
+    closeShiftPopover();
     currentWeekStart = addDays(currentWeekStart, delta * 7);
     loadWeek();
   }
 
+  function updatePopoverContext() {
+    if (document.getElementById("rota-shift-popover")?.hasAttribute("hidden")) return;
+    const employeeSelect = document.getElementById("rota-add-employee");
+    const daySelect = document.getElementById("rota-add-day");
+    const context = document.getElementById("rota-shift-popover-context");
+    const empId = Number(employeeSelect?.value);
+    const dateIso = daySelect?.value;
+    if (!context || !empId || !dateIso) return;
+    context.textContent = `${employeeName(empId)} · ${new Date(`${dateIso}T12:00:00`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" })}`;
+  }
+
   async function initSection() {
+    populateTimeSelects("09:00", "17:00");
+
     document.getElementById("rota-prev-week")?.addEventListener("click", () => changeWeek(-1));
     document.getElementById("rota-next-week")?.addEventListener("click", () => changeWeek(1));
     document.getElementById("rota-this-week")?.addEventListener("click", () => {
       if (dirty && !window.confirm("Discard unsaved changes?")) return;
+      closeShiftPopover();
       currentWeekStart = mondayIso(new Date());
       loadWeek();
     });
     document.getElementById("rota-add-btn")?.addEventListener("click", addShiftFromForm);
     document.getElementById("rota-save-btn")?.addEventListener("click", saveRota);
     document.getElementById("rota-copy-prev-btn")?.addEventListener("click", copyPreviousWeek);
+    document.getElementById("rota-clear-btn")?.addEventListener("click", clearRota);
     document.getElementById("rota-publish-btn")?.addEventListener("click", publishRota);
     document.getElementById("rota-reload-btn")?.addEventListener("click", () => {
       if (dirty && !window.confirm("Discard unsaved changes?")) return;
+      closeShiftPopover();
       loadWeek();
     });
     document.getElementById("rota-view-grid")?.addEventListener("click", () => setView("grid"));
     document.getElementById("rota-view-list")?.addEventListener("click", () => setView("list"));
+    document.getElementById("rota-shift-cancel-btn")?.addEventListener("click", closeShiftPopover);
+    document.getElementById("rota-shift-popover-close")?.addEventListener("click", closeShiftPopover);
+    document.getElementById("rota-add-employee")?.addEventListener("change", (event) => {
+      prefillRoleFromEmployee(Number(event.target.value));
+      updatePopoverContext();
+    });
+    document.getElementById("rota-add-day")?.addEventListener("change", updatePopoverContext);
+    document.getElementById("rota-add-start")?.addEventListener("change", updateShiftDurationLabel);
+    document.getElementById("rota-add-end")?.addEventListener("change", updateShiftDurationLabel);
 
     setView("grid");
     await loadEmployeesList();

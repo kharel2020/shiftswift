@@ -144,6 +144,7 @@
     $("employees-detail-view")?.setAttribute("hidden", "");
     activeEmployeeId = null;
     workspaceCache = null;
+    setSidebarBreadcrumb(null);
     window.location.hash = "employees";
   }
 
@@ -151,6 +152,80 @@
     $("employees-list-view")?.setAttribute("hidden", "");
     $("employees-detail-view")?.removeAttribute("hidden");
     $("employee-advanced-links")?.removeAttribute("hidden");
+  }
+
+  function employeeInitials(employee) {
+    const first = (employee?.first_name || "").trim()[0] || "";
+    const last = (employee?.last_name || "").trim()[0] || "";
+    return (first + last).toUpperCase() || "?";
+  }
+
+  function formatJoinedDate(value) {
+    if (!value) return null;
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return String(value).slice(0, 10);
+    return parsed.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  }
+
+  function setSidebarBreadcrumb(name) {
+    const crumb = $("employee-nav-crumb");
+    if (!crumb) return;
+    if (name) {
+      crumb.hidden = false;
+      crumb.innerHTML = `→ <span>${escapeHtml(name)}</span>`;
+    } else {
+      crumb.hidden = true;
+      crumb.textContent = "";
+    }
+  }
+
+  function renderSummaryStrip(employee) {
+    const host = $("employee-summary-strip");
+    if (!host) return;
+    const items = [];
+    if (employee.job_title) {
+      items.push(
+        `<span class="employee-strip-item"><span class="employee-strip-icon" aria-hidden="true">◆</span>${escapeHtml(employee.job_title)}</span>`
+      );
+    }
+    const joined = formatJoinedDate(employee.start_date);
+    if (joined) {
+      items.push(
+        `<span class="employee-strip-item"><span class="employee-strip-icon" aria-hidden="true">◷</span>Joined ${escapeHtml(joined)}</span>`
+      );
+    }
+    const location = employee.work_location || employee.department;
+    if (location) {
+      items.push(
+        `<span class="employee-strip-item"><span class="employee-strip-icon" aria-hidden="true">◎</span>${escapeHtml(location)}</span>`
+      );
+    }
+    host.innerHTML = items.join("");
+  }
+
+  function renderEmployeeHeader(workspace) {
+    const employee = workspace.employee || {};
+    const fullName = `${employee.first_name || ""} ${employee.last_name || ""}`.trim() || "Employee";
+    $("employee-workspace-title").textContent = fullName;
+    $("employee-workspace-subtitle").textContent = employee.is_sponsored
+      ? "Sponsored worker"
+      : "Standard employee";
+    const avatar = $("employee-avatar");
+    if (avatar) avatar.textContent = employeeInitials(employee);
+    renderSummaryStrip(employee);
+    setSidebarBreadcrumb(fullName);
+  }
+
+  function openLifecycleSection(sectionKey, workspace) {
+    activeSection = sectionKey;
+    window.location.hash = `employees/${activeEmployeeId}/${sectionKey}`;
+    renderLifecycleAccordion(workspace || workspaceCache);
+  }
+
+  function collapseLifecycleSection(workspace) {
+    activeSection = null;
+    window.location.hash = `employees/${activeEmployeeId}`;
+    renderLifecycleAccordion(workspace || workspaceCache);
   }
 
   function renderAdvancedLinks(employee) {
@@ -186,9 +261,73 @@
   }
 
   function sectionKindTag(section) {
-    if (section.kind === "link") return `<span class="lifecycle-kind">Guidance</span>`;
-    if (section.kind === "documents") return `<span class="lifecycle-kind">Documents</span>`;
+    if (section.kind === "link") {
+      return `<span class="lifecycle-kind lifecycle-kind--guidance">Guidance</span>`;
+    }
+    if (section.kind === "documents") {
+      return `<span class="lifecycle-kind lifecycle-kind--documents">Documents</span>`;
+    }
     return "";
+  }
+
+  function stepNumberMarkup(section, workspace, isOpen) {
+    if (section.kind === "link") {
+      return `<span class="lifecycle-accordion-num lifecycle-accordion-num--guidance" aria-label="Guidance">↗</span>`;
+    }
+    const isActive =
+      section.key === workspace.next_section && !section.complete && section.kind !== "link";
+    if (section.complete) {
+      return `<span class="lifecycle-accordion-num lifecycle-accordion-num--done" aria-label="Complete">✓</span>`;
+    }
+    if (isActive || (isOpen && !section.complete)) {
+      return `<span class="lifecycle-accordion-num lifecycle-accordion-num--active">${section.step}</span>`;
+    }
+    return `<span class="lifecycle-accordion-num">${section.step}</span>`;
+  }
+
+  function lifecycleStepActionButton(section, isOpen) {
+    if (isOpen) return "";
+    if (section.kind === "link") {
+      return `<button type="button" class="lifecycle-step-edit" data-open-section="${escapeHtml(section.key)}">View</button>`;
+    }
+    if (section.complete && (section.kind === "form" || section.kind === "documents")) {
+      return `<button type="button" class="lifecycle-step-edit" data-open-section="${escapeHtml(section.key)}">Edit</button>`;
+    }
+    return "";
+  }
+
+  function bindLifecycleAccordionEvents(accordion, workspace) {
+    accordion.querySelectorAll("[data-open-section]").forEach((btn) => {
+      btn.addEventListener("click", (event) => {
+        event.stopPropagation();
+        openLifecycleSection(btn.dataset.openSection, workspace);
+      });
+    });
+
+    accordion.querySelectorAll(".lifecycle-accordion-toggle").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const key = btn.dataset.section;
+        const item = btn.closest(".lifecycle-accordion-item");
+        if (key === activeSection && item?.classList.contains("is-open")) {
+          collapseLifecycleSection(workspace);
+          return;
+        }
+        openLifecycleSection(key, workspace);
+      });
+    });
+
+    accordion.querySelectorAll(".lifecycle-accordion-chevron-btn").forEach((btn) => {
+      btn.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const key = btn.dataset.section;
+        const item = btn.closest(".lifecycle-accordion-item");
+        if (key === activeSection && item?.classList.contains("is-open")) {
+          collapseLifecycleSection(workspace);
+          return;
+        }
+        openLifecycleSection(key, workspace);
+      });
+    });
   }
 
   function lifecycleAccordionHost() {
@@ -201,24 +340,43 @@
 
     accordion.innerHTML = (workspace.sections || [])
       .map((section) => {
-        const isOpen = section.key === activeSection;
-        const state = section.complete ? "complete" : "pending";
+        const isOpen = Boolean(activeSection) && section.key === activeSection;
+        const isActive =
+          section.key === workspace.next_section && !section.complete && section.kind !== "link";
+        const isCompleteEditable = section.complete && section.kind !== "link";
         const kindTag = sectionKindTag(section);
         const branch = section.branch
           ? `<span class="lifecycle-tag">${escapeHtml(section.branch)}</span>`
           : "";
-        const stepLabel = section.complete && !isOpen ? "✓" : section.step;
-        return `<section class="lifecycle-accordion-item lifecycle-accordion-item--${state}${isOpen ? " is-open" : ""}" data-section="${escapeHtml(section.key)}">
-          <button type="button" class="lifecycle-accordion-header" data-section="${escapeHtml(section.key)}" aria-expanded="${isOpen}">
-            <span class="lifecycle-accordion-num">${stepLabel}</span>
-            <span class="lifecycle-accordion-copy">
-              <strong>${escapeHtml(section.label)}</strong>
-              ${kindTag}
-              <span class="muted">${escapeHtml(section.description || "")}</span>
-              ${branch}
-            </span>
-            <span class="lifecycle-accordion-chevron" aria-hidden="true"></span>
-          </button>
+        const actionBadge = isActive
+          ? `<span class="lifecycle-action-badge">Action needed</span>`
+          : "";
+        const itemClasses = [
+          "lifecycle-accordion-item",
+          isOpen ? "is-open" : "",
+          isActive ? "lifecycle-accordion-item--active-step" : "",
+          isCompleteEditable ? "lifecycle-accordion-item--complete" : "",
+          section.kind === "link" ? "lifecycle-accordion-item--guidance" : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
+        const stepAction = lifecycleStepActionButton(section, isOpen);
+
+        return `<section class="${itemClasses}" data-section="${escapeHtml(section.key)}">
+          <div class="lifecycle-accordion-header">
+            <button type="button" class="lifecycle-accordion-toggle" data-section="${escapeHtml(section.key)}" aria-expanded="${isOpen}">
+              ${stepNumberMarkup(section, workspace, isOpen)}
+              <span class="lifecycle-accordion-copy">
+                <strong>${escapeHtml(section.label)} ${actionBadge}${kindTag ? ` ${kindTag}` : ""}</strong>
+                <span class="muted">${escapeHtml(section.description || "")}</span>
+                ${branch}
+              </span>
+            </button>
+            <div class="lifecycle-accordion-actions">
+              ${stepAction}
+              <button type="button" class="lifecycle-accordion-chevron-btn lifecycle-accordion-chevron" data-section="${escapeHtml(section.key)}" aria-label="${isOpen ? "Collapse" : "Expand"} section"></button>
+            </div>
+          </div>
           <div class="lifecycle-accordion-body"${isOpen ? "" : " hidden"}>
             <div class="lifecycle-accordion-content" data-section-content="${escapeHtml(section.key)}"></div>
           </div>
@@ -226,33 +384,34 @@
       })
       .join("");
 
-    accordion.querySelectorAll(".lifecycle-accordion-header").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const key = btn.dataset.section;
-        const item = btn.closest(".lifecycle-accordion-item");
-        if (key === activeSection && item?.classList.contains("is-open")) {
-          item.classList.remove("is-open");
-          btn.setAttribute("aria-expanded", "false");
-          item.querySelector(".lifecycle-accordion-body")?.setAttribute("hidden", "");
-          return;
-        }
-        activeSection = key;
-        window.location.hash = `employees/${activeEmployeeId}/${activeSection}`;
-        renderLifecycleAccordion(workspace);
-      });
-    });
+    bindLifecycleAccordionEvents(accordion, workspace);
 
-    const contentHost = accordion.querySelector(`[data-section-content="${activeSection}"]`);
+    const contentHost = activeSection
+      ? accordion.querySelector(`[data-section-content="${activeSection}"]`)
+      : null;
     if (contentHost) {
       renderSectionContent(workspace, activeSection, contentHost);
+    }
+
+    if (activeSection) {
+      requestAnimationFrame(() => {
+        accordion
+          .querySelector(`.lifecycle-accordion-item[data-section="${activeSection}"]`)
+          ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      });
     }
   }
 
   function renderProgress(workspace) {
     const pct = workspace.completion_pct || 0;
     $("employee-progress-fill").style.width = `${pct}%`;
-    const next = workspace.next_section ? sectionLabel(workspace.next_section) : "Complete";
-    $("employee-progress-label").textContent = `Lifecycle ${pct}% complete · next: ${next}`;
+    const next = workspace.next_section ? sectionLabel(workspace.next_section) : null;
+    const heading = $("employee-progress-heading");
+    const nextEl = $("employee-progress-next");
+    if (heading) heading.textContent = `Lifecycle progress — ${pct}% complete`;
+    if (nextEl) {
+      nextEl.textContent = next ? `Next: ${next}` : "All required steps complete";
+    }
   }
 
   function categoryLabel(value) {
@@ -467,7 +626,16 @@
     const intro = buildSectionIntro(section, workspace);
     container.innerHTML = `<div class="employee-section-intro">${intro}</div><div id="employee-section-form"></div>`;
 
-    mountEditForm(container.querySelector("#employee-section-form"), schema, {
+    const formSchema = {
+      ...schema,
+      submitLabel: "Save & continue",
+      secondaryAction: {
+        label: "Cancel",
+        onClick: () => collapseLifecycleSection(workspace),
+      },
+    };
+
+    mountEditForm(container.querySelector("#employee-section-form"), formSchema, {
       values: section.data || {},
       onSubmit: async (payload) => {
         const res = await apiFetch(`/admin/employees/${activeEmployeeId}/sections/${sectionKey}`, {
@@ -480,30 +648,24 @@
         if (sectionKey === "recruitment") {
           window.dispatchEvent(new CustomEvent("admin:features-refresh"));
         }
-        renderWorkspace(data);
         const next = data.next_section;
         if (next && next !== sectionKey) {
           activeSection = next;
           window.location.hash = `employees/${activeEmployeeId}/${next}`;
-          renderLifecycleAccordion(data);
         }
+        renderWorkspace(data);
       },
     });
   }
 
   function renderWorkspace(workspace) {
     workspaceCache = workspace;
-    const employee = workspace.employee || {};
-    $("employee-workspace-title").textContent = `${employee.first_name || ""} ${employee.last_name || ""}`.trim() || "Employee";
-    const typeLabel = employee.is_sponsored ? "Sponsored worker" : "Standard employee";
-    $("employee-workspace-subtitle").textContent = [typeLabel, employee.job_title, employee.department, employee.email]
-      .filter(Boolean)
-      .join(" · ");
-    renderAdvancedLinks(employee);
+    renderEmployeeHeader(workspace);
+    renderAdvancedLinks(workspace.employee || {});
     renderProgress(workspace);
 
     const sectionKeys = (workspace.sections || []).map((s) => s.key);
-    if (!sectionKeys.includes(activeSection)) {
+    if (activeSection && !sectionKeys.includes(activeSection)) {
       activeSection = workspace.next_section || "recruitment";
     }
     renderLifecycleAccordion(workspace);
@@ -653,8 +815,8 @@
     const id = Number(match[1]);
     const section = match[2] || null;
     if (id === activeEmployeeId) {
-      if (section && section !== activeSection && workspaceCache) {
-        activeSection = section;
+      if (section !== activeSection && workspaceCache) {
+        activeSection = section || null;
         renderLifecycleAccordion(workspaceCache);
       }
       return;

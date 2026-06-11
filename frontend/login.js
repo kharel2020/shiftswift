@@ -52,7 +52,12 @@ function setStatus(message) {
 
 function friendlyLoginError(message, endpoint, username) {
   if (message === "Failed to fetch" || message === "Load failed") {
-    return "Cannot reach the API. Start it with: bash scripts/start_local.sh";
+    const host = window.location.hostname;
+    const isLocal = host === "localhost" || host === "127.0.0.1";
+    if (isLocal) {
+      return "Cannot reach the API. Start it with: bash scripts/start_local.sh";
+    }
+    return "Cannot reach the API. The service may be restarting — try again in a minute, or contact support if this continues.";
   }
   if (message === "Invalid credentials for this login type") {
     if (endpoint.includes("master")) {

@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon.png?v=brandkit-v1" />
     <link rel="icon" type="image/svg+xml" href="./assets/shiftswift-hr-icon.svg?v=brandkit-v1" />
     <link rel="apple-touch-icon" href="./assets/shiftswift-hr-icon.png?v=brandkit-v1" />
-    <link rel="stylesheet" href="./styles.css?v=admin-v6" />
+    <link rel="stylesheet" href="./styles.css?v=admin-v8" />
   </head>
   <body>
     <div id="sidebar-overlay" class="sidebar-overlay" aria-hidden="true"></div>
@@ -22,6 +22,7 @@
         <nav class="nav">
           <a class="nav-link" href="#overview" data-section="overview">Overview</a>
           <a class="nav-link" href="#employees" data-section="employees">Employees</a>
+          <p class="nav-crumb" id="employee-nav-crumb" hidden aria-live="polite"></p>
           <a class="nav-link" href="#recruitment" data-section="recruitment">Recruitment</a>
           <a class="nav-link" href="#grievance" data-section="grievance" data-feature="grievance">Grievance</a>
           <a class="nav-link" href="#offboarding" data-section="offboarding">Offboarding</a>
@@ -98,15 +99,20 @@
 
           <div id="employees-detail-view" hidden>
             <article class="card employee-workspace">
-              <div class="employee-workspace-header">
-                <button type="button" class="btn ghost" id="employee-back-btn">← Back to register</button>
-                <div>
-                  <h3 id="employee-workspace-title">Employee</h3>
-                  <p class="muted" id="employee-workspace-subtitle"></p>
+              <button type="button" class="employee-back-link" id="employee-back-btn">← Back to employee register</button>
+              <div class="employee-profile-header">
+                <div class="employee-profile-main">
+                  <div class="employee-avatar" id="employee-avatar" aria-hidden="true">?</div>
+                  <div class="employee-profile-copy">
+                    <h3 id="employee-workspace-title">Employee</h3>
+                    <p class="employee-type-line muted" id="employee-workspace-subtitle">Standard employee</p>
+                    <div class="employee-summary-strip" id="employee-summary-strip"></div>
+                  </div>
                 </div>
-                <div class="employee-progress-wrap">
+                <div class="employee-progress-block">
+                  <p class="employee-progress-heading" id="employee-progress-heading">Lifecycle progress — 0% complete</p>
                   <div class="employee-progress-bar"><span id="employee-progress-fill"></span></div>
-                  <span class="muted" id="employee-progress-label"></span>
+                  <p class="employee-progress-next" id="employee-progress-next">Next step</p>
                 </div>
               </div>
               <div class="lifecycle-accordion" id="employee-lifecycle-accordion" aria-label="Employee lifecycle"></div>
@@ -747,7 +753,7 @@
           <header class="section-header">
             <div>
               <h2>Rota</h2>
-              <p class="muted">Build the live weekly rota — overlaps blocked, atomic save, publish when ready.</p>
+              <p class="muted">Build your rota, save as draft, then publish — staff see shifts instantly in the Time Clock app. Overlaps blocked; atomic save.</p>
             </div>
             <div class="section-actions rota-week-nav">
               <button type="button" class="btn ghost" id="rota-prev-week" aria-label="Previous week">←</button>
@@ -765,7 +771,54 @@
             <button type="button" class="btn ghost" id="rota-view-list" data-view="list">List</button>
           </div>
           <article class="card" id="rota-grid-panel">
-            <h3>Week grid <span class="muted">— drag shifts between days and staff</span></h3>
+            <div class="rota-grid-toolbar">
+              <h3>Week grid <span class="muted">— click a cell or + to add a shift</span></h3>
+              <p id="rota-week-summary" class="rota-week-summary muted"></p>
+            </div>
+            <div id="rota-empty-state" class="rota-empty-state" hidden>
+              <div class="rota-empty-state__icon" aria-hidden="true">📅</div>
+              <h4>No active employees yet</h4>
+              <p class="muted">Add team members before you can build a weekly rota.</p>
+              <a class="btn" href="#employees">Add employees</a>
+            </div>
+            <div id="rota-shift-popover" class="rota-shift-popover" hidden>
+              <div class="rota-shift-popover__head">
+                <h4 id="rota-shift-popover-title">Add shift</h4>
+                <button type="button" class="rota-shift-popover__close" id="rota-shift-popover-close" aria-label="Close">×</button>
+              </div>
+              <p id="rota-shift-popover-context" class="muted rota-shift-popover__context"></p>
+              <div class="rota-add-form">
+                <label>
+                  Employee
+                  <select id="rota-add-employee"></select>
+                  <span id="rota-employee-empty-hint" class="rota-inline-hint" hidden>
+                    No active employees. <a href="#employees">Add employees →</a>
+                  </span>
+                </label>
+                <label>
+                  Day
+                  <select id="rota-add-day"></select>
+                </label>
+                <label>
+                  Start
+                  <select id="rota-add-start"></select>
+                </label>
+                <label>
+                  End
+                  <select id="rota-add-end"></select>
+                </label>
+                <label>
+                  Role <span class="muted">(optional)</span>
+                  <input id="rota-add-role" type="text" maxlength="80" list="rota-role-suggestions" placeholder="e.g. Floor, Bar, Kitchen" />
+                </label>
+              </div>
+              <datalist id="rota-role-suggestions"></datalist>
+              <p id="rota-shift-duration" class="rota-shift-duration muted"></p>
+              <div class="rota-shift-popover__actions">
+                <button type="button" class="btn ghost" id="rota-shift-cancel-btn">Cancel</button>
+                <button type="button" class="btn" id="rota-add-btn">Add to rota</button>
+              </div>
+            </div>
             <div id="rota-grid" class="rota-grid" aria-label="Weekly rota grid"></div>
           </article>
           <article class="card" id="rota-list-panel" hidden>
@@ -828,37 +881,21 @@
               </table>
             </div>
           </article>
-          <article class="card edit-panel">
-            <h3>Add shift</h3>
-            <div class="rota-add-form">
-              <label>
-                Employee
-                <select id="rota-add-employee"></select>
-              </label>
-              <label>
-                Day
-                <select id="rota-add-day"></select>
-              </label>
-              <label>
-                Start
-                <input id="rota-add-start" type="time" value="09:00" />
-              </label>
-              <label>
-                End
-                <input id="rota-add-end" type="time" value="17:00" />
-              </label>
-              <label>
-                Role <span class="muted">(optional)</span>
-                <input id="rota-add-role" type="text" maxlength="80" placeholder="e.g. Floor, Bar, Kitchen" />
-              </label>
-              <button type="button" class="btn" id="rota-add-btn">Add to rota</button>
+          <article class="card edit-panel" id="rota-add-shift-card" hidden aria-hidden="true"></article>
+          <div class="rota-actions rota-actions--sticky">
+            <div class="rota-actions-primary">
+              <button type="button" class="btn primary" id="rota-save-btn">Save rota</button>
+              <button type="button" class="btn primary" id="rota-publish-btn">Publish rota</button>
             </div>
-          </article>
-          <div class="rota-actions">
-            <button type="button" class="btn primary" id="rota-save-btn">Save rota</button>
-            <button type="button" class="btn" id="rota-copy-prev-btn">Copy previous week</button>
-            <button type="button" class="btn ghost" id="rota-publish-btn">Publish rota</button>
-            <button type="button" class="btn ghost" id="rota-reload-btn">Reload</button>
+            <div class="rota-actions-secondary">
+              <button type="button" class="btn ghost" id="rota-copy-prev-btn">Copy previous week</button>
+              <button type="button" class="btn ghost" id="rota-clear-btn">Clear rota</button>
+              <button type="button" class="rota-link-btn" id="rota-reload-btn">Reload</button>
+            </div>
+            <label class="rota-notify-option muted">
+              <input type="checkbox" id="rota-notify-staff" disabled />
+              Notify staff on publish <span class="rota-notify-soon">(coming soon)</span>
+            </label>
           </div>
         </section>
 
@@ -944,7 +981,7 @@
     <script src="./admin-shared.js?v=admin-v8"></script>
     <script src="./admin-workspace.js?v=admin-v6"></script>
     <script src="./admin-documents.js?v=2"></script>
-    <script src="./admin-employees.js?v=7"></script>
+    <script src="./admin-employees.js?v=8"></script>
     <script src="./admin-recruitment.js?v=4"></script>
     <script src="./admin-promotions.js?v=admin-v4"></script>
     <script src="./admin-compliance.js?v=admin-v6"></script>
@@ -952,7 +989,7 @@
     <script src="./admin-offboarding.js?v=admin-v4"></script>
     <script src="./admin-templates.js?v=admin-v6"></script>
     <script src="./admin-time-punch.js?v=1"></script>
-    <script src="./admin-rota.js?v=2"></script>
+    <script src="./admin-rota.js?v=3"></script>
     <script src="./app.js?v=admin-v4"></script>
     <script src="./contracts.js?v=admin-v4"></script>
       <script src="./cookie-consent.js?v=1"></script>
