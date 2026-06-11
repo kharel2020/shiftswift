@@ -72,15 +72,15 @@ def main() -> None:
     draw.rounded_rectangle([badge_x, 218, badge_x + 58, 252], radius=8, fill=GREEN)
     draw.text((badge_x + 29, 224), "HR", font=load_font(22, bold=True), fill=(255, 255, 255), anchor="mm")
 
-    draw.text((240, 290), "UK HR & compliance software for SMEs", font=sub_font, fill=MUTED)
+    draw.text((240, 290), "UK HR & sponsor compliance recording tools", font=sub_font, fill=MUTED)
     draw.text(
         (240, 340),
-        "Right-to-work · Day-9 absence alerts · Geofenced time clock",
+        "RTW evidence · Day-9 alerts · Time clock · Audit export packs",
         font=load_font(26),
         fill=(60, 60, 56),
     )
 
-    pills = ["14-day free trial", "Sponsor licence tools", "Home Office audit exports"]
+    pills = ["14-day free trial", "Recording tools only", "You act on Home Office duties"]
     px = 240
     py = 420
     for label in pills:
