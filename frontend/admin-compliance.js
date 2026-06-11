@@ -4,31 +4,249 @@
 
   let complianceReady = false;
   let ackPanelBound = false;
+  let lastAckData = null;
+  let lastDashboardData = null;
 
-  function renderSponsorDutyGrid(container, duties) {
-    if (!container || !Array.isArray(duties)) return;
-    container.innerHTML = duties
-      .map(
-        (item) => `<article class="sponsor-duty-item">
-          <h4>${escapeHtml(item.title)}</h4>
-          <p><strong>Your duty:</strong> ${escapeHtml(item.customer_duty)}</p>
-          <p class="muted"><strong>ShiftSwift HR:</strong> ${escapeHtml(item.software_role)}</p>
-        </article>`
-      )
-      .join("");
+  const AUDIT_EXPORT_FLAG_KEY = `sponsor_audit_export_done_${window.Admin?.TENANT_ID ?? "default"}`;
+
+  const SETUP_STEPS = [
+    {
+      id: "enabled",
+      label: "Sponsor compliance enabled",
+      href: null,
+    },
+    {
+      id: "sponsored_worker",
+      label: "First sponsored worker added",
+      href: "#employees",
+    },
+    {
+      id: "rtw_upload",
+      label: "Upload right-to-work documents",
+      href: "#compliance-rtw",
+    },
+    {
+      id: "absence_monitoring",
+      label: "Enable absence monitoring for sponsored workers",
+      href: "#compliance-absence",
+    },
+    {
+      id: "audit_export",
+      label: "Test audit pack export",
+      href: "#compliance-audit-export",
+    },
+  ];
+
+  const DUTY_CARD_ICONS = {
+    "Right to Work checks": "id",
+    "Worker absences": "calendar-off",
+    "SMS change reporting": "message",
+    "Recruitment & adverts": "speakerphone",
+    "Record keeping & inspections": "folder",
+  };
+
+  function formatAckDate(iso) {
+    if (!iso) return "";
+    return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
   }
 
-  function applySponsorDutyCopy(data) {
-    const toolsNotice = document.getElementById("sponsor-licence-tools-notice");
-    if (toolsNotice && data.tools_notice) toolsNotice.textContent = data.tools_notice;
+  function auditExportTested() {
+    return localStorage.getItem(AUDIT_EXPORT_FLAG_KEY) === "1";
+  }
 
-    renderSponsorDutyGrid(document.getElementById("sponsor-licence-duties-list"), data.duties);
+  function markAuditExportTested() {
+    localStorage.setItem(AUDIT_EXPORT_FLAG_KEY, "1");
+  }
 
-    const reminder = document.getElementById("sponsor-duty-reminder");
-    const reminderNotice = document.getElementById("sponsor-duty-reminder-notice");
-    if (reminderNotice && data.tools_notice) reminderNotice.textContent = data.tools_notice;
-    renderSponsorDutyGrid(document.getElementById("sponsor-duty-reminder-list"), data.duties);
-    if (reminder && data.acknowledged) reminder.hidden = false;
+  function setupStepComplete(stepId, ackData, overview) {
+    switch (stepId) {
+      case "enabled":
+        return Boolean(ackData?.acknowledged);
+      case "sponsored_worker":
+        return (overview?.sponsored_worker_count ?? 0) > 0;
+      case "rtw_upload":
+        return (overview?.rtw_total_checks ?? 0) > 0;
+      case "absence_monitoring":
+        return (overview?.absence_days_recorded ?? 0) > 0;
+      case "audit_export":
+        return auditExportTested();
+      default:
+        return false;
+    }
+  }
+
+  function renderSetupChecklist(ackData, overview) {
+    const card = document.getElementById("sponsor-setup-checklist");
+    const list = document.getElementById("sponsor-setup-steps");
+    const progress = document.getElementById("sponsor-setup-progress");
+    if (!card || !list) return;
+    if (!ackData?.acknowledged) {
+      card.hidden = true;
+      return;
+    }
+    card.hidden = false;
+    const completed = SETUP_STEPS.filter((step) => setupStepComplete(step.id, ackData, overview)).length;
+    if (progress) progress.textContent = `${completed} of ${SETUP_STEPS.length} complete`;
+    list.innerHTML = SETUP_STEPS.map((step, index) => {
+      const done = setupStepComplete(step.id, ackData, overview);
+      const stepClass = done ? "sponsor-setup-step sponsor-setup-step--done" : "sponsor-setup-step";
+      const circle = done
+        ? `<span class="sponsor-setup-step__circle sponsor-setup-step__circle--done" aria-hidden="true">✓</span>`
+        : `<span class="sponsor-setup-step__circle">${index + 1}</span>`;
+      const textClass = done ? "sponsor-setup-step__text sponsor-setup-step__text--done" : "sponsor-setup-step__text";
+      const link = !done && step.href
+        ? `<a class="sponsor-setup-step__link" href="${escapeHtml(step.href)}">Go →</a>`
+        : "";
+      return `<li class="${stepClass}">${circle}<span class="${textClass}">${escapeHtml(step.label)}</span>${link}</li>`;
+    }).join("");
+  }
+
+  function dutyStatusBadge(label, tone) {
+    const cls =
+      tone === "warn" ? "sponsor-duty-status sponsor-duty-status--warn" : tone === "none" ? "sponsor-duty-status sponsor-duty-status--none" : "sponsor-duty-status sponsor-duty-status--ok";
+    return `<span class="${cls}">${escapeHtml(label)}</span>`;
+  }
+
+  function renderDutyCards(duties, overview) {
+    const grid = document.getElementById("sponsor-duty-cards");
+    if (!grid || !Array.isArray(duties)) return;
+    grid.hidden = false;
+    const o = overview || {};
+    const cards = duties.map((duty) => {
+      let cardClass = "sponsor-duty-card";
+      let statusLabel = "Not started";
+      let statusTone = "none";
+      let statHtml = "";
+
+      if (duty.title === "Right to Work checks") {
+        const total = o.rtw_total_checks ?? 0;
+        statusLabel = total ? `${total} record${total === 1 ? "" : "s"}` : "0 records";
+        statusTone = total ? "ok" : "none";
+        if ((o.rtw_expiring_within_30_days ?? 0) > 0) {
+          statHtml = `<p class="sponsor-duty-stat">${o.rtw_expiring_within_30_days} expiry due within 30 days</p>`;
+        }
+      } else if (duty.title === "Worker absences") {
+        const alerts = o.absence_open_alerts ?? 0;
+        const warning = o.absence_top_warning;
+        if (alerts > 0 || warning) {
+          cardClass += " sponsor-duty-card--alert";
+          statusLabel = alerts ? `${alerts} open alert${alerts === 1 ? "" : "s"}` : "Streak warning";
+          statusTone = "warn";
+          if (warning) {
+            statHtml = `<p class="sponsor-duty-stat sponsor-duty-stat--warn">${escapeHtml(warning.employee_name)} — day ${escapeHtml(warning.unexcused_streak)} of absence</p>`;
+          }
+        } else {
+          statusLabel = "Clear";
+          statusTone = "ok";
+        }
+      } else if (duty.title === "SMS change reporting") {
+        const pending = o.sms_pending ?? 0;
+        statusLabel = `${pending} pending`;
+        statusTone = pending ? "warn" : "none";
+      } else if (duty.title === "Recruitment & adverts") {
+        const logged = o.advert_logged ?? 0;
+        statusLabel = logged ? `${logged} logged` : "0 logged";
+        statusTone = logged ? "ok" : "none";
+      } else if (duty.title === "Record keeping & inspections") {
+        statusLabel = (o.rtw_total_checks ?? 0) > 0 || auditExportTested() ? "Audit pack ready" : "Setup needed";
+        statusTone = statusLabel === "Audit pack ready" ? "ok" : "none";
+        const exportedNote = auditExportTested() ? "Audit export tested" : "Export not tested yet";
+        statHtml = `<p class="sponsor-duty-stat"><button type="button" class="sponsor-duty-stat-link" id="sponsor-duty-export-now">${escapeHtml(exportedNote)} · Export now</button></p>`;
+      }
+
+      const fullWidth = duty.title === "Record keeping & inspections" ? " sponsor-duty-card--wide" : "";
+      const icon = DUTY_CARD_ICONS[duty.title] || "shield-check";
+
+      return `<article class="${cardClass}${fullWidth}">
+        <div class="sponsor-duty-card__head">
+          <h4 class="sponsor-duty-card__title">${escapeHtml(duty.title)}</h4>
+          ${dutyStatusBadge(statusLabel, statusTone)}
+        </div>
+        <p class="sponsor-duty-card__duty"><strong>Your duty:</strong> ${escapeHtml(duty.customer_duty)}</p>
+        <p class="sponsor-duty-card__sw"><strong>ShiftSwift HR:</strong> ${escapeHtml(duty.software_role)}</p>
+        ${statHtml}
+      </article>`;
+    });
+    grid.innerHTML = cards.join("");
+    document.getElementById("sponsor-duty-export-now")?.addEventListener("click", () => {
+      document.getElementById("audit-export-pdf")?.click();
+    });
+  }
+
+  function renderEnabledBanner(ackData) {
+    const banner = document.getElementById("sponsor-enabled-banner");
+    const meta = document.getElementById("sponsor-enabled-meta");
+    if (!banner) return;
+    if (!ackData?.acknowledged) {
+      banner.hidden = true;
+      return;
+    }
+    banner.hidden = false;
+    const when = formatAckDate(ackData.acknowledged_at);
+    const who = ackData.acknowledged_by || "Admin";
+    if (meta) meta.textContent = when ? `Enabled ${when} by ${who}` : `Enabled by ${who}`;
+  }
+
+  function showEnabledOverview(ackData, dashboardData) {
+    lastAckData = ackData;
+    lastDashboardData = dashboardData;
+    renderEnabledBanner(ackData);
+    renderSetupChecklist(ackData, dashboardData?.duty_overview);
+    renderDutyCards(ackData.duties, dashboardData?.duty_overview);
+  }
+
+  function hideEnabledOverview() {
+    document.getElementById("sponsor-enabled-banner")?.setAttribute("hidden", "");
+    document.getElementById("sponsor-setup-checklist")?.setAttribute("hidden", "");
+    document.getElementById("sponsor-duty-cards")?.setAttribute("hidden", "");
+  }
+
+  async function refreshSponsorOverview() {
+    try {
+      const [ackRes, dashRes] = await Promise.all([
+        apiFetch("/compliance/sponsor-licence/acknowledgement"),
+        apiFetch("/compliance/sponsor-licence/dashboard"),
+      ]);
+      if (!ackRes.ok) return;
+      const ackData = await ackRes.json();
+      const dashboardData = dashRes.ok ? await dashRes.json() : null;
+      if (ackData.acknowledged) showEnabledOverview(ackData, dashboardData);
+    } catch {
+      /* overview is optional */
+    }
+  }
+
+  function updateAckCheckboxState() {
+    const holds = document.getElementById("sponsor-licence-holds");
+    const understand = document.getElementById("sponsor-licence-understand");
+    const accept = document.getElementById("sponsor-licence-accept");
+    const btn = document.getElementById("sponsor-licence-ack-btn");
+    const progress = document.getElementById("sponsor-ack-progress");
+    const checked = [holds, understand, accept].filter((el) => el?.checked).length;
+    const ready = checked === 3;
+    if (btn) {
+      btn.disabled = !ready;
+      btn.classList.toggle("sponsor-ack-enable-btn--ready", ready);
+    }
+    if (progress) {
+      progress.textContent = ready
+        ? "All 3 confirmed — ready to enable"
+        : `Tick all 3 boxes to continue — ${checked} of 3 confirmed`;
+      progress.classList.toggle("sponsor-ack-progress--ready", ready);
+    }
+  }
+
+  function populateAckPanel(data) {
+    const disclaimer = document.getElementById("sponsor-licence-ack-disclaimer");
+    if (disclaimer) {
+      const parts = [data.tools_notice, data.ack_text].filter(Boolean);
+      disclaimer.textContent = parts.join(" ");
+    }
+    ["sponsor-licence-holds", "sponsor-licence-understand", "sponsor-licence-accept"].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.checked = false;
+    });
+    updateAckCheckboxState();
   }
 
   async function ensureSponsorLicenceAcknowledged() {
@@ -41,18 +259,21 @@
       if (res.status === 403) {
         panel.hidden = true;
         content.hidden = false;
+        hideEnabledOverview();
         return true;
       }
       if (!res.ok) return false;
       const data = await res.json();
-      applySponsorDutyCopy(data);
-      const ackText = document.getElementById("sponsor-licence-ack-text");
-      if (ackText && data.ack_text) ackText.textContent = data.ack_text;
+      lastAckData = data;
       if (data.acknowledged) {
         panel.hidden = true;
         content.hidden = false;
+        populateAckPanel(data);
+        await refreshSponsorOverview();
         return true;
       }
+      hideEnabledOverview();
+      populateAckPanel(data);
       panel.hidden = false;
       content.hidden = true;
       bindAckPanel();
@@ -62,24 +283,39 @@
     }
   }
 
+  function bindSponsorOverviewActions() {
+    if (document.body.dataset.sponsorOverviewBound === "true") return;
+    document.body.dataset.sponsorOverviewBound = "true";
+
+    document.getElementById("sponsor-reread-duties")?.addEventListener("click", () => {
+      const cards = document.getElementById("sponsor-duty-cards");
+      cards?.scrollIntoView({ behavior: "smooth", block: "start" });
+      cards?.classList.add("sponsor-duties-grid--highlight");
+      window.setTimeout(() => cards?.classList.remove("sponsor-duties-grid--highlight"), 1200);
+    });
+
+    document.getElementById("sponsor-banner-export-btn")?.addEventListener("click", () => {
+      document.getElementById("audit-export-pdf")?.click();
+    });
+  }
+
   function bindAckPanel() {
     if (ackPanelBound) return;
     ackPanelBound = true;
+    bindSponsorOverviewActions();
+
+    ["sponsor-licence-holds", "sponsor-licence-understand", "sponsor-licence-accept"].forEach((id) => {
+      document.getElementById(id)?.addEventListener("change", updateAckCheckboxState);
+    });
+
     document.getElementById("sponsor-licence-ack-btn")?.addEventListener("click", async () => {
       const status = document.getElementById("sponsor-licence-ack-status");
       const holds = document.getElementById("sponsor-licence-holds");
       const understand = document.getElementById("sponsor-licence-understand");
       const accept = document.getElementById("sponsor-licence-accept");
-      if (!holds?.checked) {
-        if (status) status.textContent = "Confirm your organisation holds a UK Sponsor Licence.";
-        return;
-      }
-      if (!understand?.checked) {
-        if (status) status.textContent = "Confirm you understand ShiftSwift HR records data — it does not report to the Home Office for you.";
-        return;
-      }
-      if (!accept?.checked) {
-        if (status) status.textContent = "Accept sponsor duty terms in the HR Module EULA.";
+      if (!holds?.checked || !understand?.checked || !accept?.checked) {
+        updateAckCheckboxState();
+        if (status) status.textContent = "Tick all three boxes before enabling.";
         return;
       }
       if (status) status.textContent = "Saving…";
@@ -180,6 +416,7 @@
           await loadAbsenceDays();
           await loadAbsenceStreaks();
           window.dispatchEvent(new CustomEvent("admin:compliance-refresh"));
+          window.dispatchEvent(new CustomEvent("admin:absence-refresh"));
         });
       });
     } catch {
@@ -256,6 +493,7 @@
         await loadAbsenceDays();
         await loadAbsenceStreaks();
         window.dispatchEvent(new CustomEvent("admin:compliance-refresh"));
+        window.dispatchEvent(new CustomEvent("admin:absence-refresh"));
       },
     });
     host.dataset.mounted = "true";
@@ -358,6 +596,7 @@
           panel.hidden = false;
           panel.innerHTML = `<p class="promo-result-message promo-result-message--ok">${escapeHtml(data.message || "Verified")} · RTW: ${escapeHtml(data.rtw_status)} · Expiry: ${escapeHtml(data.expiry_date || "Not set")} · Mode: ${escapeHtml(data.mode)}</p>`;
         }
+        window.dispatchEvent(new CustomEvent("admin:rtw-refresh"));
       },
     });
     host.dataset.mounted = "true";
@@ -403,6 +642,7 @@
         if (status) status.textContent = `Stored check #${data.check_id} · SHA ${data.content_sha256?.slice(0, 12)}…`;
         form.reset();
         window.dispatchEvent(new CustomEvent("admin:compliance-refresh"));
+        window.dispatchEvent(new CustomEvent("admin:rtw-refresh"));
       } catch (error) {
         if (status) status.textContent = error.message;
       }
@@ -411,6 +651,7 @@
   }
 
   async function initComplianceTools(skipAckCheck = false) {
+    bindSponsorOverviewActions();
     if (!skipAckCheck) {
       const ready = await ensureSponsorLicenceAcknowledged();
       if (!ready) return;
@@ -419,8 +660,6 @@
     await mountShareCodeForm();
     await mountAbsenceDayForm();
     await mountWorkingCalendarForm();
-    await loadAbsenceStreaks();
-    await loadAbsenceDays();
     await loadWorkingCalendar();
     await loadReportingTriggers();
 
@@ -445,6 +684,8 @@
       let path = "/compliance/sponsor-licence/audit-export?format=pdf";
       if (employeeId) path += `&employee_id=${encodeURIComponent(employeeId)}`;
       await downloadAuthenticated(path, `audit-pack-business-${window.Admin.TENANT_ID}.pdf`);
+      markAuditExportTested();
+      refreshSponsorOverview();
     });
   }
 
@@ -455,10 +696,10 @@
     }
   });
 
+  window.refreshSponsorComplianceOverview = refreshSponsorOverview;
+
   window.addEventListener("admin:compliance-refresh", () => {
-    if (typeof loadComplianceDashboard === "function") loadComplianceDashboard();
-    loadAbsenceStreaks();
-    loadAbsenceDays();
+    refreshSponsorOverview();
   });
 
   if (parseHashBaseSection(window.location.hash) === "compliance") {

@@ -4,13 +4,32 @@
 
   let sectionReady = false;
 
+  function updatePunchStats(sites, punches) {
+    const siteItems = sites || [];
+    const punchItems = punches || [];
+    const sitesEl = document.getElementById("punch-stat-sites");
+    const punchesEl = document.getElementById("punch-stat-punches");
+    const primaryEl = document.getElementById("punch-stat-primary");
+    const primarySubEl = document.getElementById("punch-stat-primary-sub");
+    if (sitesEl) sitesEl.textContent = String(siteItems.length);
+    if (punchesEl) punchesEl.textContent = String(punchItems.length);
+    const primary = siteItems.find((s) => s.is_primary) || siteItems[0];
+    if (primaryEl) {
+      primaryEl.textContent = primary ? (primary.is_active ? "Set" : "Inactive") : "None";
+    }
+    if (primarySubEl) {
+      primarySubEl.textContent = primary ? primary.name : "Sync from business address";
+    }
+  }
+
   async function loadSites() {
     const tbody = document.getElementById("punch-sites-body");
-    if (!tbody) return;
+    if (!tbody) return [];
     try {
       const res = await apiFetch("/admin/time-punch/sites");
       if (!res.ok) throw new Error("Load failed");
       const data = await res.json();
+      const rows = data.items || [];
       renderTableBody(tbody, {
         emptyMessage: "No punch sites yet. Sync from your business address.",
         columns: [
@@ -24,24 +43,27 @@
           { key: "is_primary", render: (r) => (r.is_primary ? "Primary" : "Not set") },
           { key: "is_active", render: (r) => (r.is_active ? "Active" : "Inactive") },
         ],
-        rows: data.items || [],
+        rows: rows,
       });
+      return rows;
     } catch {
       renderTableBody(tbody, {
         columns: [{ key: "a" }, { key: "b" }, { key: "c" }, { key: "d" }, { key: "e" }, { key: "f" }],
         rows: [],
         emptyMessage: "Could not load punch sites.",
       });
+      return [];
     }
   }
 
   async function loadPunches() {
     const tbody = document.getElementById("recent-punches-body");
-    if (!tbody) return;
+    if (!tbody) return [];
     try {
       const res = await apiFetch("/admin/time-punch/punches?limit=50");
       if (!res.ok) throw new Error("Load failed");
       const data = await res.json();
+      const rows = data.items || [];
       renderTableBody(tbody, {
         emptyMessage: "No punches recorded yet.",
         columns: [
@@ -63,14 +85,16 @@
             render: (r) => (r.distance_meters != null ? `${Math.round(r.distance_meters)}m` : "Not set"),
           },
         ],
-        rows: data.items || [],
+        rows,
       });
+      return rows;
     } catch {
       renderTableBody(tbody, {
         columns: [{ key: "a" }, { key: "b" }, { key: "c" }, { key: "d" }, { key: "e" }],
         rows: [],
         emptyMessage: "Could not load punches.",
       });
+      return [];
     }
   }
 
@@ -87,7 +111,8 @@
         return;
       }
       if (msg) msg.textContent = `Synced primary site: ${data.name}`;
-      await loadSites();
+      const [sites, punches] = await Promise.all([loadSites(), loadPunches()]);
+      updatePunchStats(sites, punches);
     } catch (error) {
       if (msg) msg.textContent = error.message || "Sync failed.";
     } finally {
@@ -97,7 +122,8 @@
 
   async function initSection() {
     document.getElementById("sync-punch-site-btn")?.addEventListener("click", syncFromAddress);
-    await Promise.all([loadSites(), loadPunches()]);
+    const [sites, punches] = await Promise.all([loadSites(), loadPunches()]);
+    updatePunchStats(sites, punches);
   }
 
   window.addEventListener("admin:section", (event) => {

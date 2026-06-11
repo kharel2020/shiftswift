@@ -43,9 +43,7 @@ SPONSOR_LICENCE_DUTIES: list[dict[str, str]] = [
 
 SPONSOR_LICENCE_ACK_TEXT = (
     "I confirm that our organisation holds a valid UK Sponsor Licence (or is applying under our "
-    "own legal responsibility). I understand that ShiftSwift HR is recording software only: we "
-    "remain solely responsible for performing checks, reviewing alerts, submitting Home Office "
-    "reports through official channels, and meeting all sponsor licence duties."
+    "own legal responsibility). Those duties remain with our organisation."
 )
 
 

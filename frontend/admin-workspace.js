@@ -129,26 +129,30 @@
       const data = await res.json();
       await loadTenantFeatures();
       applyFeatureGates();
+      const trialBanner = data.trial_active
+        ? `<p class="promo-result hr-overview-trial">Your <strong>14-day trial</strong> includes full HR, compliance, and workforce tools${data.days_remaining != null ? ` — <strong>${escapeHtml(data.days_remaining)} days</strong> remaining` : ""}.</p>`
+        : "";
       grid.innerHTML = `
-        ${data.trial_active ? `<p class="promo-result" style="margin-bottom:1rem;">Your <strong>14-day trial</strong> includes full HR, compliance, and workforce tools${data.days_remaining != null ? ` — <strong>${escapeHtml(data.days_remaining)} days</strong> remaining` : ""}.</p>` : ""}
-        <article class="metric-card">
-          <strong>${escapeHtml(data.active_employees)}</strong>
-          <span>Active employees</span>
-          <p class="muted">Limit ${escapeHtml(data.max_employees)} on current plan</p>
+        ${trialBanner}
+        <article class="hr-stat-card">
+          <span class="hr-stat-card__label">Active employees</span>
+          <span class="hr-stat-card__value">${escapeHtml(data.active_employees)}</span>
+          <span class="hr-stat-card__sub">Limit ${escapeHtml(data.max_employees)} on current plan</span>
         </article>
-        <article class="metric-card">
-          <strong>${escapeHtml(data.subscription_status || "Not set")}</strong>
-          <span>Subscription</span>
-          <p class="muted">${escapeHtml(data.plan_display_name || data.subscription_plan || "No plan")} plan</p>
+        <article class="hr-stat-card">
+          <span class="hr-stat-card__label">Subscription</span>
+          <span class="hr-stat-card__value">${escapeHtml(data.subscription_status || "Not set")}</span>
+          <span class="hr-stat-card__sub">${escapeHtml(data.plan_display_name || data.subscription_plan || "No plan")} plan</span>
         </article>
-        <article class="metric-card">
-          <strong>${escapeHtml(data.document_count)}</strong>
-          <span>Stored documents</span>
+        <article class="hr-stat-card">
+          <span class="hr-stat-card__label">Stored documents</span>
+          <span class="hr-stat-card__value">${escapeHtml(data.document_count)}</span>
+          <span class="hr-stat-card__sub">In tenant document store</span>
         </article>
-        <article class="metric-card">
-          <strong>HR</strong>
-          <span>Platform focus</span>
-          <p class="muted">Records, time clock, RTW &amp; sponsor compliance</p>
+        <article class="hr-stat-card hr-stat-card--ok">
+          <span class="hr-stat-card__label">Platform focus</span>
+          <span class="hr-stat-card__value">HR</span>
+          <span class="hr-stat-card__sub">Records, time clock, RTW &amp; sponsor compliance</span>
         </article>`;
     } catch (error) {
       grid.innerHTML = `<p class="muted">${escapeHtml(error.message || "Could not load overview.")}</p>`;

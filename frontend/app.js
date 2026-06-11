@@ -149,8 +149,10 @@ async function loadComplianceDashboard() {
     if (!res.ok) throw new Error("API unavailable");
     const data = await res.json();
 
-    document.getElementById("rtw-valid-count").textContent = String(data.rtw?.valid_checks ?? 0);
-    document.getElementById("rtw-expired-count").textContent = String(data.rtw?.expired_checks ?? 0);
+    const rtwValid = document.getElementById("rtw-valid-count");
+    if (rtwValid) rtwValid.textContent = String(data.rtw?.valid_checks ?? 0);
+    const rtwExpired = document.getElementById("rtw-expired-count");
+    if (rtwExpired) rtwExpired.textContent = String(data.rtw?.expired_checks ?? 0);
     const rtwPill = document.getElementById("rtw-status-pill");
     if (rtwPill) {
       rtwPill.textContent = (data.rtw?.expired_checks ?? 0) > 0 ? "Action required" : "Compliant";
@@ -186,11 +188,18 @@ async function loadComplianceDashboard() {
       smsPill.textContent = overdue ? "Overdue" : "Monitoring";
       smsPill.className = `status-pill ${overdue ? "status-critical" : "status-warning"}`;
     }
+    if (typeof window.refreshSponsorComplianceOverview === "function") {
+      window.refreshSponsorComplianceOverview();
+    }
   } catch {
-    document.getElementById("rtw-valid-count").textContent = "0";
-    document.getElementById("rtw-expired-count").textContent = "0";
-    document.getElementById("advert-active-count").textContent = "0";
-    document.getElementById("advert-sponsored-count").textContent = "0";
+    const rtwValid = document.getElementById("rtw-valid-count");
+    if (rtwValid) rtwValid.textContent = "0";
+    const rtwExpired = document.getElementById("rtw-expired-count");
+    if (rtwExpired) rtwExpired.textContent = "0";
+    const advertActive = document.getElementById("advert-active-count");
+    if (advertActive) advertActive.textContent = "0";
+    const advertSponsored = document.getElementById("advert-sponsored-count");
+    if (advertSponsored) advertSponsored.textContent = "0";
     renderAbsenceAlerts([]);
     renderSmsChanges([]);
     renderAdvertRecords([]);

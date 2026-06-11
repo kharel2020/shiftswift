@@ -67,7 +67,7 @@ def test_get_status_when_not_acknowledged() -> None:
     assert status["acknowledged"] is False
     assert status["holds_sponsor_licence"] is False
     assert status["current_ack_version"] == SPONSOR_LICENCE_ACK_VERSION
-    assert "recording software only" in status["ack_text"]
+    assert "Those duties remain with our organisation" in status["ack_text"]
     assert len(status["duties"]) >= 5
     assert "SMS" in status["tools_notice"]
 

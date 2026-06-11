@@ -12,21 +12,28 @@ from config import load_settings
 from deps import AuthUser, get_hr_user, resolve_tenant_id
 from sponsor_licence_compliance import (
     UK_RTW_CHECKLIST_URL,
+    absence_monitoring_dashboard,
     absence_type_catalog,
     add_advertisement_link,
     compliance_dashboard,
     create_advertisement_record,
     delete_sponsored_absence_day,
     evaluate_day9_absence_alerts,
+    get_absence_monitoring_detail,
     get_absence_streak_summaries,
     get_advertisement_record,
+    get_rtw_check,
     list_advertisement_records,
+    list_rtw_checks,
     list_sponsored_absence_days,
     list_working_calendar,
     log_sms_reportable_change,
+    mark_absence_returned,
+    mark_absence_sms_reported,
     record_sponsored_absence_day,
     recruitment_reference_links,
     refresh_sms_change_alert_statuses,
+    send_rtw_expiry_reminder,
     store_immutable_rtw_pdf,
     upsert_working_calendar,
 )
@@ -165,6 +172,59 @@ def rtw_checklist_link() -> dict[str, str]:
         "url": UK_RTW_CHECKLIST_URL,
         "note": "Use this official checklist when completing RTW checks.",
     }
+
+
+@router.get("/rtw-checks")
+def list_rtw_check_records(
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, Any]:
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = _db_conn()
+    try:
+        _require_sponsor_compliance_access(tenant_id=tenant_id, conn=conn)
+        return list_rtw_checks(tenant_id=tenant_id, conn=conn)
+    finally:
+        conn.close()
+
+
+@router.get("/rtw-checks/{check_id}")
+def get_rtw_check_record(
+    check_id: int,
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, Any]:
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = _db_conn()
+    try:
+        _require_sponsor_compliance_access(tenant_id=tenant_id, conn=conn)
+        return get_rtw_check(tenant_id=tenant_id, check_id=check_id, conn=conn)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    finally:
+        conn.close()
+
+
+@router.post("/rtw-checks/{check_id}/send-reminder")
+def send_rtw_check_reminder(
+    check_id: int,
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, Any]:
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = _db_conn()
+    try:
+        _require_sponsor_compliance_access(tenant_id=tenant_id, conn=conn)
+        result = send_rtw_expiry_reminder(tenant_id=tenant_id, check_id=check_id, conn=conn)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    else:
+        conn.commit()
+        return result
+    finally:
+        conn.close()
 
 
 @router.post("/rtw-checks")
@@ -556,6 +616,90 @@ def absence_streaks(
     finally:
         conn.close()
     return {"items": items, "count": len(items), "as_of": (as_of or date.today()).isoformat()}
+
+
+@router.get("/absence-monitoring")
+def get_absence_monitoring(
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    as_of: date | None = None,
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, Any]:
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = _db_conn()
+    try:
+        _require_sponsor_compliance_access(tenant_id=tenant_id, conn=conn)
+        return absence_monitoring_dashboard(tenant_id=tenant_id, conn=conn, as_of=as_of or date.today())
+    finally:
+        conn.close()
+
+
+@router.get("/absence-monitoring/{employee_id}")
+def get_absence_monitoring_record(
+    employee_id: int,
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    as_of: date | None = None,
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, Any]:
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = _db_conn()
+    try:
+        _require_sponsor_compliance_access(tenant_id=tenant_id, conn=conn)
+        return get_absence_monitoring_detail(
+            tenant_id=tenant_id,
+            employee_id=employee_id,
+            conn=conn,
+            as_of=as_of or date.today(),
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    finally:
+        conn.close()
+
+
+@router.post("/absence-monitoring/{employee_id}/mark-sms-reported")
+def mark_absence_monitoring_sms_reported(
+    employee_id: int,
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, Any]:
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = _db_conn()
+    try:
+        _require_sponsor_compliance_access(tenant_id=tenant_id, conn=conn)
+        return mark_absence_sms_reported(
+            tenant_id=tenant_id,
+            employee_id=employee_id,
+            acknowledged_by=current_user.username,
+            conn=conn,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    finally:
+        conn.close()
+
+
+@router.post("/absence-monitoring/{employee_id}/mark-returned")
+def mark_absence_monitoring_returned(
+    employee_id: int,
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    as_of: date | None = None,
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, Any]:
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = _db_conn()
+    try:
+        _require_sponsor_compliance_access(tenant_id=tenant_id, conn=conn)
+        return mark_absence_returned(
+            tenant_id=tenant_id,
+            employee_id=employee_id,
+            acknowledged_by=current_user.username,
+            conn=conn,
+            as_of=as_of or date.today(),
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    finally:
+        conn.close()
 
 
 @router.get("/working-calendar")

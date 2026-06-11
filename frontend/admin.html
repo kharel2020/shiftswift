@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon.png?v=brandkit-v1" />
     <link rel="icon" type="image/svg+xml" href="./assets/shiftswift-hr-icon.svg?v=brandkit-v1" />
     <link rel="apple-touch-icon" href="./assets/shiftswift-hr-icon.png?v=brandkit-v1" />
-    <link rel="stylesheet" href="./styles.css?v=admin-v8" />
+    <link rel="stylesheet" href="./styles.css?v=admin-v13" />
   </head>
   <body>
     <div id="sidebar-overlay" class="sidebar-overlay" aria-hidden="true"></div>
@@ -59,7 +59,7 @@
               <p class="muted">Workspace snapshot for your business.</p>
             </div>
           </header>
-          <div class="metric-grid" id="overview-metrics"></div>
+          <div class="metric-grid hr-stats-grid" id="overview-metrics"></div>
         </section>
 
         <section id="employees" class="admin-section" hidden>
@@ -71,15 +71,22 @@
           </header>
 
           <div id="employees-list-view">
-            <article class="card edit-panel">
-              <h3>Add employee</h3>
-              <p class="muted">Start at step 1 (Recruitment). Employee type and sponsor licence steps unlock as you progress.</p>
-              <div id="employee-quick-add-form"></div>
-            </article>
-            <article class="card">
-              <h3>Employee register</h3>
-              <div class="table-wrap">
-                <table class="data-table">
+            <article class="card hr-workspace">
+              <header class="hr-workspace-header section-header section-header--compact">
+                <div>
+                  <h3>Employees</h3>
+                  <p class="muted">Follow the employee lifecycle from recruitment through off-boarding, one step at a time.</p>
+                </div>
+              </header>
+              <div class="hr-workspace-body">
+                <div class="hr-surface-panel hr-log-panel">
+                  <h4 class="hr-section-title">Add employee</h4>
+                  <p class="muted">Start at step 1 (Recruitment). Employee type and sponsor licence steps unlock as you progress.</p>
+                  <div id="employee-quick-add-form"></div>
+                </div>
+                <h4 class="hr-section-title">Employee register</h4>
+                <div class="hr-table-wrap">
+                  <table class="data-table">
                   <thead>
                     <tr>
                       <th>Name</th>
@@ -93,6 +100,7 @@
                     <tr><td colspan="5" class="muted">Loading employees…</td></tr>
                   </tbody>
                 </table>
+                </div>
               </div>
             </article>
           </div>
@@ -137,20 +145,28 @@
             </div>
           </header>
           <div id="recruitment-list-view">
-            <article class="card edit-panel">
-              <h3>Step 1: Vacancy identified</h3>
-              <p class="muted">Create a vacancy, then walk through posting, screening, interviews, offer, and onboarding trigger.</p>
-              <div id="recruitment-quick-add-form"></div>
-            </article>
-            <article class="card">
-              <h3>Open vacancies</h3>
-              <div class="table-wrap">
-                <table class="data-table">
+            <article class="card hr-workspace">
+              <header class="hr-workspace-header section-header section-header--compact">
+                <div>
+                  <h3>Recruitment pipeline</h3>
+                  <p class="muted">Walk through posting, screening, interviews, offer, and onboarding trigger.</p>
+                </div>
+              </header>
+              <div class="hr-workspace-body">
+                <div class="hr-surface-panel hr-log-panel">
+                  <h4 class="hr-section-title">Step 1: Vacancy identified</h4>
+                  <p class="muted">Create a vacancy, then progress through the ten-step pipeline.</p>
+                  <div id="recruitment-quick-add-form"></div>
+                </div>
+                <h4 class="hr-section-title">Open vacancies</h4>
+                <div class="hr-table-wrap">
+                  <table class="data-table">
                   <thead><tr><th>Role</th><th>Department</th><th>Status</th><th>Pipeline</th><th></th></tr></thead>
                   <tbody id="recruitment-table-body">
                     <tr><td colspan="5" class="muted">Open this section to load vacancies…</td></tr>
                   </tbody>
                 </table>
+                </div>
               </div>
             </article>
           </div>
@@ -179,14 +195,21 @@
               <p class="muted">Encrypted investigation notes, ACAS deadlines, and compliance cross-triggers.</p>
             </div>
           </header>
-          <article class="card edit-panel">
-            <h3>Open new case</h3>
-            <div id="grievance-case-form"></div>
-          </article>
-          <article class="card">
-            <h3>Case register</h3>
-            <div class="table-wrap">
-              <table class="data-table">
+          <article class="card hr-workspace">
+            <header class="hr-workspace-header section-header section-header--compact">
+              <div>
+                <h3>Grievance cases</h3>
+                <p class="muted">Encrypted investigation notes, ACAS deadlines, and compliance cross-triggers.</p>
+              </div>
+            </header>
+            <div class="hr-workspace-body">
+              <div class="hr-surface-panel hr-log-panel">
+                <h4 class="hr-section-title">Open new case</h4>
+                <div id="grievance-case-form"></div>
+              </div>
+              <h4 class="hr-section-title">Case register</h4>
+              <div class="hr-table-wrap">
+                <table class="data-table">
                 <thead>
                   <tr>
                     <th>Reference</th>
@@ -201,18 +224,25 @@
                   <tr><td colspan="6" class="muted">Open this section to load cases…</td></tr>
                 </tbody>
               </table>
+              </div>
             </div>
           </article>
-          <article class="card edit-panel" id="grievance-case-detail" hidden>
-            <h3>Case detail: <span data-case-ref></span> <span data-case-status></span></h3>
-            <p class="muted">ACAS investigation deadline: <strong data-case-deadline></strong></p>
-            <h4>Encrypted notes</h4>
-            <div id="grievance-note-form"></div>
-            <div class="table-wrap">
-              <table class="data-table">
+          <article class="card hr-workspace" id="grievance-case-detail" hidden>
+            <header class="hr-workspace-header section-header section-header--compact">
+              <div>
+                <h3>Case detail: <span data-case-ref></span> <span data-case-status></span></h3>
+                <p class="muted">ACAS investigation deadline: <strong data-case-deadline></strong></p>
+              </div>
+            </header>
+            <div class="hr-workspace-body">
+              <h4 class="hr-section-title">Encrypted notes</h4>
+              <div id="grievance-note-form"></div>
+              <div class="hr-table-wrap">
+                <table class="data-table">
                 <thead><tr><th>Type</th><th>Author</th><th>When</th><th>Note</th></tr></thead>
                 <tbody id="grievance-notes-body"></tbody>
               </table>
+              </div>
             </div>
           </article>
         </section>
@@ -224,18 +254,25 @@
               <p class="muted">ACAS appeal windows and sponsorship cessation reporting.</p>
             </div>
           </header>
-          <article class="card edit-panel">
-            <h3>Start leaver workflow</h3>
-            <div class="edit-form edit-form--cols-2">
-              <label class="edit-field"><span class="edit-label">Employee</span><select id="offboarding-employee"></select></label>
-              <label class="edit-field"><span class="edit-label">Reason</span><input id="offboarding-reason" type="text" placeholder="Resignation, dismissal…" /></label>
-              <div class="edit-form-actions" data-span="2"><button type="button" class="btn" id="offboarding-start-btn">Start workflow</button></div>
-            </div>
-          </article>
-          <article class="card">
-            <h3>Active workflows</h3>
-            <div class="table-wrap">
-              <table class="data-table">
+          <article class="card hr-workspace">
+            <header class="hr-workspace-header section-header section-header--compact">
+              <div>
+                <h3>Offboarding workflows</h3>
+                <p class="muted">ACAS appeal windows and sponsorship cessation reporting.</p>
+              </div>
+            </header>
+            <div class="hr-workspace-body">
+              <div class="hr-surface-panel hr-log-panel">
+                <h4 class="hr-section-title">Start leaver workflow</h4>
+                <div class="edit-form edit-form--cols-2">
+                  <label class="edit-field"><span class="edit-label">Employee</span><select id="offboarding-employee"></select></label>
+                  <label class="edit-field"><span class="edit-label">Reason</span><input id="offboarding-reason" type="text" placeholder="Resignation, dismissal…" /></label>
+                  <div class="edit-form-actions" data-span="2"><button type="button" class="btn" id="offboarding-start-btn">Start workflow</button></div>
+                </div>
+              </div>
+              <h4 class="hr-section-title">Active workflows</h4>
+              <div class="hr-table-wrap">
+                <table class="data-table">
                 <thead>
                   <tr>
                     <th>ID</th>
@@ -251,6 +288,7 @@
                   <tr><td colspan="7" class="muted">Open this section to load workflows…</td></tr>
                 </tbody>
               </table>
+              </div>
             </div>
           </article>
         </section>
@@ -263,17 +301,23 @@
             </div>
           </header>
 
-          <article class="card edit-panel">
-            <h3>Billing code validator</h3>
-            <p class="muted">Uses the same rules as signup. Select a plan, enter codes, and preview adjusted pricing.</p>
-            <div id="promo-validate-form"></div>
-            <div id="promo-validation-result" class="promo-result" hidden></div>
-          </article>
-
-          <article class="card">
-            <h3>Discount codes</h3>
-            <div class="table-wrap">
-              <table class="data-table">
+          <article class="card hr-workspace">
+            <header class="hr-workspace-header section-header section-header--compact">
+              <div>
+                <h3>Promotion codes</h3>
+                <p class="muted">Validate billing codes against platform plans before signup or checkout.</p>
+              </div>
+            </header>
+            <div class="hr-workspace-body">
+              <div class="hr-surface-panel hr-log-panel">
+                <h4 class="hr-section-title">Billing code validator</h4>
+                <p class="muted">Uses the same rules as signup. Select a plan, enter codes, and preview adjusted pricing.</p>
+                <div id="promo-validate-form"></div>
+                <div id="promo-validation-result" class="promo-result" hidden></div>
+              </div>
+              <h4 class="hr-section-title">Discount codes</h4>
+              <div class="hr-table-wrap">
+                <table class="data-table">
                 <thead>
                   <tr>
                     <th>Code</th>
@@ -289,21 +333,18 @@
                   <tr><td colspan="7" class="muted">Open this section to load discount codes…</td></tr>
                 </tbody>
               </table>
-            </div>
-          </article>
-
-          <article class="card">
-            <div class="section-header section-header--compact">
-              <div>
-                <h3>Referral codes</h3>
-                <p class="muted">Introducer codes for HR consultants and partners. Commission is paid manually — confirm against Stripe before payout.</p>
               </div>
-              <div id="introducer-export-actions" class="link-row" hidden>
-                <button type="button" class="btn secondary" id="export-all-introducers-btn">Export all introducers (CSV)</button>
+              <div class="section-header section-header--compact" style="margin-top:1.25rem;">
+                <div>
+                  <h4 class="hr-section-title">Referral codes</h4>
+                  <p class="muted">Introducer codes for HR consultants and partners. Commission is paid manually — confirm against Stripe before payout.</p>
+                </div>
+                <div id="introducer-export-actions" class="link-row" hidden>
+                  <button type="button" class="btn secondary" id="export-all-introducers-btn">Export all introducers (CSV)</button>
+                </div>
               </div>
-            </div>
-            <div class="table-wrap">
-              <table class="data-table">
+              <div class="hr-table-wrap">
+                <table class="data-table">
                 <thead>
                   <tr>
                     <th>Code</th>
@@ -319,6 +360,7 @@
                   <tr><td colspan="7" class="muted">Open this section to load referral codes…</td></tr>
                 </tbody>
               </table>
+              </div>
             </div>
           </article>
         </section>
@@ -333,8 +375,8 @@
 
           <div id="hr-template-updates-banner" class="promo-result" hidden></div>
 
-          <article class="card edit-panel">
-            <header class="section-header section-header--compact">
+          <article class="card hr-workspace">
+            <header class="hr-workspace-header section-header section-header--compact">
               <div>
                 <h3>AI document assistant</h3>
                 <p class="muted">Powered by Google Gemini 2.0 Flash (low cost). Set <code>GEMINI_API_KEY</code> in backend .env.</p>
@@ -344,13 +386,11 @@
                 <span class="edit-label">Enable AI for this business</span>
               </label>
             </header>
-            <div id="ai-status-panel" class="promo-result"></div>
-          </article>
-
-          <article class="card">
-            <h3>Process template library</h3>
-            <div class="table-wrap">
-              <table class="data-table">
+            <div class="hr-workspace-body">
+              <div id="ai-status-panel" class="promo-result"></div>
+              <h4 class="hr-section-title">Process template library</h4>
+              <div class="hr-table-wrap">
+                <table class="data-table">
                 <thead>
                   <tr>
                     <th>Template</th>
@@ -363,10 +403,11 @@
                   <tr><td colspan="4" class="muted">Open this section to load templates…</td></tr>
                 </tbody>
               </table>
+              </div>
             </div>
           </article>
 
-          <article class="card edit-panel" id="template-editor-panel" hidden>
+          <article class="card hr-workspace" id="template-editor-panel" hidden>
             <header class="section-header section-header--compact">
               <div>
                 <h3 id="template-editor-title">Edit template</h3>
@@ -415,147 +456,184 @@
               <h2>Sponsor Licence Safeguards</h2>
               <p class="muted">Recording tools and alerts for UK sponsor licence duties — your organisation remains legally responsible for checks, SMS reporting, and Home Office submissions.</p>
             </div>
-            <a class="btn secondary" id="rtw-checklist-link" href="#" target="_blank" rel="noopener">Open GOV.UK RTW Checklist</a>
+            <a class="btn secondary" id="rtw-checklist-link" href="#" target="_blank" rel="noopener">GOV.UK: Right to work checks guidance →</a>
           </header>
 
-          <article class="card edit-panel" id="sponsor-licence-ack-panel" hidden>
-            <header class="section-header section-header--compact">
+          <div id="sponsor-enabled-banner" class="sponsor-enabled-banner" hidden>
+            <div class="sponsor-enabled-banner__left">
+              <span class="sponsor-enabled-dot" aria-hidden="true"></span>
               <div>
-                <h3>Confirm sponsor licence holder &amp; your duties</h3>
-                <p class="muted">ShiftSwift HR helps you <strong>record</strong> compliance activity. You remain responsible for performing checks, acting on alerts, and reporting to the Home Office.</p>
+                <p class="sponsor-enabled-banner__title">Sponsor compliance tools active</p>
+                <p class="sponsor-enabled-banner__meta">
+                  <span id="sponsor-enabled-meta"></span>
+                  · <button type="button" class="sponsor-reread-link" id="sponsor-reread-duties">Re-read duties</button>
+                </p>
               </div>
+            </div>
+            <button type="button" class="btn ghost btn-sm" id="sponsor-banner-export-btn">Export audit pack</button>
+          </div>
+
+          <article class="card sponsor-setup-card" id="sponsor-setup-checklist" hidden>
+            <h3 class="sponsor-setup-card__title">
+              Setup checklist
+              <span class="sponsor-setup-card__progress" id="sponsor-setup-progress">0 of 5 complete</span>
+            </h3>
+            <ol class="sponsor-setup-steps" id="sponsor-setup-steps"></ol>
+          </article>
+
+          <div id="sponsor-duty-cards" class="sponsor-duties-grid" hidden aria-label="Compliance duty areas"></div>
+
+          <article class="card sponsor-ack-card" id="sponsor-licence-ack-panel" hidden>
+            <header class="sponsor-ack-card__header">
+              <h3>Confirm sponsor licence holder &amp; your duties</h3>
+              <p class="muted">Read carefully — tick all three boxes to enable sponsor compliance tools.</p>
             </header>
-            <p class="sponsor-duty-notice" id="sponsor-licence-tools-notice"></p>
-            <div class="sponsor-duty-grid" id="sponsor-licence-duties-list" aria-label="Your sponsor licence duties"></div>
-            <p class="muted" id="sponsor-licence-ack-text"></p>
-            <label class="signup-check">
-              <input type="checkbox" id="sponsor-licence-holds" />
-              <span>Our organisation holds (or is applying for) a valid UK Sponsor Licence</span>
-            </label>
-            <label class="signup-check">
-              <input type="checkbox" id="sponsor-licence-understand" />
-              <span>I understand ShiftSwift HR records data we enter — it does not submit Home Office reports on our behalf</span>
-            </label>
-            <label class="signup-check">
-              <input type="checkbox" id="sponsor-licence-accept" />
-              <span>
-                I accept sponsor licence duty terms in the
-                <a href="./eula.html" target="_blank" rel="noopener">HR Module EULA</a>
-              </span>
-            </label>
-            <div class="edit-form-actions">
-              <button type="button" class="btn" id="sponsor-licence-ack-btn">Enable sponsor compliance tools</button>
+            <div class="sponsor-ack-card__body">
+              <div class="sponsor-ack-disclaimer" id="sponsor-licence-ack-disclaimer"></div>
+              <div class="sponsor-ack-checks">
+                <label class="sponsor-ack-check">
+                  <input type="checkbox" id="sponsor-licence-holds" />
+                  <span>Our organisation holds (or is applying for) a valid UK Sponsor Licence</span>
+                </label>
+                <label class="sponsor-ack-check">
+                  <input type="checkbox" id="sponsor-licence-understand" />
+                  <span>I understand ShiftSwift HR records data we enter — it does not submit Home Office reports on our behalf</span>
+                </label>
+                <label class="sponsor-ack-check">
+                  <input type="checkbox" id="sponsor-licence-accept" />
+                  <span>
+                    I accept sponsor licence duty terms in the
+                    <a href="./eula.html" target="_blank" rel="noopener">HR Module EULA</a>
+                  </span>
+                </label>
+              </div>
+              <button type="button" class="btn sponsor-ack-enable-btn" id="sponsor-licence-ack-btn" disabled>Enable sponsor compliance tools</button>
+              <p class="sponsor-ack-progress" id="sponsor-ack-progress">Tick all 3 boxes to continue — 0 of 3 confirmed</p>
               <p class="edit-form-status muted" id="sponsor-licence-ack-status"></p>
             </div>
           </article>
 
           <div id="compliance-tools-content">
-          <article class="card sponsor-duty-reminder" id="sponsor-duty-reminder" hidden>
-            <h3>Your duties — we provide the recording tools</h3>
-            <p class="muted" id="sponsor-duty-reminder-notice"></p>
-            <details class="sponsor-duty-details">
-              <summary>View sponsor licence duties vs what ShiftSwift HR does</summary>
-              <div class="sponsor-duty-grid" id="sponsor-duty-reminder-list"></div>
-            </details>
-          </article>
-          <div class="alert-grid">
-            <article class="alert-card" id="rtw-summary">
-              <div class="alert-card-head">
-                <span class="alert-label">Right to Work</span>
-                <span class="status-pill status-ok" id="rtw-status-pill">Loading</span>
-              </div>
-              <p class="alert-copy">Immutable dated PDF evidence linked to the official UK Government checklist.</p>
-              <div class="metric-row">
-                <div><strong id="rtw-valid-count">0</strong><span>Valid checks</span></div>
-                <div><strong id="rtw-expired-count">0</strong><span>Expired checks</span></div>
-              </div>
-            </article>
 
-            <article class="alert-card alert-card-critical" id="absence-summary">
-              <div class="alert-card-head">
-                <span class="alert-label">10-Day Absence Trigger</span>
-                <span class="status-pill status-critical" id="absence-status-pill">Day 9 alert</span>
-              </div>
-              <p class="alert-copy">Only <strong>unauthorized</strong> working-day absences count. Paid annual leave, authorized unpaid leave, and bank holidays are excused.</p>
-              <ul class="alert-list" id="absence-alert-list"></ul>
-              <ul class="alert-list" id="absence-streak-summary"></ul>
-            </article>
-
-            <article class="alert-card alert-card-warning" id="sms-summary">
-              <div class="alert-card-head">
-                <span class="alert-label">SMS Change Reporting</span>
-                <span class="status-pill status-warning" id="sms-status-pill">10-day window</span>
-              </div>
-              <p class="alert-copy">Job title, salary, and work location changes must be reported via SMS within 10 days.</p>
-              <ul class="alert-list" id="sms-change-list"></ul>
-            </article>
-
-            <article class="alert-card" id="advert-summary">
-              <div class="alert-card-head">
-                <span class="alert-label">Recruitment Adverts</span>
-                <span class="status-pill status-ok" id="advert-status-pill">Records</span>
-              </div>
-              <p class="alert-copy">Store job advert links for sponsored vacancies. Required for sponsor licence audits and RLMT evidence.</p>
-              <div class="metric-row">
-                <div><strong id="advert-active-count">0</strong><span>Active adverts</span></div>
-                <div><strong id="advert-sponsored-count">0</strong><span>Sponsored roles</span></div>
-              </div>
-            </article>
-          </div>
-
-          <article class="card edit-panel">
-            <header class="section-header section-header--compact">
+          <article class="card absence-workspace" id="compliance-absence">
+            <header class="absence-workspace-header section-header section-header--compact">
               <div>
-                <h3>Sponsored worker absence tracking</h3>
-                <p class="muted">Record paid/unpaid leave and unauthorized absences. Unexcused streaks feed the day-9 Home Office alert.</p>
+                <h3>Absence Monitoring</h3>
+                <p class="muted">Track unauthorised absences for sponsored workers — day-9 threshold alerts for Home Office reporting.</p>
+              </div>
+              <div class="section-actions absence-workspace-actions">
+                <button type="button" class="btn outline" id="absence-export-log-btn">Export log</button>
+                <button type="button" class="btn" id="absence-log-btn">+ Log absence</button>
               </div>
             </header>
-            <div id="absence-day-form"></div>
-            <div class="table-wrap">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>Employee</th>
-                    <th>Unexcused streak</th>
-                    <th>Paid leave (30d)</th>
-                    <th>Unpaid auth. (30d)</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody id="absence-streak-body">
-                  <tr><td colspan="5" class="muted">Open compliance section to load streaks…</td></tr>
-                </tbody>
-              </table>
+
+            <div class="absence-stats-grid" aria-label="Absence summary">
+              <div class="absence-stat-card absence-stat-card--danger">
+                <span class="absence-stat-card__label">Day-9 alerts</span>
+                <span class="absence-stat-card__value" id="absence-stat-day9">0</span>
+                <span class="absence-stat-card__sub">Action required now</span>
+              </div>
+              <div class="absence-stat-card absence-stat-card--warn">
+                <span class="absence-stat-card__label">Active absences</span>
+                <span class="absence-stat-card__value" id="absence-stat-active">0</span>
+                <span class="absence-stat-card__sub">Currently ongoing</span>
+              </div>
+              <div class="absence-stat-card">
+                <span class="absence-stat-card__label">Resolved this month</span>
+                <span class="absence-stat-card__value" id="absence-stat-resolved">0</span>
+                <span class="absence-stat-card__sub" id="absence-stat-month"></span>
+              </div>
+              <div class="absence-stat-card absence-stat-card--ok">
+                <span class="absence-stat-card__label">Sponsored workers</span>
+                <span class="absence-stat-card__value" id="absence-stat-sponsored">0</span>
+                <span class="absence-stat-card__sub">Under monitoring</span>
+              </div>
             </div>
-            <div class="table-wrap" style="margin-top:1rem;">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Employee</th>
-                    <th>Type</th>
-                    <th>Paid</th>
-                    <th>Counts toward day 9</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody id="absence-days-body">
-                  <tr><td colspan="6" class="muted">No absence days recorded yet.</td></tr>
-                </tbody>
-              </table>
+
+            <div id="absence-primary-banner" class="absence-primary-banner" hidden></div>
+
+            <div class="absence-workspace-layout">
+              <div class="absence-main-pane">
+                <h4 class="absence-section-title">
+                  Active absences — sponsored workers
+                  <span class="absence-count-badge" id="absence-active-count">0 active</span>
+                </h4>
+                <div class="absence-table-wrap">
+                  <table class="absence-table" aria-label="Active sponsored absences">
+                    <thead>
+                      <tr>
+                        <th scope="col"></th>
+                        <th scope="col">Worker</th>
+                        <th scope="col">Type</th>
+                        <th scope="col">Started</th>
+                        <th scope="col">Days</th>
+                        <th scope="col">Progress</th>
+                        <th scope="col">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody id="absence-active-body">
+                      <tr><td colspan="7" class="muted">Loading absence records…</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <h4 class="absence-section-title absence-section-title--muted">
+                  Recent resolved absences
+                  <span class="absence-count-badge absence-count-badge--ok" id="absence-resolved-count">0 this month</span>
+                </h4>
+                <div class="absence-table-wrap">
+                  <table class="absence-table absence-table--resolved" aria-label="Resolved absences">
+                    <thead>
+                      <tr>
+                        <th scope="col"></th>
+                        <th scope="col">Worker</th>
+                        <th scope="col">Type</th>
+                        <th scope="col">Period</th>
+                        <th scope="col">Days</th>
+                        <th scope="col">Resolution</th>
+                        <th scope="col">Reported</th>
+                      </tr>
+                    </thead>
+                    <tbody id="absence-resolved-body">
+                      <tr><td colspan="7" class="muted">No resolved absences yet.</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <aside id="absence-detail-panel" class="absence-detail-panel" hidden>
+                <div class="absence-detail-panel__head">
+                  <h4>Absence record</h4>
+                  <span id="absence-detail-badge" class="absence-panel-badge" hidden></span>
+                </div>
+                <div id="absence-detail-content" class="absence-detail-panel__body"></div>
+                <div class="absence-detail-panel__foot">
+                  <button type="button" class="btn outline" id="absence-mark-sms-btn">Mark SMS reported</button>
+                  <button type="button" class="btn" id="absence-mark-returned-btn">Mark returned to work</button>
+                </div>
+              </aside>
+            </div>
+
+            <div id="absence-log-panel" class="absence-log-panel" hidden>
+              <header class="absence-log-panel__head">
+                <h4>Log absence day</h4>
+                <button type="button" class="absence-log-panel__close" id="absence-log-panel-close" aria-label="Close">×</button>
+              </header>
+              <div id="absence-day-form"></div>
             </div>
           </article>
 
-          <article class="card edit-panel">
-            <header class="section-header section-header--compact">
+          <article class="card hr-workspace hr-workspace--compact">
+            <header class="hr-workspace-header section-header section-header--compact">
               <div>
                 <h3>Working calendar (bank holidays)</h3>
                 <p class="muted">Mark non-working days so weekends and bank holidays do not break absence streaks incorrectly.</p>
               </div>
             </header>
-            <div id="working-calendar-form"></div>
-            <div class="table-wrap">
-              <table class="data-table">
+            <div class="hr-workspace-body">
+              <div id="working-calendar-form"></div>
+              <div class="hr-table-wrap">
+                <table class="data-table">
                 <thead>
                   <tr>
                     <th>Date</th>
@@ -567,23 +645,102 @@
                   <tr><td colspan="3" class="muted">No custom calendar entries. All weekdays count as working days.</td></tr>
                 </tbody>
               </table>
+              </div>
             </div>
           </article>
 
-          <article class="card edit-panel">
-            <header class="section-header section-header--compact">
+          <article class="card rtw-workspace" id="compliance-rtw">
+            <header class="rtw-workspace-header section-header section-header--compact">
               <div>
                 <h3>Right to Work</h3>
-                <p class="muted">Upload immutable PDF evidence or verify an eVisa share code.</p>
+                <p class="muted">Immutable RTW records, expiry tracking, and document audit trail for all staff.</p>
+              </div>
+              <div class="section-actions rtw-workspace-actions">
+                <button type="button" class="btn outline" id="rtw-export-all-btn">Export all records</button>
+                <button type="button" class="btn" id="rtw-add-check-btn">+ Add RTW check</button>
               </div>
             </header>
-            <div id="rtw-upload-form"></div>
-            <div id="share-code-form"></div>
-            <div id="share-code-result" class="promo-result" hidden></div>
+
+            <div class="rtw-stats-grid" aria-label="RTW summary">
+              <div class="rtw-stat-card">
+                <span class="rtw-stat-card__value" id="rtw-stat-total">0</span>
+                <span class="rtw-stat-card__label">Total checks</span>
+              </div>
+              <div class="rtw-stat-card rtw-stat-card--ok">
+                <span class="rtw-stat-card__value" id="rtw-stat-verified">0</span>
+                <span class="rtw-stat-card__label">Verified</span>
+              </div>
+              <div class="rtw-stat-card rtw-stat-card--warn">
+                <span class="rtw-stat-card__value" id="rtw-stat-expiring">0</span>
+                <span class="rtw-stat-card__label">Expiring soon <span class="rtw-stat-card__hint">Within 30 days</span></span>
+              </div>
+              <div class="rtw-stat-card rtw-stat-card--danger">
+                <span class="rtw-stat-card__value" id="rtw-stat-review">0</span>
+                <span class="rtw-stat-card__label">Needs review <span class="rtw-stat-card__hint">Action required</span></span>
+              </div>
+            </div>
+
+            <div class="rtw-toolbar">
+              <div class="rtw-filter-tabs" role="tablist" aria-label="Filter RTW records">
+                <button type="button" class="rtw-filter-tab is-active" data-rtw-filter="all">All</button>
+                <button type="button" class="rtw-filter-tab" data-rtw-filter="verified">Verified</button>
+                <button type="button" class="rtw-filter-tab" data-rtw-filter="expiring_soon">Expiring soon</button>
+                <button type="button" class="rtw-filter-tab" data-rtw-filter="needs_review">Needs review</button>
+                <button type="button" class="rtw-filter-tab" data-rtw-filter="sponsored">Sponsored</button>
+              </div>
+              <label class="rtw-search">
+                <span class="sr-only">Search RTW records</span>
+                <input type="search" id="rtw-search-input" placeholder="Search name or document type…" autocomplete="off" />
+              </label>
+            </div>
+
+            <div class="rtw-workspace-layout">
+              <div class="rtw-table-wrap">
+                <table class="rtw-table" aria-label="Right to work checks">
+                  <thead>
+                    <tr>
+                      <th>Employee</th>
+                      <th>Document type</th>
+                      <th>Check date</th>
+                      <th>Expiry</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="rtw-table-body">
+                    <tr><td colspan="5" class="muted">Loading RTW records…</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <aside id="rtw-detail-panel" class="rtw-detail-panel" hidden>
+                <div class="rtw-detail-panel__head">
+                  <h4>RTW record</h4>
+                  <button type="button" class="rtw-detail-edit-link" id="rtw-detail-recheck-link">Re-check</button>
+                </div>
+                <div id="rtw-detail-content"></div>
+                <div class="rtw-detail-panel__foot">
+                  <button type="button" class="btn ghost" id="rtw-send-reminder-btn">Send reminder</button>
+                  <button type="button" class="btn" id="rtw-detail-recheck-btn">Re-check</button>
+                </div>
+              </aside>
+            </div>
+
+            <div id="rtw-add-panel" class="rtw-add-panel" hidden>
+              <header class="rtw-add-panel__head">
+                <h4>Add RTW check</h4>
+                <button type="button" class="rtw-add-panel__close" id="rtw-add-panel-close" aria-label="Close">×</button>
+              </header>
+              <div id="rtw-upload-form"></div>
+              <div id="share-code-form"></div>
+              <div id="share-code-result" class="promo-result" hidden></div>
+            </div>
+
+            <p class="rtw-immutable-note">
+              <strong>Immutable records.</strong> Once saved, RTW checks cannot be edited or deleted — only new entries are added, with timestamp and user logged for audit trail integrity.
+            </p>
           </article>
 
-          <article class="card edit-panel feature-gated-panel" data-feature="audit-export">
-            <header class="section-header section-header--compact">
+          <article class="card hr-workspace hr-workspace--compact feature-gated-panel" id="compliance-audit-export" data-feature="audit-export">
+            <header class="hr-workspace-header section-header section-header--compact">
               <div>
                 <h3>Home Office audit export</h3>
                 <p class="muted">One-click pack for unexpected sponsor licence inspections.</p>
@@ -599,11 +756,16 @@
             </header>
           </article>
 
-          <article class="card">
-            <h3>Open reporting triggers</h3>
-            <p class="muted">Auto-created when sponsored workers are suspended or offboarded.</p>
-            <div class="table-wrap">
-              <table class="data-table">
+          <article class="card hr-workspace hr-workspace--compact">
+            <header class="hr-workspace-header section-header section-header--compact">
+              <div>
+                <h3>Open reporting triggers</h3>
+                <p class="muted">Auto-created when sponsored workers are suspended or offboarded.</p>
+              </div>
+            </header>
+            <div class="hr-workspace-body">
+              <div class="hr-table-wrap">
+                <table class="data-table">
                 <thead>
                   <tr>
                     <th>Type</th>
@@ -617,20 +779,22 @@
                   <tr><td colspan="5" class="muted">Open compliance section to load triggers…</td></tr>
                 </tbody>
               </table>
+              </div>
             </div>
           </article>
 
-          <article class="card edit-panel">
-            <header class="section-header section-header--compact">
+          <article class="card hr-workspace hr-workspace--compact">
+            <header class="hr-workspace-header section-header section-header--compact">
               <div>
                 <h3>Advertisement records &amp; links</h3>
                 <p class="muted">Log where each vacancy was advertised with live URLs and related archive links.</p>
               </div>
               <div class="link-row" id="gov-recruitment-links"></div>
             </header>
-            <div id="advert-form"></div>
-            <div class="table-wrap">
-              <table class="data-table" id="advert-records-table">
+            <div class="hr-workspace-body">
+              <div id="advert-form"></div>
+              <div class="hr-table-wrap">
+                <table class="data-table" id="advert-records-table">
                 <thead>
                   <tr>
                     <th>Job title</th>
@@ -644,17 +808,20 @@
                   <tr><td colspan="5" class="muted">Loading advertisement records…</td></tr>
                 </tbody>
               </table>
+              </div>
             </div>
           </article>
 
-          <article class="card legal-note">
-            <h3>Software records — you act on duties</h3>
-            <p class="muted legal-note-copy">
-              ShiftSwift HR stores the evidence and alerts your team creates. You must still perform Right to Work checks,
-              submit SMS reports through official Home Office channels, and respond to day-9 absence alerts. See the
-              <a href="./eula.html" target="_blank" rel="noopener">HR Module EULA</a> for full liability terms.
-            </p>
-            <a class="btn ghost" href="./eula.html" target="_blank" rel="noopener">View HR Module EULA</a>
+          <article class="card hr-workspace hr-workspace--compact legal-note">
+            <div class="hr-workspace-body">
+              <h3>Software records — you act on duties</h3>
+              <p class="muted legal-note-copy">
+                ShiftSwift HR stores the evidence and alerts your team creates. You must still perform Right to Work checks,
+                submit SMS reports through official Home Office channels, and respond to day-9 absence alerts. See the
+                <a href="./eula.html" target="_blank" rel="noopener">HR Module EULA</a> for full liability terms.
+              </p>
+              <a class="btn ghost" href="./eula.html" target="_blank" rel="noopener">View HR Module EULA</a>
+            </div>
           </article>
           </div>
         </section>
@@ -667,17 +834,23 @@
             </div>
           </header>
 
-          <article class="card edit-panel">
-            <h3>Generate contract pack</h3>
-            <p class="muted">Contracts are auto-created on signup. Use this form to regenerate or fill missing customer details.</p>
-            <div id="contract-generate-form"></div>
-            <div id="signing-link-box" class="signing-link-box" hidden></div>
-          </article>
-
-          <article class="card">
-            <h3>Contract register</h3>
-            <div class="table-wrap">
-              <table class="data-table">
+          <article class="card hr-workspace">
+            <header class="hr-workspace-header section-header section-header--compact">
+              <div>
+                <h3>Legal contracts</h3>
+                <p class="muted">Generate MSA, DPA, and subscription order forms. Send for e-signature and store signed copies.</p>
+              </div>
+            </header>
+            <div class="hr-workspace-body">
+              <div class="hr-surface-panel hr-log-panel">
+                <h4 class="hr-section-title">Generate contract pack</h4>
+                <p class="muted">Contracts are auto-created on signup. Use this form to regenerate or fill missing customer details.</p>
+                <div id="contract-generate-form"></div>
+                <div id="signing-link-box" class="signing-link-box" hidden></div>
+              </div>
+              <h4 class="hr-section-title">Contract register</h4>
+              <div class="hr-table-wrap">
+                <table class="data-table">
                 <thead>
                   <tr>
                     <th>Reference</th>
@@ -692,8 +865,9 @@
                   <tr><td colspan="6" class="muted">Loading contracts…</td></tr>
                 </tbody>
               </table>
+              </div>
+              <div id="contract-preview-panel" class="contract-preview-panel" hidden></div>
             </div>
-            <div id="contract-preview-panel" class="contract-preview-panel" hidden></div>
           </article>
         </section>
 
@@ -708,10 +882,39 @@
             </div>
           </header>
           <p id="punch-admin-message" class="muted" aria-live="polite"></p>
-          <article class="card">
-            <h3>Punch sites</h3>
-            <div class="table-wrap">
-              <table class="data-table">
+          <article class="card hr-workspace">
+            <header class="hr-workspace-header section-header section-header--compact">
+              <div>
+                <h3>Time punch</h3>
+                <p class="muted">Geofenced clock in/out sites and recent punch activity.</p>
+              </div>
+            </header>
+            <div class="hr-stats-grid" aria-label="Time punch summary">
+              <div class="hr-stat-card">
+                <span class="hr-stat-card__label">Punch sites</span>
+                <span class="hr-stat-card__value" id="punch-stat-sites">0</span>
+                <span class="hr-stat-card__sub">Configured locations</span>
+              </div>
+              <div class="hr-stat-card hr-stat-card--ok">
+                <span class="hr-stat-card__label">Recent punches</span>
+                <span class="hr-stat-card__value" id="punch-stat-punches">0</span>
+                <span class="hr-stat-card__sub">Last 50 loaded</span>
+              </div>
+              <div class="hr-stat-card">
+                <span class="hr-stat-card__label">Primary site</span>
+                <span class="hr-stat-card__value" id="punch-stat-primary">—</span>
+                <span class="hr-stat-card__sub" id="punch-stat-primary-sub">Sync from business address</span>
+              </div>
+              <div class="hr-stat-card">
+                <span class="hr-stat-card__label">Geofence</span>
+                <span class="hr-stat-card__value">Active</span>
+                <span class="hr-stat-card__sub">Staff must be on site to punch</span>
+              </div>
+            </div>
+            <div class="hr-workspace-body">
+              <h4 class="hr-section-title">Punch sites</h4>
+              <div class="hr-table-wrap">
+                <table class="data-table">
                 <thead>
                   <tr>
                     <th>Name</th>
@@ -726,12 +929,10 @@
                   <tr><td colspan="6" class="muted">Open this section to load sites…</td></tr>
                 </tbody>
               </table>
-            </div>
-          </article>
-          <article class="card">
-            <h3>Recent punches</h3>
-            <div class="table-wrap">
-              <table class="data-table">
+              </div>
+              <h4 class="hr-section-title hr-section-title--muted">Recent punches</h4>
+              <div class="hr-table-wrap">
+                <table class="data-table">
                 <thead>
                   <tr>
                     <th>When</th>
@@ -745,82 +946,100 @@
                   <tr><td colspan="5" class="muted">Open this section to load punches…</td></tr>
                 </tbody>
               </table>
+              </div>
             </div>
           </article>
         </section>
 
         <section id="rota" class="admin-section" hidden>
-          <header class="section-header">
+          <header class="section-header rota-builder-header">
             <div>
-              <h2>Rota</h2>
-              <p class="muted">Build your rota, save as draft, then publish — staff see shifts instantly in the Time Clock app. Overlaps blocked; atomic save.</p>
-            </div>
-            <div class="section-actions rota-week-nav">
-              <button type="button" class="btn ghost" id="rota-prev-week" aria-label="Previous week">←</button>
-              <div class="rota-week-nav__label">
-                <strong id="rota-week-label">Week</strong>
+              <div class="rota-builder-title-row">
+                <h2>Rota</h2>
                 <span id="rota-week-status"></span>
               </div>
-              <button type="button" class="btn ghost" id="rota-next-week" aria-label="Next week">→</button>
-              <button type="button" class="btn ghost" id="rota-this-week">This week</button>
+              <p class="muted">Build your rota, save as draft, then publish — staff see shifts in the Time Clock app.</p>
+            </div>
+            <div class="section-actions rota-builder-actions">
+              <div class="rota-week-nav">
+                <button type="button" class="btn ghost" id="rota-prev-week" aria-label="Previous week">←</button>
+                <strong id="rota-week-label" class="rota-week-nav__label">Week</strong>
+                <button type="button" class="btn ghost" id="rota-next-week" aria-label="Next week">→</button>
+                <button type="button" class="btn ghost rota-this-week-btn" id="rota-this-week">This week</button>
+              </div>
+              <button type="button" class="btn ghost" id="rota-copy-prev-btn">Copy prev week</button>
+              <button type="button" class="btn ghost" id="rota-reload-btn">Reload</button>
+              <button type="button" class="btn outline" id="rota-save-btn">Save draft</button>
+              <button type="button" class="btn primary" id="rota-publish-btn">Publish rota</button>
             </div>
           </header>
           <p id="rota-admin-message" class="muted rota-admin-message" aria-live="polite"></p>
-          <div class="rota-view-toggle" role="tablist" aria-label="Rota view">
-            <button type="button" class="btn ghost is-active" id="rota-view-grid" data-view="grid">Grid</button>
-            <button type="button" class="btn ghost" id="rota-view-list" data-view="list">List</button>
-          </div>
-          <article class="card" id="rota-grid-panel">
-            <div class="rota-grid-toolbar">
-              <h3>Week grid <span class="muted">— click a cell or + to add a shift</span></h3>
-              <p id="rota-week-summary" class="rota-week-summary muted"></p>
-            </div>
-            <div id="rota-empty-state" class="rota-empty-state" hidden>
-              <div class="rota-empty-state__icon" aria-hidden="true">📅</div>
-              <h4>No active employees yet</h4>
-              <p class="muted">Add team members before you can build a weekly rota.</p>
-              <a class="btn" href="#employees">Add employees</a>
-            </div>
-            <div id="rota-shift-popover" class="rota-shift-popover" hidden>
-              <div class="rota-shift-popover__head">
-                <h4 id="rota-shift-popover-title">Add shift</h4>
-                <button type="button" class="rota-shift-popover__close" id="rota-shift-popover-close" aria-label="Close">×</button>
+          <article class="card hr-workspace">
+          <div class="rota-builder-subbar">
+            <div class="rota-builder-subbar__left">
+              <div class="rota-view-toggle" role="tablist" aria-label="Rota view">
+                <button type="button" class="btn ghost is-active" id="rota-view-grid" data-view="grid">Grid</button>
+                <button type="button" class="btn ghost" id="rota-view-list" data-view="list">List</button>
               </div>
-              <p id="rota-shift-popover-context" class="muted rota-shift-popover__context"></p>
-              <div class="rota-add-form">
-                <label>
-                  Employee
+              <p id="rota-week-summary" class="rota-week-summary"></p>
+            </div>
+            <p class="rota-builder-hint muted">Click any cell to add or edit a shift</p>
+          </div>
+
+          <div class="rota-builder-layout" id="rota-grid-view">
+            <article class="card rota-builder-main">
+              <div id="rota-empty-state" class="rota-empty-state" hidden>
+                <div class="rota-empty-state__icon" aria-hidden="true">📅</div>
+                <h4>No active employees yet</h4>
+                <p class="muted">Add team members before you can build a weekly rota.</p>
+                <a class="btn" href="#employees">Add employees</a>
+              </div>
+              <div id="rota-grid" class="rota-grid-scroll" aria-label="Weekly rota grid"></div>
+            </article>
+            <aside id="rota-shift-panel" class="rota-shift-panel" hidden>
+              <div class="rota-shift-panel__head">
+                <h3 id="rota-shift-popover-title">Add shift</h3>
+                <button type="button" class="rota-shift-panel__close" id="rota-shift-popover-close" aria-label="Close panel">×</button>
+              </div>
+              <p id="rota-shift-popover-context" class="muted rota-shift-panel__context"></p>
+              <div class="rota-shift-panel__body">
+                <label class="rota-field">
+                  <span class="rota-field-label">Employee</span>
                   <select id="rota-add-employee"></select>
                   <span id="rota-employee-empty-hint" class="rota-inline-hint" hidden>
                     No active employees. <a href="#employees">Add employees →</a>
                   </span>
                 </label>
-                <label>
-                  Day
+                <label class="rota-field">
+                  <span class="rota-field-label">Day</span>
                   <select id="rota-add-day"></select>
                 </label>
-                <label>
-                  Start
+                <label class="rota-field">
+                  <span class="rota-field-label">Start time</span>
                   <select id="rota-add-start"></select>
                 </label>
-                <label>
-                  End
+                <label class="rota-field">
+                  <span class="rota-field-label">End time</span>
                   <select id="rota-add-end"></select>
                 </label>
-                <label>
-                  Role <span class="muted">(optional)</span>
-                  <input id="rota-add-role" type="text" maxlength="80" list="rota-role-suggestions" placeholder="e.g. Floor, Bar, Kitchen" />
+                <p id="rota-shift-duration" class="rota-duration-badge"></p>
+                <label class="rota-field">
+                  <span class="rota-field-label">Role <span class="muted">(from profile)</span></span>
+                  <input id="rota-add-role" type="text" maxlength="80" list="rota-role-suggestions" placeholder="e.g. Kitchen, Floor, Bar" />
                 </label>
+                <label class="rota-field">
+                  <span class="rota-field-label">Note <span class="muted">(optional)</span></span>
+                  <input id="rota-add-notes" type="text" maxlength="500" placeholder="e.g. cover for absence" />
+                </label>
+                <datalist id="rota-role-suggestions"></datalist>
+                <p id="rota-overlap-status" class="rota-overlap-status rota-overlap-status--ok"></p>
               </div>
-              <datalist id="rota-role-suggestions"></datalist>
-              <p id="rota-shift-duration" class="rota-shift-duration muted"></p>
-              <div class="rota-shift-popover__actions">
+              <div class="rota-shift-panel__foot">
                 <button type="button" class="btn ghost" id="rota-shift-cancel-btn">Cancel</button>
                 <button type="button" class="btn" id="rota-add-btn">Add to rota</button>
               </div>
-            </div>
-            <div id="rota-grid" class="rota-grid" aria-label="Weekly rota grid"></div>
-          </article>
+            </aside>
+          </div>
           <article class="card" id="rota-list-panel" hidden>
             <h3>Shifts</h3>
             <div class="table-wrap">
@@ -882,21 +1101,14 @@
             </div>
           </article>
           <article class="card edit-panel" id="rota-add-shift-card" hidden aria-hidden="true"></article>
-          <div class="rota-actions rota-actions--sticky">
-            <div class="rota-actions-primary">
-              <button type="button" class="btn primary" id="rota-save-btn">Save rota</button>
-              <button type="button" class="btn primary" id="rota-publish-btn">Publish rota</button>
-            </div>
-            <div class="rota-actions-secondary">
-              <button type="button" class="btn ghost" id="rota-copy-prev-btn">Copy previous week</button>
-              <button type="button" class="btn ghost" id="rota-clear-btn">Clear rota</button>
-              <button type="button" class="rota-link-btn" id="rota-reload-btn">Reload</button>
-            </div>
+          <div class="rota-builder-footer">
+            <button type="button" class="btn ghost" id="rota-clear-btn">Clear rota</button>
             <label class="rota-notify-option muted">
               <input type="checkbox" id="rota-notify-staff" disabled />
               Notify staff on publish <span class="rota-notify-soon">(coming soon)</span>
             </label>
           </div>
+          </article>
         </section>
 
         <section id="settings" class="admin-section" hidden>
@@ -907,27 +1119,37 @@
             </div>
           </header>
 
-          <article class="card edit-panel feature-gated-panel" data-feature="multi-site">
-            <h3>Multi-site dashboard</h3>
-            <p class="muted">Manage staff records and compliance across multiple sites from one workspace. Included on Scale plans.</p>
-            <p class="muted">Contact <a href="mailto:support@shiftswifthr.co.uk">support@shiftswifthr.co.uk</a> to add additional sites after upgrading.</p>
+          <article class="card hr-workspace hr-workspace--compact feature-gated-panel" data-feature="multi-site">
+            <div class="hr-workspace-body">
+              <h3>Multi-site dashboard</h3>
+              <p class="muted">Manage staff records and compliance across multiple sites from one workspace. Included on Scale plans.</p>
+              <p class="muted">Contact <a href="mailto:support@shiftswifthr.co.uk">support@shiftswifthr.co.uk</a> to add additional sites after upgrading.</p>
+            </div>
           </article>
 
-          <article class="card edit-panel feature-gated-panel" data-feature="api-access">
-            <h3>API access</h3>
-            <p class="muted">Integrate ShiftSwift HR with your accountant, BI tools, or internal systems. Included on Scale plans.</p>
-            <p class="muted">API keys and documentation are issued after Scale activation. Email <a href="mailto:support@shiftswifthr.co.uk">support@shiftswifthr.co.uk</a>.</p>
+          <article class="card hr-workspace hr-workspace--compact feature-gated-panel" data-feature="api-access">
+            <div class="hr-workspace-body">
+              <h3>API access</h3>
+              <p class="muted">Integrate ShiftSwift HR with your accountant, BI tools, or internal systems. Included on Scale plans.</p>
+              <p class="muted">API keys and documentation are issued after Scale activation. Email <a href="mailto:support@shiftswifthr.co.uk">support@shiftswifthr.co.uk</a>.</p>
+            </div>
           </article>
 
-          <article class="card edit-panel">
-            <h3>Business information</h3>
-            <div id="tenant-profile-form"></div>
-          </article>
-
-          <article class="card edit-panel">
-            <h3>Document store</h3>
-            <p class="muted">Upload HR files to secure tenant storage, or register external links. Export a CSV manifest or ZIP archive for audits and offboarding.</p>
-            <div class="link-row" id="document-export-actions">
+          <article class="card hr-workspace">
+            <header class="hr-workspace-header section-header section-header--compact">
+              <div>
+                <h3>Business &amp; documents</h3>
+                <p class="muted">Business information and secure document store for your organisation.</p>
+              </div>
+            </header>
+            <div class="hr-workspace-body">
+              <div class="hr-surface-panel">
+                <h4 class="hr-section-title">Business information</h4>
+                <div id="tenant-profile-form"></div>
+              </div>
+              <h4 class="hr-section-title">Document store</h4>
+              <p class="muted">Upload HR files to secure tenant storage, or register external links. Export a CSV manifest or ZIP archive for audits and offboarding.</p>
+              <div class="link-row" id="document-export-actions">
               <button type="button" class="btn secondary" id="documents-export-csv">Export CSV manifest</button>
               <button type="button" class="btn secondary" id="documents-export-zip">Export ZIP pack</button>
               <label class="signup-check" style="margin:0;">
@@ -953,7 +1175,7 @@
             <div id="document-filters"></div>
             <div id="document-form"></div>
             <div id="document-edit-panel" class="edit-panel" hidden></div>
-            <div class="table-wrap">
+            <div class="hr-table-wrap">
               <table class="data-table">
                 <thead>
                   <tr>
@@ -972,6 +1194,7 @@
                 </tbody>
               </table>
             </div>
+            </div>
           </article>
         </section>
       </main>
@@ -979,17 +1202,19 @@
     <script src="./auth-guard.js?v=security-v1"></script>
     <script src="./brand-config.js?v=brand-v4"></script>
     <script src="./admin-shared.js?v=admin-v8"></script>
-    <script src="./admin-workspace.js?v=admin-v6"></script>
+    <script src="./admin-workspace.js?v=admin-v7"></script>
     <script src="./admin-documents.js?v=2"></script>
     <script src="./admin-employees.js?v=8"></script>
     <script src="./admin-recruitment.js?v=4"></script>
     <script src="./admin-promotions.js?v=admin-v4"></script>
-    <script src="./admin-compliance.js?v=admin-v6"></script>
+    <script src="./admin-compliance.js?v=admin-v7"></script>
+    <script src="./admin-absence.js?v=1"></script>
+    <script src="./admin-rtw.js?v=1"></script>
     <script src="./admin-grievance.js?v=admin-v4"></script>
     <script src="./admin-offboarding.js?v=admin-v4"></script>
     <script src="./admin-templates.js?v=admin-v6"></script>
-    <script src="./admin-time-punch.js?v=1"></script>
-    <script src="./admin-rota.js?v=3"></script>
+    <script src="./admin-time-punch.js?v=2"></script>
+    <script src="./admin-rota.js?v=4"></script>
     <script src="./app.js?v=admin-v4"></script>
     <script src="./contracts.js?v=admin-v4"></script>
       <script src="./cookie-consent.js?v=1"></script>

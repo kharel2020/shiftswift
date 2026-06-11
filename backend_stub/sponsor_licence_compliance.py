@@ -96,6 +96,191 @@ def _sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+RTW_EXPIRING_SOON_DAYS = 30
+
+
+def rtw_check_status(*, outcome: str, expiry_date: date | None, as_of: date | None = None) -> str:
+    """Return verified | expiring_soon | needs_review for UI filters and stats."""
+    today = as_of or date.today()
+    if outcome == "fail":
+        return "needs_review"
+    if expiry_date is not None:
+        days_left = (expiry_date - today).days
+        if days_left < 0:
+            return "needs_review"
+        if days_left <= RTW_EXPIRING_SOON_DAYS:
+            return "expiring_soon"
+    if outcome in {"pass", "time_limited"}:
+        return "verified"
+    return "needs_review"
+
+
+def rtw_document_type(check_method: str | None, outcome: str) -> str:
+    method = (check_method or "").strip()
+    if method:
+        lower = method.lower()
+        if "share" in lower or "online" in lower or "idsp" in lower or "evisa" in lower:
+            return "eVisa share code"
+        return method
+    return {
+        "pass": "Right to work verified",
+        "time_limited": "Time-limited permission",
+        "fail": "Failed check",
+    }.get(outcome, "RTW check")
+
+
+def rtw_document_number_masked(content_sha256: str) -> str:
+    tail = (content_sha256 or "")[-4:] or "0000"
+    return f"••••••••{tail}"
+
+
+def _serialize_rtw_row(row: tuple, *, as_of: date | None = None) -> dict[str, Any]:
+    (
+        check_id,
+        employee_id,
+        check_date,
+        check_method,
+        checker_user_id,
+        outcome,
+        expiry_date,
+        content_sha256,
+        storage_path,
+        created_at,
+        first_name,
+        last_name,
+        job_title,
+        department,
+        is_sponsored,
+        email,
+    ) = row
+    status = rtw_check_status(outcome=outcome, expiry_date=expiry_date, as_of=as_of)
+    name = f"{first_name or ''} {last_name or ''}".strip() or f"Employee #{employee_id}"
+    role = job_title or department or "Staff"
+    today = as_of or date.today()
+    days_until_expiry = (expiry_date - today).days if expiry_date else None
+    filename = Path(storage_path).name if storage_path else f"rtw-check-{check_id}.pdf"
+    return {
+        "id": check_id,
+        "employee_id": employee_id,
+        "employee_name": name,
+        "employee_short_name": _employee_short_name(first_name, last_name, employee_id),
+        "employee_role": role,
+        "is_sponsored": bool(is_sponsored),
+        "employee_email": email,
+        "check_date": check_date.isoformat() if check_date else None,
+        "check_method": check_method,
+        "checker_user_id": checker_user_id,
+        "outcome": outcome,
+        "expiry_date": expiry_date.isoformat() if expiry_date else None,
+        "days_until_expiry": days_until_expiry,
+        "status": status,
+        "document_type": rtw_document_type(check_method, outcome),
+        "document_number_masked": rtw_document_number_masked(content_sha256),
+        "content_sha256": content_sha256,
+        "filename": filename,
+        "created_at": created_at.isoformat() if created_at else None,
+        "immutable_locked": True,
+    }
+
+
+def _employee_short_name(first_name: str | None, last_name: str | None, employee_id: int) -> str:
+    first = (first_name or "").strip()
+    last = (last_name or "").strip()
+    if first and last:
+        return f"{first[0]}. {last.split()[0]}"
+    if first:
+        return first
+    return f"#{employee_id}"
+
+
+def list_rtw_checks(*, tenant_id: int, conn: Any, limit: int = 500) -> dict[str, Any]:
+    today = date.today()
+    query = """
+        SELECT c.id, c.employee_id, c.check_date, c.check_method, c.checker_user_id,
+               c.outcome, c.expiry_date, c.content_sha256, c.storage_path, c.created_at,
+               e.first_name, e.last_name, e.job_title, e.department, e.email,
+               COALESCE(esp.is_sponsored_worker, e.is_sponsored, FALSE) AS is_sponsored
+        FROM right_to_work_checks c
+        JOIN employees e ON e.tenant_id = c.tenant_id AND e.id = c.employee_id
+        LEFT JOIN employee_sponsor_profiles esp
+          ON esp.tenant_id = c.tenant_id AND esp.employee_id = c.employee_id
+        WHERE c.tenant_id = %s
+        ORDER BY c.check_date DESC, c.id DESC
+        LIMIT %s
+    """
+    with conn.cursor() as cur:
+        cur.execute(query, (tenant_id, limit))
+        rows = cur.fetchall()
+    items = [_serialize_rtw_row(row, as_of=today) for row in rows]
+    stats = {
+        "total": len(items),
+        "verified": sum(1 for item in items if item["status"] == "verified"),
+        "expiring_soon": sum(1 for item in items if item["status"] == "expiring_soon"),
+        "needs_review": sum(1 for item in items if item["status"] == "needs_review"),
+    }
+    return {"items": items, "stats": stats}
+
+
+def get_rtw_check(*, tenant_id: int, check_id: int, conn: Any) -> dict[str, Any]:
+    query = """
+        SELECT c.id, c.employee_id, c.check_date, c.check_method, c.checker_user_id,
+               c.outcome, c.expiry_date, c.content_sha256, c.storage_path, c.created_at,
+               e.first_name, e.last_name, e.job_title, e.department, e.email,
+               COALESCE(esp.is_sponsored_worker, e.is_sponsored, FALSE) AS is_sponsored
+        FROM right_to_work_checks c
+        JOIN employees e ON e.tenant_id = c.tenant_id AND e.id = c.employee_id
+        LEFT JOIN employee_sponsor_profiles esp
+          ON esp.tenant_id = c.tenant_id AND esp.employee_id = c.employee_id
+        WHERE c.tenant_id = %s AND c.id = %s
+    """
+    with conn.cursor() as cur:
+        cur.execute(query, (tenant_id, check_id))
+        row = cur.fetchone()
+    if not row:
+        raise LookupError("RTW check not found")
+    item = _serialize_rtw_row(row)
+    item["documents"] = [
+        {
+            "filename": item["filename"],
+            "uploaded_at": item["check_date"],
+            "download_path": f"/compliance/sponsor-licence/rtw-checks/{check_id}/file",
+        }
+    ]
+    return item
+
+
+def send_rtw_expiry_reminder(*, tenant_id: int, check_id: int, conn: Any) -> dict[str, Any]:
+    from core.notifications import queue_notification
+
+    check = get_rtw_check(tenant_id=tenant_id, check_id=check_id, conn=conn)
+    if not check.get("expiry_date"):
+        raise ValueError("This RTW record has no expiry date — no reminder needed.")
+    email = check.get("employee_email")
+    if not email:
+        raise ValueError("Employee has no email address on file.")
+    days_left = check.get("days_until_expiry")
+    subject = "Right to Work document expiry reminder"
+    body = (
+        f"Dear {check['employee_name']},\n\n"
+        f"Your Right to Work documentation expires on {check['expiry_date']}"
+        f"{f' ({days_left} days remaining)' if days_left is not None else ''}.\n"
+        "Please contact HR to arrange a re-check before this date.\n\n"
+        "ShiftSwift HR"
+    )
+    queue_notification(
+        conn=conn,
+        tenant_id=tenant_id,
+        channel="email",
+        subject=subject,
+        body=body,
+        purpose="compliance",
+        to=email,
+        payload={"rtw_check_id": check_id, "employee_id": check["employee_id"]},
+        commit=False,
+    )
+    return {"message": f"Reminder queued for {check['employee_name']}."}
+
+
 def store_immutable_rtw_pdf(
     *,
     tenant_id: int,
@@ -549,6 +734,449 @@ def get_absence_streak_summaries(
     return summaries
 
 
+def _is_working_day(tenant_id: int, day: date, conn: Any) -> bool:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT is_working_day
+            FROM sponsor_working_calendar
+            WHERE tenant_id = %s AND calendar_date = %s
+            """,
+            (tenant_id, day),
+        )
+        row = cur.fetchone()
+    return True if row is None else bool(row[0])
+
+
+def _has_absence_on_date(
+    *,
+    tenant_id: int,
+    employee_id: int,
+    day: date,
+    conn: Any,
+    unexcused_only: bool = False,
+) -> bool:
+    with conn.cursor() as cur:
+        query = """
+            SELECT 1 FROM sponsored_absence_days
+            WHERE tenant_id = %s AND employee_id = %s AND absence_date = %s
+        """
+        if unexcused_only:
+            query += " AND is_excused = FALSE"
+        cur.execute(query, (tenant_id, employee_id, day))
+        return cur.fetchone() is not None
+
+
+def _absence_episode_dates(
+    *,
+    tenant_id: int,
+    employee_id: int,
+    as_of: date,
+    conn: Any,
+    max_calendar_days: int = 120,
+) -> list[date]:
+    dates: list[date] = []
+    cursor = as_of
+    scanned = 0
+    while scanned < max_calendar_days:
+        if _is_working_day(tenant_id, cursor, conn):
+            if not _has_absence_on_date(tenant_id=tenant_id, employee_id=employee_id, day=cursor, conn=conn):
+                break
+            dates.append(cursor)
+        cursor -= timedelta(days=1)
+        scanned += 1
+    dates.reverse()
+    return dates
+
+
+def _absence_status_label(*, unexcused_streak: int, is_excused_episode: bool) -> tuple[str, str]:
+    if unexcused_streak >= SPONSOR_ABSENCE_ALERT_DAY:
+        return "report_now", "Report now"
+    if unexcused_streak > 0:
+        if unexcused_streak >= SPONSOR_ABSENCE_ALERT_DAY - 2:
+            return "monitor", "Monitor"
+        return "monitor", "Monitor"
+    if is_excused_episode:
+        return "authorized", "Authorised"
+    return "clear", "Clear"
+
+
+def _absence_type_badge(*, unexcused_streak: int, excuse_label: str, is_excused: bool) -> tuple[str, str]:
+    if unexcused_streak > 0:
+        return "danger", "Unauthorised"
+    if is_excused:
+        if "sick" in excuse_label.lower():
+            return "grey", "Sick"
+        return "grey", "Authorised"
+    return "grey", excuse_label or "Authorised"
+
+
+def _build_absence_record(
+    *,
+    tenant_id: int,
+    employee_id: int,
+    as_of: date,
+    conn: Any,
+    include_timeline: bool = False,
+) -> dict[str, Any] | None:
+    episode_dates = _absence_episode_dates(
+        tenant_id=tenant_id, employee_id=employee_id, as_of=as_of, conn=conn
+    )
+    if not episode_dates:
+        return None
+    unexcused_streak = consecutive_unexcused_working_days(
+        tenant_id=tenant_id, employee_id=employee_id, as_of=as_of, conn=conn
+    )
+    start_date = episode_dates[0]
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT e.first_name, e.last_name, e.job_title, e.department,
+                   COALESCE(esp.is_sponsored_worker, e.is_sponsored, FALSE)
+            FROM employees e
+            LEFT JOIN employee_sponsor_profiles esp
+              ON esp.tenant_id = e.tenant_id AND esp.employee_id = e.id
+            WHERE e.tenant_id = %s AND e.id = %s
+            """,
+            (tenant_id, employee_id),
+        )
+        emp = cur.fetchone()
+        cur.execute(
+            """
+            SELECT is_excused, excuse_type, source, created_at
+            FROM sponsored_absence_days
+            WHERE tenant_id = %s AND employee_id = %s AND absence_date = %s
+            """,
+            (tenant_id, employee_id, start_date),
+        )
+        first_day = cur.fetchone()
+        cur.execute(
+            """
+            SELECT is_excused, excuse_type
+            FROM sponsored_absence_days
+            WHERE tenant_id = %s AND employee_id = %s AND absence_date = %s
+            """,
+            (tenant_id, employee_id, episode_dates[-1]),
+        )
+        latest_day = cur.fetchone()
+        cur.execute(
+            """
+            SELECT id, consecutive_working_days, alert_status, triggered_at,
+                   home_office_report_required_by, acknowledged_by, acknowledged_at
+            FROM sponsor_absence_alerts
+            WHERE tenant_id = %s AND employee_id = %s
+            ORDER BY triggered_at DESC
+            LIMIT 1
+            """,
+            (tenant_id, employee_id),
+        )
+        alert_row = cur.fetchone()
+    if not emp:
+        return None
+    first_name, last_name, job_title, department, is_sponsored = emp
+    name = f"{first_name or ''} {last_name or ''}".strip() or f"Employee #{employee_id}"
+    excuse_type = (latest_day[1] if latest_day else first_day[1] if first_day else "unauthorized") or "unauthorized"
+    meta = ABSENCE_EXCUSE_TYPES.get(excuse_type, ABSENCE_EXCUSE_TYPES["unauthorized"])
+    is_excused = bool(latest_day[0]) if latest_day else bool(first_day[0]) if first_day else False
+    is_excused_episode = unexcused_streak == 0
+    status_key, status_label = _absence_status_label(
+        unexcused_streak=unexcused_streak, is_excused_episode=is_excused_episode
+    )
+    type_tone, type_label = _absence_type_badge(
+        unexcused_streak=unexcused_streak, excuse_label=meta["label"], is_excused=is_excused
+    )
+    working_days = len(episode_dates)
+    progress_pct = min(100, int((unexcused_streak / SPONSOR_ABSENCE_ALERT_DAY) * 100)) if unexcused_streak else min(
+        100, int((working_days / SPONSOR_ABSENCE_ALERT_DAY) * 100)
+    )
+    progress_hint = (
+        "Report required"
+        if unexcused_streak >= SPONSOR_ABSENCE_ALERT_DAY
+        else f"{max(0, SPONSOR_ABSENCE_ALERT_DAY - unexcused_streak)} days remaining"
+        if unexcused_streak > 0
+        else "Authorised leave"
+    )
+    logged_source = (first_day[2] if first_day else "admin") or "admin"
+    logged_at = first_day[3] if first_day else None
+    record = {
+        "employee_id": employee_id,
+        "employee_name": name,
+        "employee_short_name": _employee_short_name(first_name, last_name, employee_id),
+        "employee_role": job_title or department or "Staff",
+        "is_sponsored": bool(is_sponsored),
+        "start_date": start_date.isoformat(),
+        "episode_end_date": episode_dates[-1].isoformat(),
+        "working_days": working_days,
+        "unexcused_streak": unexcused_streak,
+        "excuse_type": excuse_type,
+        "excuse_label": meta["label"],
+        "is_excused": is_excused,
+        "type_label": type_label,
+        "type_tone": type_tone,
+        "status_key": status_key,
+        "status_label": status_label,
+        "progress_pct": progress_pct,
+        "progress_hint": progress_hint,
+        "logged_by": logged_source.replace("_", " ").title(),
+        "logged_at": logged_at.isoformat() if logged_at else None,
+        "alert_id": alert_row[0] if alert_row else None,
+        "alert_status": alert_row[2] if alert_row else None,
+        "is_critical": unexcused_streak >= SPONSOR_ABSENCE_ALERT_DAY,
+    }
+    if include_timeline:
+        record["timeline"] = _absence_timeline(
+            start_date=start_date,
+            unexcused_streak=unexcused_streak,
+            logged_by=record["logged_by"],
+            logged_at=logged_at,
+            alert_row=alert_row,
+            as_of=as_of,
+        )
+        record["panel_badge"] = (
+            f"Day {unexcused_streak} — Act now"
+            if unexcused_streak >= SPONSOR_ABSENCE_ALERT_DAY
+            else f"Day {unexcused_streak} — Monitor"
+            if unexcused_streak >= SPONSOR_ABSENCE_ALERT_DAY - 2
+            else None
+        )
+    return record
+
+
+def _fmt_short_date(value: date | datetime) -> str:
+    if isinstance(value, datetime):
+        value = value.date()
+    return f"{value.day} {value.strftime('%b')}"
+
+
+def _absence_timeline(
+    *,
+    start_date: date,
+    unexcused_streak: int,
+    logged_by: str,
+    logged_at: datetime | None,
+    alert_row: tuple | None,
+    as_of: date,
+) -> list[dict[str, Any]]:
+    events: list[dict[str, Any]] = [
+        {
+            "key": "logged",
+            "label": "Absence logged",
+            "sub": f"{_fmt_short_date(start_date)} · {logged_by}",
+            "tone": "ok",
+        }
+    ]
+    if unexcused_streak >= 5:
+        events.append(
+            {
+                "key": "day5",
+                "label": "Day-5 alert sent",
+                "sub": "Email to admin",
+                "tone": "warn",
+            }
+        )
+    if unexcused_streak >= SPONSOR_ABSENCE_ALERT_DAY:
+        alert_date = alert_row[3].date() if alert_row and alert_row[3] else as_of
+        events.append(
+            {
+                "key": "day9",
+                "label": "Day-9 alert — action required",
+                "sub": f"{_fmt_short_date(alert_date)} · SMS report due today",
+                "tone": "danger",
+            }
+        )
+    if alert_row and alert_row[2] in {"reported", "acknowledged"}:
+        events.append(
+            {
+                "key": "resolved",
+                "label": "SMS reported" if alert_row[2] == "reported" else "Returned to work",
+                "sub": _fmt_short_date(alert_row[6]) if alert_row[6] else "Resolved",
+                "tone": "ok",
+            }
+        )
+    else:
+        events.append(
+            {
+                "key": "awaiting",
+                "label": "Awaiting resolution",
+                "sub": "Return to work or SMS report",
+                "tone": "muted",
+            }
+        )
+    return events
+
+
+def absence_monitoring_dashboard(*, tenant_id: int, conn: Any, as_of: date | None = None) -> dict[str, Any]:
+    today = as_of or date.today()
+    month_start = today.replace(day=1)
+    sponsored_ids = list_sponsored_employee_ids(tenant_id=tenant_id, conn=conn)
+    active: list[dict[str, Any]] = []
+    for employee_id in sponsored_ids:
+        record = _build_absence_record(
+            tenant_id=tenant_id, employee_id=employee_id, as_of=today, conn=conn
+        )
+        if record:
+            active.append(record)
+    active.sort(key=lambda item: (-item["unexcused_streak"], -item["working_days"], item["employee_id"]))
+
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT COUNT(*) FROM sponsor_absence_alerts
+            WHERE tenant_id = %s
+              AND alert_status IN ('reported', 'acknowledged')
+              AND triggered_at >= %s
+            """,
+            (tenant_id, month_start),
+        )
+        resolved_count = cur.fetchone()[0]
+        cur.execute(
+            """
+            SELECT a.id, a.employee_id, e.first_name, e.last_name, e.job_title, e.department,
+                   COALESCE(esp.is_sponsored_worker, e.is_sponsored, FALSE),
+                   a.consecutive_working_days, a.alert_status, a.triggered_at, a.acknowledged_at
+            FROM sponsor_absence_alerts a
+            JOIN employees e ON e.tenant_id = a.tenant_id AND e.id = a.employee_id
+            LEFT JOIN employee_sponsor_profiles esp
+              ON esp.tenant_id = a.tenant_id AND esp.employee_id = a.employee_id
+            WHERE a.tenant_id = %s
+              AND a.alert_status IN ('reported', 'acknowledged')
+            ORDER BY COALESCE(a.acknowledged_at, a.triggered_at) DESC
+            LIMIT 10
+            """,
+            (tenant_id,),
+        )
+        resolved_rows = cur.fetchall()
+
+    resolved: list[dict[str, Any]] = []
+    for row in resolved_rows:
+        first_name, last_name = row[2], row[3]
+        name = f"{first_name or ''} {last_name or ''}".strip()
+        resolution = "SMS reported" if row[8] == "reported" else "Returned"
+        resolved.append(
+            {
+                "employee_id": row[1],
+                "employee_name": name,
+                "employee_short_name": _employee_short_name(first_name, last_name, row[1]),
+                "employee_role": row[4] or row[5] or "Staff",
+                "is_sponsored": bool(row[6]),
+                "days": row[7],
+                "resolution": resolution,
+                "reported": "Yes" if row[8] == "reported" else "N/A",
+            }
+        )
+
+    day9_alerts = sum(1 for item in active if item["unexcused_streak"] >= SPONSOR_ABSENCE_ALERT_DAY)
+    primary_alert = next((item for item in active if item["is_critical"]), None)
+
+    return {
+        "as_of": today.isoformat(),
+        "stats": {
+            "day9_alerts": day9_alerts,
+            "active_absences": len(active),
+            "resolved_this_month": resolved_count,
+            "sponsored_workers": len(sponsored_ids),
+        },
+        "primary_alert": primary_alert,
+        "active": active,
+        "resolved": resolved,
+    }
+
+
+def get_absence_monitoring_detail(
+    *, tenant_id: int, employee_id: int, conn: Any, as_of: date | None = None
+) -> dict[str, Any]:
+    today = as_of or date.today()
+    record = _build_absence_record(
+        tenant_id=tenant_id,
+        employee_id=employee_id, as_of=today, conn=conn, include_timeline=True
+    )
+    if not record:
+        raise LookupError("No active absence record for this employee")
+    return record
+
+
+def mark_absence_sms_reported(
+    *, tenant_id: int, employee_id: int, acknowledged_by: str, conn: Any
+) -> dict[str, Any]:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE sponsor_absence_alerts
+            SET alert_status = 'reported',
+                acknowledged_by = %s,
+                acknowledged_at = NOW()
+            WHERE tenant_id = %s AND employee_id = %s
+              AND alert_status IN ('pending', 'sent')
+            RETURNING id
+            """,
+            (acknowledged_by.strip(), tenant_id, employee_id),
+        )
+        row = cur.fetchone()
+        if not row:
+            raise LookupError("No open day-9 alert for this employee")
+        cur.execute(
+            """
+            INSERT INTO compliance_audit_events (tenant_id, event_type, entity_type, entity_id, payload)
+            VALUES (%s, 'sponsor_absence_sms_reported', 'sponsor_absence_alerts', %s, %s::jsonb)
+            """,
+            (
+                tenant_id,
+                row[0],
+                {"employee_id": employee_id, "acknowledged_by": acknowledged_by.strip()},
+            ),
+        )
+    conn.commit()
+    return {"message": "Marked as reported via SMS.", "alert_id": row[0]}
+
+
+def mark_absence_returned(
+    *, tenant_id: int, employee_id: int, acknowledged_by: str, conn: Any, as_of: date | None = None
+) -> dict[str, Any]:
+    today = as_of or date.today()
+    episode_dates = _absence_episode_dates(
+        tenant_id=tenant_id, employee_id=employee_id, as_of=today, conn=conn
+    )
+    if not episode_dates:
+        raise LookupError("No active absence episode to resolve")
+    with conn.cursor() as cur:
+        for day in episode_dates:
+            cur.execute(
+                """
+                DELETE FROM sponsored_absence_days
+                WHERE tenant_id = %s AND employee_id = %s AND absence_date = %s
+                """,
+                (tenant_id, employee_id, day),
+            )
+        cur.execute(
+            """
+            UPDATE sponsor_absence_alerts
+            SET alert_status = 'acknowledged',
+                acknowledged_by = %s,
+                acknowledged_at = NOW()
+            WHERE tenant_id = %s AND employee_id = %s
+              AND alert_status IN ('pending', 'sent', 'reported')
+            """,
+            (acknowledged_by.strip(), tenant_id, employee_id),
+        )
+        cur.execute(
+            """
+            INSERT INTO compliance_audit_events (tenant_id, event_type, entity_type, entity_id, payload)
+            VALUES (%s, 'sponsor_absence_returned', 'employees', %s, %s::jsonb)
+            """,
+            (
+                tenant_id,
+                employee_id,
+                {
+                    "employee_id": employee_id,
+                    "acknowledged_by": acknowledged_by.strip(),
+                    "cleared_dates": [d.isoformat() for d in episode_dates],
+                },
+            ),
+        )
+    conn.commit()
+    return {"message": "Marked returned to work and cleared active absence days.", "cleared_days": len(episode_dates)}
+
+
 def list_working_calendar(
     *,
     tenant_id: int,
@@ -717,6 +1345,7 @@ def refresh_sms_change_alert_statuses(*, tenant_id: int, as_of: date, conn: Any)
 
 def compliance_dashboard(*, tenant_id: int, conn: Any) -> dict[str, Any]:
     today = _utcnow().date()
+    expiring_cutoff = today + timedelta(days=30)
     with conn.cursor() as cur:
         cur.execute(
             """
@@ -734,6 +1363,33 @@ def compliance_dashboard(*, tenant_id: int, conn: Any) -> dict[str, Any]:
             (tenant_id, today),
         )
         expired_rtw = cur.fetchone()[0]
+        cur.execute(
+            """
+            SELECT COUNT(*) FROM right_to_work_checks
+            WHERE tenant_id = %s
+              AND expiry_date IS NOT NULL
+              AND expiry_date >= %s
+              AND expiry_date <= %s
+            """,
+            (tenant_id, today, expiring_cutoff),
+        )
+        rtw_expiring_soon = cur.fetchone()[0]
+        cur.execute(
+            """
+            SELECT COUNT(*) FROM sponsored_absence_days
+            WHERE tenant_id = %s
+            """,
+            (tenant_id,),
+        )
+        absence_days_recorded = cur.fetchone()[0]
+        cur.execute(
+            """
+            SELECT COUNT(*) FROM sponsor_reporting_triggers
+            WHERE tenant_id = %s AND status = 'open'
+            """,
+            (tenant_id,),
+        )
+        open_reporting_triggers = cur.fetchone()[0]
         cur.execute(
             """
             SELECT id, employee_id, consecutive_working_days, alert_status, home_office_report_required_by
@@ -778,16 +1434,40 @@ def compliance_dashboard(*, tenant_id: int, conn: Any) -> dict[str, Any]:
         advert_summary = _advertisement_summary(tenant_id, today, cur)
     recent_adverts = list_advertisement_records(tenant_id=tenant_id, conn=conn, limit=10)
     absence_streaks = get_absence_streak_summaries(tenant_id=tenant_id, as_of=today, conn=conn)
+    sponsored_worker_count = len(list_sponsored_employee_ids(tenant_id=tenant_id, conn=conn))
+    top_absence_warning = next(
+        (s for s in absence_streaks if s.get("risk_level") in {"warning", "alert"}),
+        None,
+    )
+    advert_logged = (advert_summary.get("sponsored_vacancy_records") or 0) + (
+        advert_summary.get("active_records") or 0
+    )
     return {
         "gov_rtw_checklist_url": UK_RTW_CHECKLIST_URL,
         "gov_recruitment_links": recruitment_reference_links(),
-        "rtw": {"valid_checks": valid_rtw, "expired_checks": expired_rtw},
+        "rtw": {
+            "valid_checks": valid_rtw,
+            "expired_checks": expired_rtw,
+            "expiring_within_30_days": rtw_expiring_soon,
+            "total_checks": valid_rtw + expired_rtw,
+        },
         "absence_alerts": absence_alerts,
         "absence_streaks": absence_streaks,
         "absence_excuse_types": absence_type_catalog(),
         "sms_change_alerts": sms_changes,
         "advertisement_records": advert_summary,
         "recent_advertisement_records": recent_adverts,
+        "duty_overview": {
+            "sponsored_worker_count": sponsored_worker_count,
+            "rtw_total_checks": valid_rtw + expired_rtw,
+            "rtw_expiring_within_30_days": rtw_expiring_soon,
+            "absence_open_alerts": len(absence_alerts),
+            "absence_top_warning": top_absence_warning,
+            "absence_days_recorded": absence_days_recorded,
+            "sms_pending": len(sms_changes),
+            "advert_logged": advert_logged,
+            "open_reporting_triggers": open_reporting_triggers,
+        },
     }
 
 

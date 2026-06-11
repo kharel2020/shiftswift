@@ -32,6 +32,25 @@ def test_sha256_helper_is_stable() -> None:
     assert len(digest) == 64
 
 
+def test_rtw_check_status_buckets() -> None:
+    today = date(2026, 6, 11)
+    assert module.rtw_check_status(outcome="pass", expiry_date=None, as_of=today) == "verified"
+    assert (
+        module.rtw_check_status(outcome="time_limited", expiry_date=today.replace(day=30), as_of=today)
+        == "expiring_soon"
+    )
+    assert (
+        module.rtw_check_status(outcome="pass", expiry_date=today.replace(day=1), as_of=today) == "needs_review"
+    )
+    assert module.rtw_check_status(outcome="fail", expiry_date=None, as_of=today) == "needs_review"
+
+
+def test_rtw_document_number_is_masked() -> None:
+    masked = module.rtw_document_number_masked("abc1234567890deadbeef")
+    assert masked.startswith("••••••••")
+    assert masked.endswith("beef")
+
+
 class _FakeCursor:
     def __init__(self) -> None:
         self.commands: list[tuple] = []
