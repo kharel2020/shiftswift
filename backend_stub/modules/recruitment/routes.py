@@ -104,6 +104,29 @@ def add_vacancy(
         conn.close()
 
 
+@router.post("/vacancies/{vacancy_id}/close")
+def close_vacancy(
+    vacancy_id: int,
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, object]:
+    from modules.recruitment.repository import update_vacancy_fields
+
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = get_connection()
+    try:
+        return update_vacancy_fields(
+            tenant_id=tenant_id,
+            vacancy_id=vacancy_id,
+            updates={"status": "closed"},
+            conn=conn,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    finally:
+        conn.close()
+
+
 @router.get("/vacancies/{vacancy_id}/workspace")
 def read_vacancy_workspace(
     vacancy_id: int,

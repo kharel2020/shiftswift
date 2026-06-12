@@ -113,7 +113,22 @@ def create_vacancy(*, tenant_id: int, data: dict[str, Any], conn: Any) -> dict[s
         )
         row = cur.fetchone()
         conn.commit()
-    return _row_to_vacancy(row)
+    vacancy = _row_to_vacancy(row)
+    if not vacancy.get("reference"):
+        ref = f"VAC-{datetime.utcnow().year}-{vacancy['id']:03d}"
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE recruitment_vacancies SET reference = %s
+                WHERE tenant_id = %s AND id = %s
+                RETURNING """
+                + ", ".join(VACANCY_COLUMNS),
+                (ref, tenant_id, vacancy["id"]),
+            )
+            row = cur.fetchone()
+            conn.commit()
+        vacancy = _row_to_vacancy(row)
+    return vacancy
 
 
 def update_vacancy_fields(

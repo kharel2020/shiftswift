@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon.png?v=brandkit-v1" />
     <link rel="icon" type="image/svg+xml" href="./assets/shiftswift-hr-icon.svg?v=brandkit-v1" />
     <link rel="apple-touch-icon" href="./assets/shiftswift-hr-icon.png?v=brandkit-v1" />
-    <link rel="stylesheet" href="./styles.css?v=admin-v14" />
+    <link rel="stylesheet" href="./styles.css?v=admin-v15" />
   </head>
   <body>
     <div id="sidebar-overlay" class="sidebar-overlay" aria-hidden="true"></div>
@@ -138,38 +138,70 @@
         </section>
 
         <section id="recruitment" class="admin-section" hidden>
-          <header class="section-header">
+          <header class="section-header recruitment-page-header">
             <div>
               <h2>Recruitment</h2>
-              <p class="muted">Ten-step pipeline from vacancy to offer accepted, then hand off to employee onboarding.</p>
+              <p class="muted">Ten-step pipeline from vacancy to offer accepted — then hand off to employee onboarding.</p>
+            </div>
+            <div class="section-actions recruitment-page-actions">
+              <button type="button" class="btn ghost" id="recruitment-closed-tab-btn">Closed roles</button>
+              <button type="button" class="btn" id="recruitment-new-vacancy-btn">+ New vacancy</button>
             </div>
           </header>
+
           <div id="recruitment-list-view">
-            <article class="card hr-workspace">
-              <header class="hr-workspace-header section-header section-header--compact">
-                <div>
-                  <h3>Recruitment pipeline</h3>
-                  <p class="muted">Walk through posting, screening, interviews, offer, and onboarding trigger.</p>
-                </div>
-              </header>
-              <div class="hr-workspace-body">
-                <div class="hr-surface-panel hr-log-panel">
-                  <h4 class="hr-section-title">Step 1: Vacancy identified</h4>
-                  <p class="muted">Create a vacancy, then progress through the ten-step pipeline.</p>
-                  <div id="recruitment-quick-add-form"></div>
-                </div>
-                <h4 class="hr-section-title">Open vacancies</h4>
-                <div class="hr-table-wrap">
+            <div class="recruitment-pipeline-stepper" id="recruitment-pipeline-stepper" aria-label="Recruitment pipeline overview"></div>
+
+            <div class="recruitment-toolbar">
+              <div class="recruitment-view-toggle" role="tablist" aria-label="Vacancy view">
+                <button type="button" class="recruitment-view-tab is-active" data-recruitment-view="pipeline" role="tab" aria-selected="true">Pipeline</button>
+                <button type="button" class="recruitment-view-tab" data-recruitment-view="list" role="tab" aria-selected="false">List</button>
+              </div>
+              <p class="recruitment-open-count muted" id="recruitment-open-count"></p>
+            </div>
+
+            <div class="recruitment-workspace-layout">
+              <div class="recruitment-main-pane">
+                <article class="card hr-workspace recruitment-create-panel" id="recruitment-create-panel" hidden>
+                  <div class="hr-workspace-body">
+                    <h4 class="hr-section-title">New vacancy</h4>
+                    <div id="recruitment-rlmt-notice" class="recruitment-rlmt-notice" hidden>
+                      This role may require a <strong>Resident Labour Market Test (RLMT)</strong>. You will be prompted to log advert evidence at the advert posting step.
+                    </div>
+                    <div id="recruitment-quick-add-form"></div>
+                  </div>
+                </article>
+
+                <div id="recruitment-pipeline-cards" class="recruitment-pipeline-cards"></div>
+
+                <div id="recruitment-list-table-wrap" class="hr-table-wrap" hidden>
                   <table class="data-table">
-                  <thead><tr><th>Role</th><th>Department</th><th>Status</th><th>Pipeline</th><th></th></tr></thead>
-                  <tbody id="recruitment-table-body">
-                    <tr><td colspan="5" class="muted">Open this section to load vacancies…</td></tr>
-                  </tbody>
-                </table>
+                    <thead>
+                      <tr>
+                        <th>Role</th>
+                        <th>Department</th>
+                        <th>Status</th>
+                        <th>Pipeline</th>
+                        <th>Candidates</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody id="recruitment-table-body">
+                      <tr><td colspan="6" class="muted">Open this section to load vacancies…</td></tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
-            </article>
+
+              <aside class="recruitment-detail-panel" id="recruitment-side-panel">
+                <div id="recruitment-side-panel-empty" class="recruitment-side-panel-empty muted">
+                  Select a vacancy to view its pipeline steps.
+                </div>
+                <div id="recruitment-side-panel-content" hidden></div>
+              </aside>
+            </div>
           </div>
+
           <div id="recruitment-detail-view" hidden>
             <article class="card employee-workspace">
               <div class="employee-workspace-header">
@@ -1304,7 +1336,7 @@
     <script src="./admin-settings.js?v=1"></script>
     <script src="./admin-documents.js?v=3"></script>
     <script src="./admin-employees.js?v=8"></script>
-    <script src="./admin-recruitment.js?v=4"></script>
+    <script src="./admin-recruitment.js?v=5"></script>
     <script src="./admin-promotions.js?v=admin-v4"></script>
     <script src="./admin-compliance.js?v=admin-v8"></script>
     <script src="./admin-absence.js?v=1"></script>

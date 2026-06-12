@@ -2,6 +2,15 @@
 
 from __future__ import annotations
 
+RECRUITMENT_DEPARTMENTS = [
+    {"value": "kitchen", "label": "Kitchen"},
+    {"value": "floor", "label": "Floor"},
+    {"value": "bar", "label": "Bar"},
+    {"value": "management", "label": "Management"},
+    {"value": "admin", "label": "Admin"},
+    {"value": "other", "label": "Other"},
+]
+
 POSTING_PLATFORMS = [
     {"value": "Indeed", "label": "Indeed"},
     {"value": "LinkedIn", "label": "LinkedIn"},

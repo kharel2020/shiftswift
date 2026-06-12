@@ -29,6 +29,7 @@ from modules.recruitment.constants import (
     SECTION_DESCRIPTIONS as RECRUITMENT_SECTION_DESCRIPTIONS,
     SECTION_LABELS as RECRUITMENT_SECTION_LABELS,
     SECTION_ORDER as RECRUITMENT_SECTION_ORDER,
+    RECRUITMENT_DEPARTMENTS,
     SECTION_STEPS as RECRUITMENT_SECTION_STEPS,
 )
 from admin_service import (
@@ -202,6 +203,7 @@ def admin_metadata() -> dict[str, object]:
             for key in RECRUITMENT_SECTION_ORDER
         ],
         "recruitment_posting_platforms": POSTING_PLATFORMS,
+        "recruitment_departments": RECRUITMENT_DEPARTMENTS,
         "hiring_decisions": HIRING_DECISIONS,
         "offer_statuses": OFFER_STATUSES,
         "employee_document_categories": EMPLOYEE_DOCUMENT_CATEGORIES,

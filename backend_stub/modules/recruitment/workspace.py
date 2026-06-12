@@ -114,12 +114,23 @@ def list_vacancy_completion_summary(
     editable = [s for s in sections if s["kind"] in ("form", "action", "link")]
     completed = sum(1 for s in editable if s["complete"])
     completion_pct = int(round((completed / len(editable)) * 100)) if editable else 0
+    next_section = next(
+        (s["key"] for s in sections if not s["complete"] and s["kind"] in ("form", "action", "link")),
+        None,
+    )
+    current_step = SECTION_STEPS.get(next_section) if next_section else len(SECTION_ORDER)
+    current_step_label = SECTION_LABELS.get(next_section, "Complete") if next_section else "Complete"
+    candidate_count = 1 if _is_filled(vacancy.get("candidate_name")) else 0
+    shortlisted_count = 1 if vacancy.get("candidate_rating") is not None else 0
     return {
         "completion_pct": completion_pct,
-        "next_section": next(
-            (s["key"] for s in sections if not s["complete"] and s["kind"] in ("form", "action", "link")),
-            None,
-        ),
+        "next_section": next_section,
+        "current_step": current_step,
+        "current_step_label": current_step_label,
+        "completed_steps": completed,
+        "total_steps": len(editable),
+        "candidate_count": candidate_count,
+        "shortlisted_count": shortlisted_count,
     }
 
 
@@ -146,19 +157,20 @@ def build_workspace(*, tenant_id: int, vacancy_id: int, conn: Any) -> dict[str, 
     vacancy["_advert_count"] = len(adverts)
 
     sections = _build_sections(vacancy=vacancy)
-    editable = [s for s in sections if s["kind"] in ("form", "action", "link")]
-    completed = sum(1 for s in editable if s["complete"])
-    completion_pct = int(round((completed / len(editable)) * 100)) if editable else 0
+    summary = list_vacancy_completion_summary(vacancy, advert_count=len(adverts))
 
     return {
         "vacancy": vacancy,
         "adverts": adverts,
         "sections": sections,
-        "completion_pct": completion_pct,
-        "next_section": next(
-            (s["key"] for s in sections if not s["complete"] and s["kind"] in ("form", "action", "link")),
-            None,
-        ),
+        "completion_pct": summary["completion_pct"],
+        "next_section": summary["next_section"],
+        "current_step": summary["current_step"],
+        "current_step_label": summary["current_step_label"],
+        "candidate_count": summary["candidate_count"],
+        "shortlisted_count": summary["shortlisted_count"],
+        "completed_steps": summary["completed_steps"],
+        "total_steps": summary["total_steps"],
         "onboarding_ready": bool(vacancy.get("employee_id")),
     }
 
