@@ -34,6 +34,13 @@ EMPLOYEE_DOCUMENT_CATEGORIES = [
     {"value": "other", "label": "Other"},
 ]
 
+# Categories visible in the employee self-service portal (HR-only docs such as RTW copies stay admin-only).
+EMPLOYEE_SELF_SERVICE_CATEGORIES = frozenset(
+    {"contract", "policy", "general", "qualification", "other"}
+)
+
+EMPLOYEE_DOCUMENT_CATEGORY_LABELS = {item["value"]: item["label"] for item in EMPLOYEE_DOCUMENT_CATEGORIES}
+
 EMPLOYEE_DOCUMENT_REQUIREMENTS = {
     "standard": (
         {"category": "contract", "label": "Signed employment contract", "required": True},

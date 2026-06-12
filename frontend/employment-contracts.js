@@ -81,6 +81,7 @@
           <p class="muted">${escapeHtml(tpl.description || "")}</p>
           <p class="muted" style="font-size:0.85rem;">Platform v${escapeHtml(tpl.platform_version)} · ${sourceBadge({ template_source: tpl.source })}</p>
           ${tpl.source_url ? `<p class="muted" style="font-size:0.85rem;"><a href="${escapeHtml(tpl.source_url)}" target="_blank" rel="noopener">ACAS source →</a></p>` : ""}
+          <p style="margin-top:8px;"><a class="btn ghost" href="#templates" data-template-edit="${escapeHtml(tpl.id)}">Customise in HR Templates</a></p>
         </div>`
       )
       .join("");
@@ -153,13 +154,18 @@
         <div><dt>Email</dt><dd>${escapeHtml(data.employee_email || "Not set")}</dd></div>
         <div><dt>Template</dt><dd>${escapeHtml(data.title)} (v${escapeHtml(data.platform_template_version)})</dd></div>
         <div><dt>Source</dt><dd>${data.template_source === "acas" ? "ACAS-aligned" : "ShiftSwift"}${data.template_source_url ? ` · <a href="${escapeHtml(data.template_source_url)}" target="_blank" rel="noopener">View guidance</a>` : ""}</dd></div>
-        ${data.employee_document_id ? `<div><dt>Employee file</dt><dd>Saved to document store (#${escapeHtml(data.employee_document_id)})</dd></div>` : ""}
+        ${data.employee_document_id ? `<div><dt>Employee file</dt><dd>Saved to document store (#${escapeHtml(data.employee_document_id)}) — visible to the employee in <strong>Employee portal → My documents</strong> after sign.</dd></div>` : ""}
       </dl>
       ${preview}
       <div class="hr-detail-foot">
-        ${data.status !== "signed" ? `<button type="button" class="btn" id="employment-contract-send-btn">Send for signature</button>` : ""}
+        ${data.status !== "signed" && data.employee_email ? `<button type="button" class="btn" id="employment-contract-send-btn">Send for e-signature</button>` : ""}
         <a class="btn ghost" href="#employees/${escapeHtml(data.employee_id)}/document_store">Open employee documents</a>
       </div>
+      <p class="muted" style="font-size:0.9rem;margin-top:10px;">
+        <strong>Format:</strong> HTML contract in the browser — employee signs electronically at
+        <code>sign-contract.html?token=…&amp;type=employment</code>. Signed copy is stored as HTML in the employee document store (not PDF unless you upload one separately).
+      </p>
+      ${!data.employee_email ? `<p class="promo-result promo-result-message promo-result--error" style="margin-top:10px;">Add an email on the employee profile before sending.</p>` : ""}
       <div id="employment-signing-link-box" class="signing-link-box" hidden></div>
       <p class="muted" id="employment-contract-action-status"></p>`;
     content.querySelector("#employment-contract-send-btn")?.addEventListener("click", () => sendContract(data.id));
@@ -184,7 +190,10 @@
     const status = $("employment-contract-action-status");
     if (status) status.textContent = "Sending signing link…";
     try {
-      const res = await apiFetch(`/employment-contracts/${id}/send`, { method: "POST" });
+      const res = await apiFetch(`/employment-contracts/${id}/send`, {
+        method: "POST",
+        body: JSON.stringify({ frontend_base: window.location.origin }),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Send failed");
       const box = $("employment-signing-link-box");
@@ -272,4 +281,10 @@
   }
 
   bindSectionEvents();
+
+  document.addEventListener("click", (event) => {
+    const link = event.target.closest("[data-template-edit]");
+    if (!link) return;
+    sessionStorage.setItem("templatesOpenId", link.dataset.templateEdit);
+  });
 })();

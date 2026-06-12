@@ -121,15 +121,27 @@ def get_contract(
         conn.close()
 
 
+class SendEmploymentContractRequest(BaseModel):
+    frontend_base: str | None = Field(default=None, max_length=500)
+
+
 @router.post("/{contract_id}/send")
-def send_contract(
+async def send_contract(
     contract_id: int,
     request: Request,
     current_user: Annotated[AuthUser, Depends(get_hr_user)],
     x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
 ) -> dict[str, object]:
     tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
-    origin = request.headers.get("Origin") or os.getenv("FRONTEND_BASE_URL", "http://localhost:5173")
+    frontend_base = None
+    if request.headers.get("content-type", "").startswith("application/json"):
+        try:
+            body = await request.json()
+            if isinstance(body, dict):
+                frontend_base = body.get("frontend_base")
+        except Exception:
+            frontend_base = None
+    origin = frontend_base or request.headers.get("Origin") or os.getenv("FRONTEND_BASE_URL", "http://localhost:5173")
     conn = _db_conn()
     try:
         try:

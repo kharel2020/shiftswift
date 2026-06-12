@@ -49,8 +49,9 @@
           <div class="metric-grid">
             <article class="card">
               <h3>My documents</h3>
-              <p class="muted">Contracts, policies, and HR letters shared with you.</p>
-              <p class="muted">Coming soon. Ask your HR team for copies in the meantime.</p>
+              <p class="muted">Signed contracts, policies, and HR letters shared with you.</p>
+              <p class="muted" id="employee-docs-summary">Loading…</p>
+              <a class="btn ghost" href="#documents">View my documents</a>
             </article>
             <article class="card">
               <h3>Payslips</h3>
@@ -130,12 +131,49 @@
             <p id="employee-shift-message" class="muted" aria-live="polite"></p>
           </article>
         </section>
+
+        <section id="documents" class="admin-section">
+          <header class="section-header">
+            <div>
+              <h2>My documents</h2>
+              <p class="muted">Files HR has shared with you — including signed employment contracts. Right-to-work and ID copies are kept by HR only.</p>
+            </div>
+          </header>
+          <article class="card">
+            <div class="hr-table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Type</th>
+                    <th>Added</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="employee-documents-body">
+                  <tr><td colspan="4" class="muted">Loading documents…</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="muted" id="employee-documents-message" aria-live="polite"></p>
+          </article>
+        </section>
+
+        <section id="payslips" class="admin-section">
+          <header class="section-header">
+            <div>
+              <h2>Payslips</h2>
+              <p class="muted">Payslips are not issued inside ShiftSwift HR. Ask your employer how you receive them.</p>
+            </div>
+          </header>
+        </section>
       </main>
     </div>
     <script src="./brand-config.js?v=brand-v4"></script>
     <script src="./employee.js?v=2"></script>
     <script src="./employee-time-punch.js?v=3"></script>
     <script src="./employee-rota.js?v=1"></script>
+    <script src="./employee-documents.js?v=1"></script>
       <script src="./cookie-consent.js?v=1"></script>
   </body>
 </html>

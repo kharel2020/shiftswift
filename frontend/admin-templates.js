@@ -100,7 +100,11 @@
         <button type="button" class="btn ghost" id="templates-side-dl-platform-btn">Download latest</button>
         ${item.is_customised ? `<button type="button" class="btn ghost" id="templates-side-dl-copy-btn">Download my copy</button>` : ""}
       </div>`;
-    content.querySelector("#templates-side-edit-btn")?.addEventListener("click", () => openEditor(item.id));
+    content.querySelector("#templates-side-edit-btn")?.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      openEditor(item.id);
+    });
     content.querySelector("#templates-side-dl-platform-btn")?.addEventListener("click", () =>
       downloadAuthenticated(`/hr-templates/${item.id}/download?variant=platform`, `${item.id}.md`)
     );
@@ -137,6 +141,7 @@
       .join("");
     tbody.querySelectorAll(".hr-register-row").forEach((row) => {
       row.addEventListener("click", () => selectTemplate(row.dataset.templateId));
+      row.addEventListener("dblclick", () => openEditor(row.dataset.templateId));
     });
     if (selectedId) {
       renderTemplateSidePanel(listCache.find((t) => t.id === selectedId));
@@ -224,18 +229,33 @@
     selectedId = templateId;
     const panel = document.getElementById("template-editor-panel");
     if (!panel) return;
+
     panel.hidden = false;
-    const res = await apiFetch(`/hr-templates/${templateId}`);
-    const tpl = await res.json();
-    if (!res.ok) {
-      alert(tpl.detail || "Could not load template");
-      return;
+    panel.removeAttribute("hidden");
+    panel.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    const titleEl = document.getElementById("template-editor-title");
+    const status = document.getElementById("template-save-status");
+    if (titleEl) titleEl.textContent = "Loading template…";
+    if (status) status.textContent = "Loading…";
+
+    try {
+      const res = await apiFetch(`/hr-templates/${templateId}`);
+      const tpl = await res.json();
+      if (!res.ok) {
+        throw new Error(tpl.detail || "Could not load template");
+      }
+      document.getElementById("template-editor-title").textContent = tpl.title;
+      document.getElementById("template-title-input").value = tpl.title;
+      document.getElementById("template-body-input").value = tpl.content_markdown;
+      document.getElementById("ai-template-id").value = templateId;
+      renderEditorMeta(tpl);
+      document.getElementById("ai-assist-panel")?.removeAttribute("hidden");
+      if (status) status.textContent = "Edit the Markdown below, then click Save changes.";
+    } catch (error) {
+      if (status) status.textContent = error.message || "Could not load template";
+      alert(error.message || "Could not load template");
     }
-    document.getElementById("template-editor-title").textContent = tpl.title;
-    document.getElementById("template-title-input").value = tpl.title;
-    document.getElementById("template-body-input").value = tpl.content_markdown;
-    document.getElementById("ai-template-id").value = templateId;
-    renderEditorMeta(tpl);
   }
 
   async function saveTemplate() {
@@ -346,7 +366,15 @@
     bindControls();
     await loadAiStatus();
     await loadTemplateList();
+    const pendingId = sessionStorage.getItem("templatesOpenId");
+    if (pendingId) {
+      sessionStorage.removeItem("templatesOpenId");
+      selectTemplate(pendingId);
+      await openEditor(pendingId);
+    }
   }
+
+  window.__openHrTemplateEditor = openEditor;
 
   window.addEventListener("admin:section", (event) => {
     if (event.detail?.section === "templates") initTemplatesSection();

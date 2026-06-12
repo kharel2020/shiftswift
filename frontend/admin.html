@@ -516,7 +516,7 @@
             </div>
             <aside class="hr-detail-panel" id="templates-side-panel">
               <div id="templates-side-empty" class="hr-detail-empty muted">
-                <p>Select a template to preview version status and open the editor.</p>
+                <p>Select a template to preview version status. Click <strong>Edit template</strong> — the Markdown editor opens below the table (page scrolls automatically). Double-click a row to edit.</p>
               </div>
               <div id="templates-side-content" hidden></div>
             </aside>
@@ -990,6 +990,13 @@
           <div class="contracts-workspace-layout">
             <div class="contracts-main-pane">
               <article class="hr-surface-panel hr-log-panel contracts-generate-panel">
+                <h4 class="hr-section-title">How it works</h4>
+                <ol class="muted" style="margin:0 0 12px 1.25rem;line-height:1.6;">
+                  <li><strong>Customise templates</strong> in HR Templates (Markdown) — or use platform defaults.</li>
+                  <li><strong>Generate</strong> below — merges employee + business details into the contract.</li>
+                  <li><strong>Send for e-signature</strong> — employee receives a link; they sign in the browser (HTML, not PDF).</li>
+                  <li><strong>Signed copy</strong> is saved automatically to the employee document store.</li>
+                </ol>
                 <h4 class="hr-section-title">Generate employment contract</h4>
                 <p class="muted">Prefills employee and employer details from the employee profile and business settings. Employee must have an email address before sending for signature.</p>
                 <form id="employment-contract-generate-form" class="edit-form edit-form--cols-2">
@@ -1495,12 +1502,12 @@
     <script src="./admin-rtw.js?v=1"></script>
     <script src="./admin-grievance.js?v=5"></script>
     <script src="./admin-offboarding.js?v=admin-v5"></script>
-    <script src="./admin-templates.js?v=admin-v7"></script>
+    <script src="./admin-templates.js?v=admin-v8"></script>
     <script src="./admin-time-punch.js?v=3"></script>
     <script src="./admin-rota.js?v=4"></script>
     <script src="./app.js?v=admin-v4"></script>
     <script src="./contracts.js?v=5"></script>
-    <script src="./employment-contracts.js?v=1"></script>
+    <script src="./employment-contracts.js?v=2"></script>
       <script src="./cookie-consent.js?v=1"></script>
   </body>
 </html>
