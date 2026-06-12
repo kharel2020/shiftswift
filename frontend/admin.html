@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon.png?v=brandkit-v1" />
     <link rel="icon" type="image/svg+xml" href="./assets/shiftswift-hr-icon.svg?v=brandkit-v1" />
     <link rel="apple-touch-icon" href="./assets/shiftswift-hr-icon.png?v=brandkit-v1" />
-    <link rel="stylesheet" href="./styles.css?v=admin-v17" />
+    <link rel="stylesheet" href="./styles.css?v=admin-v18" />
   </head>
   <body>
     <div id="sidebar-overlay" class="sidebar-overlay" aria-hidden="true"></div>
@@ -853,48 +853,63 @@
         </section>
 
         <section id="contracts" class="admin-section" hidden>
-          <header class="section-header">
+          <header class="section-header contracts-page-header">
             <div>
               <h2>Legal contracts</h2>
               <p class="muted">Generate MSA, DPA, and subscription order forms from customer data. Send for e-signature and store signed copies.</p>
             </div>
+            <div class="section-actions">
+              <a class="btn ghost" href="./payment-terms.html" target="_blank" rel="noopener">Payment terms</a>
+              <a class="btn ghost" href="./dpa.html" target="_blank" rel="noopener">DPA template</a>
+            </div>
           </header>
 
-          <article class="card hr-workspace">
-            <header class="hr-workspace-header section-header section-header--compact">
-              <div>
-                <h3>Legal contracts</h3>
-                <p class="muted">Generate MSA, DPA, and subscription order forms. Send for e-signature and store signed copies.</p>
-              </div>
-            </header>
-            <div class="hr-workspace-body">
-              <div class="hr-surface-panel hr-log-panel">
+          <div class="contracts-status-workflow" aria-label="Contract status workflow">
+            <span class="contracts-workflow-step">Draft</span>
+            <span class="contracts-workflow-arrow" aria-hidden="true">→</span>
+            <span class="contracts-workflow-step">Sent</span>
+            <span class="contracts-workflow-arrow" aria-hidden="true">→</span>
+            <span class="contracts-workflow-step">Signed</span>
+            <span class="contracts-workflow-arrow" aria-hidden="true">→</span>
+            <span class="contracts-workflow-step">Stored</span>
+          </div>
+
+          <div class="contracts-workspace-layout">
+            <div class="contracts-main-pane">
+              <article class="hr-surface-panel hr-log-panel contracts-generate-panel">
                 <h4 class="hr-section-title">Generate contract pack</h4>
-                <p class="muted">Contracts are auto-created on signup. Use this form to regenerate or fill missing customer details.</p>
+                <p class="muted">Prefilled from your business settings. Contracts are also created automatically on signup.</p>
                 <div id="contract-generate-form"></div>
                 <div id="signing-link-box" class="signing-link-box" hidden></div>
-              </div>
+              </article>
+
               <h4 class="hr-section-title">Contract register</h4>
               <div class="hr-table-wrap">
                 <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>Reference</th>
-                    <th>Customer</th>
-                    <th>Status</th>
-                    <th>Signatory</th>
-                    <th>Signed</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="contracts-table-body">
-                  <tr><td colspan="6" class="muted">Loading contracts…</td></tr>
-                </tbody>
-              </table>
+                  <thead>
+                    <tr>
+                      <th>Reference</th>
+                      <th>Template</th>
+                      <th>Customer</th>
+                      <th>Status</th>
+                      <th>Signatory</th>
+                      <th>Signed</th>
+                    </tr>
+                  </thead>
+                  <tbody id="contracts-table-body">
+                    <tr><td colspan="6" class="muted">Open this section to load contracts…</td></tr>
+                  </tbody>
+                </table>
               </div>
-              <div id="contract-preview-panel" class="contract-preview-panel" hidden></div>
             </div>
-          </article>
+
+            <aside class="contracts-detail-panel" id="contracts-detail-panel">
+              <div id="contracts-detail-empty" class="contracts-detail-empty muted">
+                <p>Select a contract from the register to preview, send for signature, or upload a signed PDF.</p>
+              </div>
+              <div id="contracts-detail-content" hidden></div>
+            </aside>
+          </div>
         </section>
 
         <section id="time-punch" class="admin-section" hidden>
@@ -1339,7 +1354,7 @@
     <script src="./admin-time-punch.js?v=2"></script>
     <script src="./admin-rota.js?v=4"></script>
     <script src="./app.js?v=admin-v4"></script>
-    <script src="./contracts.js?v=admin-v4"></script>
+    <script src="./contracts.js?v=5"></script>
       <script src="./cookie-consent.js?v=1"></script>
   </body>
 </html>

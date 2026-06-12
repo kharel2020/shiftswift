@@ -634,6 +634,7 @@ window.Admin = (() => {
         { name: "signatory_name", label: "Signatory name", type: "text" },
         { name: "signatory_title", label: "Signatory title", type: "text", defaultValue: "Director" },
         { name: "plan_id", label: "Plan", type: "select", optionsKey: "platform_plans" },
+        { name: "effective_date", label: "Effective date", type: "date", required: true },
         { name: "template_id", label: "Template", type: "select", optionsKey: "contract_templates", defaultValue: "pack" },
       ],
     },

@@ -460,6 +460,67 @@ def sign_contract(
     }
 
 
+def list_contract_events(conn: Any, *, contract_id: int, tenant_id: int) -> list[dict[str, Any]]:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT event_type, actor, detail, created_at
+            FROM contract_events
+            WHERE contract_id = %s AND tenant_id = %s
+            ORDER BY created_at ASC
+            """,
+            (contract_id, tenant_id),
+        )
+        rows = cur.fetchall()
+    return [
+        {
+            "event_type": row[0],
+            "actor": row[1],
+            "detail": row[2],
+            "created_at": row[3].isoformat() if row[3] else None,
+        }
+        for row in rows
+    ]
+
+
+def get_contract_detail(conn: Any, *, contract_id: int, tenant_id: int) -> dict[str, Any]:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT c.id, c.template_id, t.name, c.contract_number, c.status,
+                   c.customer_legal_name, c.signatory_email, c.signatory_name,
+                   c.signatory_title, c.generated_html, c.sent_at, c.signed_at,
+                   c.effective_date, c.created_at, c.signing_token_expires_at
+            FROM tenant_contracts c
+            JOIN contract_templates t ON t.id = c.template_id
+            WHERE c.id = %s AND c.tenant_id = %s
+            """,
+            (contract_id, tenant_id),
+        )
+        row = cur.fetchone()
+    if not row:
+        raise LookupError("contract not found")
+    events = list_contract_events(conn, contract_id=contract_id, tenant_id=tenant_id)
+    return {
+        "id": row[0],
+        "template_id": row[1],
+        "template_name": row[2],
+        "contract_number": row[3],
+        "status": row[4],
+        "customer_legal_name": row[5],
+        "signatory_email": row[6],
+        "signatory_name": row[7],
+        "signatory_title": row[8],
+        "html": row[9],
+        "sent_at": row[10].isoformat() if row[10] else None,
+        "signed_at": row[11].isoformat() if row[11] else None,
+        "effective_date": row[12].isoformat() if row[12] else None,
+        "created_at": row[13].isoformat() if row[13] else None,
+        "signing_token_expires_at": row[14].isoformat() if row[14] else None,
+        "events": events,
+    }
+
+
 def list_contracts(conn: Any, tenant_id: int) -> list[dict[str, Any]]:
     with conn.cursor() as cur:
         cur.execute(

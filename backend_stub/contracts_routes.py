@@ -16,6 +16,7 @@ from contracts_service import (
     create_contract,
     generate_contract_pack,
     get_contract_by_token,
+    get_contract_detail,
     list_contracts,
     send_contract_for_signature,
     sign_contract,
@@ -157,33 +158,11 @@ def get_contract(
     tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
     conn = _db_conn()
     try:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT id, template_id, contract_number, status, customer_legal_name,
-                       signatory_email, signatory_name, generated_html, sent_at, signed_at
-                FROM tenant_contracts
-                WHERE id = %s AND tenant_id = %s
-                """,
-                (contract_id, tenant_id),
-            )
-            row = cur.fetchone()
-            if not row:
-                raise HTTPException(status_code=404, detail="Contract not found")
+        return get_contract_detail(conn, contract_id=contract_id, tenant_id=tenant_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     finally:
         conn.close()
-    return {
-        "id": row[0],
-        "template_id": row[1],
-        "contract_number": row[2],
-        "status": row[3],
-        "customer_legal_name": row[4],
-        "signatory_email": row[5],
-        "signatory_name": row[6],
-        "html": row[7],
-        "sent_at": row[8].isoformat() if row[8] else None,
-        "signed_at": row[9].isoformat() if row[9] else None,
-    }
 
 
 @router.post("/{contract_id}/send")
