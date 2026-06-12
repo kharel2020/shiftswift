@@ -160,46 +160,15 @@
   }
 
   async function loadTenantProfileForm() {
-    const host = document.getElementById("tenant-profile-form");
-    if (!host) return;
-    let values = {};
-    try {
-      const res = await apiFetch("/admin/tenant-profile");
-      if (res.ok) values = await res.json();
-    } catch {
-      /* empty */
-    }
-    mountEditForm(host, FORM_SCHEMAS.tenantProfile, {
-      values,
-      onSubmit: async (payload) => {
-        const res = await apiFetch("/admin/tenant-profile", {
-          method: "PATCH",
-          body: JSON.stringify(payload),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || "Update failed");
-      },
-    });
+    /* Business profile form is rendered in admin-settings.js */
   }
 
   async function loadDocuments() {
-    if (window.AdminDocuments?.loadSettingsDocuments) {
-      await window.AdminDocuments.loadSettingsDocuments();
-    }
+    /* Settings documents load via admin-settings.js */
   }
 
-  const sectionLoaded = new Set();
-
   window.addEventListener("admin:section", (event) => {
-    const section = event.detail?.section;
-    if (section === "overview") loadOverview();
-    if (section === "settings" && !sectionLoaded.has("settings")) {
-      sectionLoaded.add("settings");
-      loadFormOptions().then(() => {
-        loadTenantProfileForm();
-        loadDocuments();
-      });
-    }
+    if (event.detail?.section === "overview") loadOverview();
   });
 
   loadOverview();

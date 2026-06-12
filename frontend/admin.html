@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon.png?v=brandkit-v1" />
     <link rel="icon" type="image/svg+xml" href="./assets/shiftswift-hr-icon.svg?v=brandkit-v1" />
     <link rel="apple-touch-icon" href="./assets/shiftswift-hr-icon.png?v=brandkit-v1" />
-    <link rel="stylesheet" href="./styles.css?v=admin-v13" />
+    <link rel="stylesheet" href="./styles.css?v=admin-v14" />
   </head>
   <body>
     <div id="sidebar-overlay" class="sidebar-overlay" aria-hidden="true"></div>
@@ -1117,95 +1117,192 @@
           <header class="section-header">
             <div>
               <h2>Settings</h2>
-              <p class="muted">Business information and document store for your organisation.</p>
+              <p class="muted">Manage your organisation, documents, billing, and integrations.</p>
             </div>
           </header>
 
-          <article class="card hr-workspace hr-workspace--compact feature-gated-panel" data-feature="multi-site">
-            <div class="hr-workspace-body">
-              <h3>Multi-site dashboard</h3>
-              <p class="muted">Manage staff records and compliance across multiple sites from one workspace. Included on Scale plans.</p>
-              <p class="muted">Contact <a href="mailto:support@shiftswifthr.co.uk">support@shiftswifthr.co.uk</a> to add additional sites after upgrading.</p>
-            </div>
-          </article>
+          <div class="settings-workspace">
+            <nav class="settings-nav" aria-label="Settings sections">
+              <button type="button" class="settings-nav__item settings-nav__item--active" data-settings-nav="business" aria-current="page">
+                <span class="settings-nav__icon" aria-hidden="true">🏢</span>
+                Business info
+              </button>
+              <button type="button" class="settings-nav__item" data-settings-nav="documents">
+                <span class="settings-nav__icon" aria-hidden="true">📁</span>
+                Document store
+              </button>
+              <button type="button" class="settings-nav__item" data-settings-nav="billing">
+                <span class="settings-nav__icon" aria-hidden="true">💳</span>
+                Billing &amp; plan
+              </button>
+              <button type="button" class="settings-nav__item" data-settings-nav="notifications">
+                <span class="settings-nav__icon" aria-hidden="true">🔔</span>
+                Notifications
+              </button>
+              <button type="button" class="settings-nav__item" data-settings-nav="users">
+                <span class="settings-nav__icon" aria-hidden="true">👥</span>
+                Users &amp; access
+              </button>
+              <hr class="settings-nav__divider" />
+              <button type="button" class="settings-nav__item" data-settings-nav="multisite">
+                <span class="settings-nav__icon" aria-hidden="true">🏬</span>
+                Multi-site
+              </button>
+              <button type="button" class="settings-nav__item" data-settings-nav="api">
+                <span class="settings-nav__icon" aria-hidden="true">🔌</span>
+                API access
+              </button>
+            </nav>
 
-          <article class="card hr-workspace hr-workspace--compact feature-gated-panel" data-feature="api-access">
-            <div class="hr-workspace-body">
-              <h3>API access</h3>
-              <p class="muted">Integrate ShiftSwift HR with your accountant, BI tools, or internal systems. Included on Scale plans.</p>
-              <p class="muted">API keys and documentation are issued after Scale activation. Email <a href="mailto:support@shiftswifthr.co.uk">support@shiftswifthr.co.uk</a>.</p>
-            </div>
-          </article>
-
-          <article class="card hr-workspace">
-            <header class="hr-workspace-header section-header section-header--compact">
-              <div>
-                <h3>Business &amp; documents</h3>
-                <p class="muted">Business information and secure document store for your organisation.</p>
-              </div>
-            </header>
-            <div class="hr-workspace-body">
-              <div class="hr-surface-panel">
-                <h4 class="hr-section-title">Business information</h4>
-                <div id="tenant-profile-form"></div>
-              </div>
-              <h4 class="hr-section-title">Document store</h4>
-              <p class="muted">Upload HR files to secure tenant storage, or register external links. Export a CSV manifest or ZIP archive for audits and offboarding.</p>
-              <div class="link-row" id="document-export-actions">
-              <button type="button" class="btn secondary" id="documents-export-csv">Export CSV manifest</button>
-              <button type="button" class="btn secondary" id="documents-export-zip">Export ZIP pack</button>
-              <label class="signup-check" style="margin:0;">
-                <input type="checkbox" id="documents-export-include-rtw" />
-                <span>Include RTW PDFs in ZIP</span>
-              </label>
-            </div>
-            <div id="document-upload-panel" class="edit-panel" style="margin-top:1rem;">
-              <h4>Upload file</h4>
-              <form id="document-upload-form" class="edit-form edit-form--cols-2" enctype="multipart/form-data">
-                <label class="edit-field"><span class="edit-label">Title</span><input name="title" required /></label>
-                <label class="edit-field"><span class="edit-label">File</span><input name="file" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,application/pdf,image/*" required /></label>
-                <label class="edit-field"><span class="edit-label">Category</span><select name="category" id="document-upload-category"></select></label>
-                <label class="edit-field"><span class="edit-label">Lifecycle stage</span><select name="lifecycle_stage" id="document-upload-stage"></select></label>
-                <label class="edit-field"><span class="edit-label">Expiry date</span><input name="expires_at" type="date" /></label>
-                <label class="edit-field" data-span="2"><span class="edit-label">Notes</span><textarea name="notes" rows="2"></textarea></label>
-                <div class="edit-form-actions" data-span="2">
-                  <button class="btn" type="submit">Upload document</button>
-                  <p class="edit-form-status muted" data-status></p>
+            <div class="settings-main">
+              <div class="settings-topbar">
+                <div class="settings-topbar__copy">
+                  <h3 id="settings-panel-title">Business information</h3>
+                  <p class="muted" id="settings-panel-subtitle">Your organisation's legal details, signatory, and contact information.</p>
                 </div>
-              </form>
+                <div class="settings-plan-badge">
+                  <span id="settings-plan-label">Loading plan…</span>
+                  <button type="button" class="settings-upgrade-link" id="settings-upgrade-link">Upgrade to Scale →</button>
+                </div>
+              </div>
+
+              <div id="settings-toast" class="settings-toast" hidden role="status"></div>
+
+              <article class="card settings-panel hr-workspace" data-settings-panel="business">
+                <div class="hr-workspace-body">
+                  <div id="tenant-profile-form"></div>
+                </div>
+              </article>
+
+              <article class="card settings-panel hr-workspace" data-settings-panel="documents" hidden>
+                <div class="hr-workspace-body">
+                  <p class="muted">Upload HR files to secure tenant storage, or register external links. Export a CSV manifest or ZIP archive for audits and offboarding.</p>
+                  <div class="settings-doc-export link-row" id="document-export-actions">
+                    <button type="button" class="btn outline settings-export-btn" id="documents-export-csv">
+                      <span aria-hidden="true">⬇</span> Export CSV manifest
+                    </button>
+                    <button type="button" class="btn outline settings-export-btn" id="documents-export-zip">
+                      <span aria-hidden="true">⬇</span> Export ZIP pack
+                    </button>
+                    <label class="signup-check settings-export-check">
+                      <input type="checkbox" id="documents-export-include-rtw" />
+                      <span>Include RTW PDFs in ZIP</span>
+                    </label>
+                  </div>
+
+                  <div class="settings-doc-tabs" role="tablist" aria-label="Add document">
+                    <button type="button" class="settings-doc-tab is-active" data-doc-tab="upload" role="tab" aria-selected="true">Upload file</button>
+                    <button type="button" class="settings-doc-tab" data-doc-tab="link" role="tab" aria-selected="false">Link external document</button>
+                  </div>
+
+                  <div id="document-upload-panel" class="settings-doc-tab-panel" data-doc-panel="upload">
+                    <form id="document-upload-form" class="edit-form edit-form--cols-2" enctype="multipart/form-data">
+                      <label class="edit-field" data-span="2">
+                        <span class="edit-label">File</span>
+                        <div class="doc-upload-dropzone" id="document-upload-dropzone">
+                          <input name="file" type="file" id="document-upload-file" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,application/pdf,image/*" required hidden />
+                          <p class="doc-upload-dropzone__lead">Drag &amp; drop a file here, or <button type="button" class="doc-upload-browse">browse</button></p>
+                          <p class="doc-upload-dropzone__hint muted">PDF, Word, or image · max upload size applies</p>
+                          <p class="doc-upload-filename" id="document-upload-filename" hidden></p>
+                        </div>
+                      </label>
+                      <label class="edit-field"><span class="edit-label">Title</span><input name="title" required /></label>
+                      <label class="edit-field"><span class="edit-label">Category</span><select name="category" id="document-upload-category"></select></label>
+                      <label class="edit-field"><span class="edit-label">Lifecycle stage</span><select name="lifecycle_stage" id="document-upload-stage"></select></label>
+                      <label class="edit-field"><span class="edit-label">Expiry date</span><input name="expires_at" type="date" /></label>
+                      <label class="edit-field" data-span="2"><span class="edit-label">Notes</span><textarea name="notes" rows="2"></textarea></label>
+                      <div class="edit-form-actions" data-span="2">
+                        <button class="btn" type="submit">Upload document</button>
+                        <p class="edit-form-status muted" data-status></p>
+                      </div>
+                    </form>
+                  </div>
+
+                  <div id="document-link-panel" class="settings-doc-tab-panel" data-doc-panel="link" hidden>
+                    <div id="document-form"></div>
+                  </div>
+
+                  <div class="settings-doc-list-head">
+                    <h4 class="hr-section-title">Stored documents</h4>
+                    <div id="document-filters" class="settings-doc-filters"></div>
+                  </div>
+                  <div id="document-edit-panel" class="edit-panel" hidden></div>
+                  <div class="hr-table-wrap">
+                    <table class="data-table">
+                      <thead>
+                        <tr>
+                          <th>Title</th>
+                          <th>Category</th>
+                          <th>Stage</th>
+                          <th>File</th>
+                          <th>Link</th>
+                          <th>Expires</th>
+                          <th>Added</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody id="documents-table-body">
+                        <tr><td colspan="8" class="muted">Loading documents…</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </article>
+
+              <article class="card settings-panel hr-workspace" data-settings-panel="billing" hidden>
+                <div class="hr-workspace-body" id="settings-billing-content">
+                  <p class="muted">Loading billing details…</p>
+                </div>
+              </article>
+
+              <article class="card settings-panel hr-workspace" data-settings-panel="notifications" hidden>
+                <div class="hr-workspace-body" id="settings-notifications-content"></div>
+              </article>
+
+              <article class="card settings-panel hr-workspace" data-settings-panel="users" hidden>
+                <div class="hr-workspace-body" id="settings-users-content"></div>
+              </article>
+
+              <article class="card settings-panel hr-workspace settings-gated-card" data-settings-panel="multisite" data-feature="multi-site" hidden>
+                <div class="settings-gated-card__locked">
+                  <span class="settings-lock-badge">Scale plan</span>
+                  <h3>Multi-site dashboard</h3>
+                  <p class="muted">Manage staff records and compliance across multiple sites from one workspace.</p>
+                  <button type="button" class="btn" data-settings-upgrade>Upgrade to Scale</button>
+                  <p class="muted">Contact <a href="mailto:support@shiftswifthr.co.uk">support@shiftswifthr.co.uk</a> after upgrading to add sites.</p>
+                </div>
+                <div class="settings-gated-card__unlocked" hidden>
+                  <h3>Multi-site dashboard</h3>
+                  <p class="muted">Manage staff records and compliance across multiple sites from one workspace.</p>
+                  <p class="muted">Contact <a href="mailto:support@shiftswifthr.co.uk">support@shiftswifthr.co.uk</a> to add additional sites.</p>
+                </div>
+              </article>
+
+              <article class="card settings-panel hr-workspace settings-gated-card" data-settings-panel="api" data-feature="api-access" hidden>
+                <div class="settings-gated-card__locked">
+                  <span class="settings-lock-badge">Scale plan</span>
+                  <h3>API access</h3>
+                  <p class="muted">Integrate ShiftSwift HR with your accountant, BI tools, or internal systems.</p>
+                  <button type="button" class="btn" data-settings-upgrade>Upgrade to Scale</button>
+                  <p class="muted">API keys and documentation are issued after Scale activation.</p>
+                </div>
+                <div class="settings-gated-card__unlocked" hidden>
+                  <h3>API access</h3>
+                  <p class="muted">Integrate ShiftSwift HR with your accountant, BI tools, or internal systems.</p>
+                  <p class="muted">Email <a href="mailto:support@shiftswifthr.co.uk">support@shiftswifthr.co.uk</a> for API keys and documentation.</p>
+                </div>
+              </article>
             </div>
-            <div id="document-filters"></div>
-            <div id="document-form"></div>
-            <div id="document-edit-panel" class="edit-panel" hidden></div>
-            <div class="hr-table-wrap">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>Title</th>
-                    <th>Category</th>
-                    <th>Stage</th>
-                    <th>File</th>
-                    <th>Link</th>
-                    <th>Expires</th>
-                    <th>Added</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="documents-table-body">
-                  <tr><td colspan="8" class="muted">Loading documents…</td></tr>
-                </tbody>
-              </table>
-            </div>
-            </div>
-          </article>
+          </div>
         </section>
       </main>
     </div>
     <script src="./auth-guard.js?v=security-v1"></script>
     <script src="./brand-config.js?v=brand-v4"></script>
     <script src="./admin-shared.js?v=admin-v8"></script>
-    <script src="./admin-workspace.js?v=admin-v7"></script>
-    <script src="./admin-documents.js?v=2"></script>
+    <script src="./admin-workspace.js?v=admin-v8"></script>
+    <script src="./admin-settings.js?v=1"></script>
+    <script src="./admin-documents.js?v=3"></script>
     <script src="./admin-employees.js?v=8"></script>
     <script src="./admin-recruitment.js?v=4"></script>
     <script src="./admin-promotions.js?v=admin-v4"></script>

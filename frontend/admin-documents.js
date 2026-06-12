@@ -37,12 +37,12 @@
     return `?${params.toString()}`;
   }
 
-  function documentFormSchema() {
+  function documentLinkFormSchema() {
     return {
-      id: "document",
+      id: "document-link",
       columns: 2,
       submitLabel: "Add link record",
-      successMessage: "Document saved.",
+      successMessage: "Document link saved.",
       fields: [
         { name: "title", label: "Title", type: "text", required: true },
         {
@@ -59,9 +59,8 @@
           optionsKey: "document_lifecycle_stages",
           defaultValue: "general",
         },
-        { name: "document_url", label: "Document URL", type: "url", placeholder: "https://..." },
+        { name: "document_url", label: "Document URL", type: "url", placeholder: "https://...", required: true },
         { name: "expires_at", label: "Expiry date", type: "date" },
-        { name: "original_filename", label: "Original filename", type: "text", placeholder: "contract.pdf" },
         { name: "notes", label: "Notes", type: "textarea", span: 2, rows: 2 },
       ],
     };
@@ -73,8 +72,74 @@
       columns: 2,
       submitLabel: "Update document",
       successMessage: "Document updated.",
-      fields: documentFormSchema().fields,
+      fields: [
+        ...documentLinkFormSchema().fields,
+        { name: "original_filename", label: "Original filename", type: "text", placeholder: "contract.pdf" },
+      ],
     };
+  }
+
+  function bindDocumentTabs() {
+    const tabs = document.querySelectorAll("[data-doc-tab]");
+    if (!tabs.length || document.body.dataset.docTabsBound === "true") return;
+    document.body.dataset.docTabsBound = "true";
+
+    tabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        const target = tab.dataset.docTab;
+        tabs.forEach((el) => {
+          const active = el.dataset.docTab === target;
+          el.classList.toggle("is-active", active);
+          el.setAttribute("aria-selected", active ? "true" : "false");
+        });
+        document.querySelectorAll("[data-doc-panel]").forEach((panel) => {
+          panel.hidden = panel.dataset.docPanel !== target;
+        });
+      });
+    });
+  }
+
+  function bindUploadDropzone() {
+    const dropzone = document.getElementById("document-upload-dropzone");
+    const fileInput = document.getElementById("document-upload-file");
+    const filenameEl = document.getElementById("document-upload-filename");
+    if (!dropzone || !fileInput || dropzone.dataset.ready === "true") return;
+
+    const showFile = (file) => {
+      if (!file) {
+        filenameEl.hidden = true;
+        filenameEl.textContent = "";
+        return;
+      }
+      filenameEl.hidden = false;
+      filenameEl.textContent = file.name;
+    };
+
+    dropzone.querySelector(".doc-upload-browse")?.addEventListener("click", () => fileInput.click());
+    fileInput.addEventListener("change", () => showFile(fileInput.files?.[0]));
+
+    ["dragenter", "dragover"].forEach((eventName) => {
+      dropzone.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        dropzone.classList.add("doc-upload-dropzone--active");
+      });
+    });
+    ["dragleave", "drop"].forEach((eventName) => {
+      dropzone.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        dropzone.classList.remove("doc-upload-dropzone--active");
+      });
+    });
+    dropzone.addEventListener("drop", (event) => {
+      const file = event.dataTransfer?.files?.[0];
+      if (!file) return;
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      fileInput.files = dt.files;
+      showFile(file);
+    });
+
+    dropzone.dataset.ready = "true";
   }
 
   function mountUploadForm() {
@@ -94,6 +159,9 @@
         .map((item) => `<option value="${escapeHtml(item.value)}">${escapeHtml(item.label)}</option>`)
         .join("");
     }
+
+    bindUploadDropzone();
+
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       const status = form.querySelector("[data-status]");
@@ -108,7 +176,9 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || "Upload failed");
         form.reset();
+        document.getElementById("document-upload-filename")?.setAttribute("hidden", "");
         if (status) status.textContent = "Uploaded.";
+        window.AdminSettings?.showSettingsToast?.("Document uploaded ✓");
         await refreshDocuments();
       } catch (error) {
         if (status) status.textContent = error.message;
@@ -125,7 +195,7 @@
     const filtersHost = document.getElementById("document-filters");
     if (!tbody && !formHost) return;
 
-    await window.Admin.loadFormOptions();
+    bindDocumentTabs();
     mountUploadForm();
 
     document.getElementById("documents-export-csv")?.addEventListener("click", async () => {
@@ -145,22 +215,20 @@
       const categories = window.Admin.formOptions?.document_categories || [];
       const stages = window.Admin.formOptions?.document_lifecycle_stages || [];
       filtersHost.innerHTML = `
-        <div class="form-grid form-grid--2">
-          <label class="field">
-            <span>Category</span>
-            <select id="${FILTER_IDS.category}">
-              <option value="">All categories</option>
-              ${categories.map((item) => `<option value="${escapeHtml(item.value)}">${escapeHtml(item.label)}</option>`).join("")}
-            </select>
-          </label>
-          <label class="field">
-            <span>Lifecycle stage</span>
-            <select id="${FILTER_IDS.stage}">
-              <option value="">All stages</option>
-              ${stages.map((item) => `<option value="${escapeHtml(item.value)}">${escapeHtml(item.label)}</option>`).join("")}
-            </select>
-          </label>
-        </div>`;
+        <label class="settings-doc-filter">
+          <span class="muted">Category</span>
+          <select id="${FILTER_IDS.category}">
+            <option value="">All categories</option>
+            ${categories.map((item) => `<option value="${escapeHtml(item.value)}">${escapeHtml(item.label)}</option>`).join("")}
+          </select>
+        </label>
+        <label class="settings-doc-filter">
+          <span class="muted">Lifecycle stage</span>
+          <select id="${FILTER_IDS.stage}">
+            <option value="">All stages</option>
+            ${stages.map((item) => `<option value="${escapeHtml(item.value)}">${escapeHtml(item.label)}</option>`).join("")}
+          </select>
+        </label>`;
       filtersHost.dataset.ready = "1";
       filtersHost.querySelectorAll("select").forEach((el) => {
         el.addEventListener("change", () => refreshDocuments());
@@ -278,7 +346,7 @@
     };
 
     if (formHost && !formHost.dataset.ready) {
-      mountEditForm(formHost, documentFormSchema(), {
+      mountEditForm(formHost, documentLinkFormSchema(), {
         onSubmit: async (payload) => {
           const res = await apiFetch("/admin/documents", {
             method: "POST",
@@ -287,12 +355,12 @@
               document_url: payload.document_url || null,
               notes: payload.notes || null,
               expires_at: payload.expires_at || null,
-              original_filename: payload.original_filename || null,
             }),
           });
           const data = await res.json();
           if (!res.ok) throw new Error(data.detail || "Save failed");
           formHost.querySelector("form")?.reset();
+          window.AdminSettings?.showSettingsToast?.("Document link saved ✓");
           await refreshDocuments();
         },
       });
