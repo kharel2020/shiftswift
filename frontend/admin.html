@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon.png?v=brandkit-v1" />
     <link rel="icon" type="image/svg+xml" href="./assets/shiftswift-hr-icon.svg?v=brandkit-v1" />
     <link rel="apple-touch-icon" href="./assets/shiftswift-hr-icon.png?v=brandkit-v1" />
-    <link rel="stylesheet" href="./styles.css?v=admin-v16" />
+    <link rel="stylesheet" href="./styles.css?v=admin-v17" />
   </head>
   <body>
     <div id="sidebar-overlay" class="sidebar-overlay" aria-hidden="true"></div>
@@ -221,62 +221,54 @@
         </section>
 
         <section id="grievance" class="admin-section" data-feature="grievance" hidden>
-          <header class="section-header">
+          <header class="section-header grievance-page-header">
             <div>
               <h2>Grievance cases</h2>
               <p class="muted">Encrypted investigation notes, ACAS deadlines, and compliance cross-triggers.</p>
             </div>
+            <div class="section-actions">
+              <button type="button" class="btn ghost" id="grievance-export-btn">Export all cases</button>
+              <a class="btn ghost" href="#settings/documents" id="grievance-policy-link">Grievance policy</a>
+            </div>
           </header>
-          <article class="card hr-workspace">
-            <header class="hr-workspace-header section-header section-header--compact">
-              <div>
-                <h3>Grievance cases</h3>
-                <p class="muted">Encrypted investigation notes, ACAS deadlines, and compliance cross-triggers.</p>
-              </div>
-            </header>
-            <div class="hr-workspace-body">
-              <div class="hr-surface-panel hr-log-panel">
+
+          <div class="grievance-status-workflow" id="grievance-status-workflow" aria-label="Case status workflow"></div>
+
+          <div class="grievance-workspace-layout">
+            <div class="grievance-main-pane">
+              <article class="hr-surface-panel hr-log-panel grievance-create-panel">
                 <h4 class="hr-section-title">Open new case</h4>
+                <p class="muted grievance-next-ref" id="grievance-next-ref"></p>
                 <div id="grievance-case-form"></div>
-              </div>
+              </article>
+
               <h4 class="hr-section-title">Case register</h4>
               <div class="hr-table-wrap">
                 <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>Reference</th>
-                    <th>Employee</th>
-                    <th>Allegation</th>
-                    <th>Status</th>
-                    <th>ACAS deadline</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="grievance-cases-body">
-                  <tr><td colspan="6" class="muted">Open this section to load cases…</td></tr>
-                </tbody>
-              </table>
+                  <thead>
+                    <tr>
+                      <th>Reference</th>
+                      <th>Employee</th>
+                      <th>Allegation</th>
+                      <th>Severity</th>
+                      <th>Status</th>
+                      <th>ACAS deadline</th>
+                    </tr>
+                  </thead>
+                  <tbody id="grievance-cases-body">
+                    <tr><td colspan="6" class="muted">Open this section to load cases…</td></tr>
+                  </tbody>
+                </table>
               </div>
             </div>
-          </article>
-          <article class="card hr-workspace" id="grievance-case-detail" hidden>
-            <header class="hr-workspace-header section-header section-header--compact">
-              <div>
-                <h3>Case detail: <span data-case-ref></span> <span data-case-status></span></h3>
-                <p class="muted">ACAS investigation deadline: <strong data-case-deadline></strong></p>
+
+            <aside class="grievance-detail-panel" id="grievance-case-detail">
+              <div id="grievance-case-detail-empty" class="grievance-detail-empty muted">
+                <p>Select a case from the register to view investigation details, ACAS deadlines, and encrypted notes.</p>
               </div>
-            </header>
-            <div class="hr-workspace-body">
-              <h4 class="hr-section-title">Encrypted notes</h4>
-              <div id="grievance-note-form"></div>
-              <div class="hr-table-wrap">
-                <table class="data-table">
-                <thead><tr><th>Type</th><th>Author</th><th>When</th><th>Note</th></tr></thead>
-                <tbody id="grievance-notes-body"></tbody>
-              </table>
-              </div>
-            </div>
-          </article>
+              <div id="grievance-case-detail-content" hidden></div>
+            </aside>
+          </div>
         </section>
 
         <section id="offboarding" class="admin-section" hidden>
@@ -1341,7 +1333,7 @@
     <script src="./admin-compliance.js?v=admin-v8"></script>
     <script src="./admin-absence.js?v=1"></script>
     <script src="./admin-rtw.js?v=1"></script>
-    <script src="./admin-grievance.js?v=admin-v4"></script>
+    <script src="./admin-grievance.js?v=5"></script>
     <script src="./admin-offboarding.js?v=admin-v4"></script>
     <script src="./admin-templates.js?v=admin-v6"></script>
     <script src="./admin-time-punch.js?v=2"></script>

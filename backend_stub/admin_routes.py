@@ -21,6 +21,7 @@ from modules.employees.constants import (
     SECTION_STEPS as EMPLOYEE_SECTION_STEPS,
     WORKER_TYPES,
 )
+from modules.grievance.constants import ALLEGATION_TYPES, SEVERITY_LEVELS, STATUS_WORKFLOW
 from modules.recruitment.constants import (
     HIRING_DECISIONS,
     OFFER_STATUSES,
@@ -206,6 +207,9 @@ def admin_metadata() -> dict[str, object]:
         "recruitment_departments": RECRUITMENT_DEPARTMENTS,
         "hiring_decisions": HIRING_DECISIONS,
         "offer_statuses": OFFER_STATUSES,
+        "grievance_allegation_types": ALLEGATION_TYPES,
+        "grievance_severities": SEVERITY_LEVELS,
+        "grievance_status_workflow": STATUS_WORKFLOW,
         "employee_document_categories": EMPLOYEE_DOCUMENT_CATEGORIES,
         "rtw_statuses": RTW_STATUSES,
         "absence_excuse_types": [

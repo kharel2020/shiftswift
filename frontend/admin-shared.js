@@ -553,11 +553,13 @@ window.Admin = (() => {
       successMessage: "Case opened.",
       fields: [
         { name: "employee_id", label: "Employee", type: "select", optionsKey: "employees", required: true },
-        { name: "allegation_type", label: "Allegation type", type: "text", required: true, placeholder: "Harassment, pay dispute…" },
-        { name: "assigned_investigator", label: "Investigator", type: "text", placeholder: "HR lead name" },
+        { name: "date_received", label: "Date received", type: "date", required: true },
+        { name: "allegation_type", label: "Allegation type", type: "select", optionsKey: "grievance_allegation_types", required: true },
+        { name: "allegation_type_other", label: "Describe allegation", type: "text", placeholder: "Required when Other is selected" },
+        { name: "assigned_investigator", label: "Investigator", type: "select", optionsKey: "grievance_investigators" },
+        { name: "acas_notification_date", label: "ACAS notification date (if notified)", type: "date" },
         { name: "linked_absence_context", label: "Absence / dispute context", type: "textarea", span: 2, placeholder: "Optional. Links to sponsor absence monitoring." },
-        { name: "initial_note", label: "Initial investigation note", type: "textarea", span: 2 },
-        { name: "is_anonymous_to_manager", label: "Anonymous to line manager", type: "checkbox" },
+        { name: "initial_note", label: "Initial investigation note (encrypted)", type: "textarea", span: 2 },
       ],
     },
     grievanceNote: {

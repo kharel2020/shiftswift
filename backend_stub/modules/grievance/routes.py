@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
 from auth_service import AuthUser
@@ -41,7 +43,11 @@ router = APIRouter(
 
 class CaseCreate(BaseModel):
     employee_id: int
-    allegation_type: str = Field(min_length=2, max_length=120)
+    allegation_type: str = Field(min_length=2, max_length=64)
+    allegation_type_other: str | None = Field(default=None, max_length=500)
+    date_received: date
+    acas_notification_date: date | None = None
+    severity: str = Field(default="medium", pattern="^(low|medium|high|critical)$")
     linked_absence_context: str | None = Field(default=None, max_length=2000)
     is_anonymous_to_manager: bool = False
     assigned_investigator: str | None = Field(default=None, max_length=120)
@@ -59,6 +65,41 @@ class SuspendRequest(BaseModel):
 
 class CloseCaseRequest(BaseModel):
     close_outcome: str = Field(pattern="^(upheld|rejected|withdrawn|dismissal|resignation)$")
+
+
+@router.get("/investigators")
+def list_investigators(
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, object]:
+    check_permission(current_user, "disciplinary.read")
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = get_connection()
+    try:
+        items = grievance_service.list_investigators(tenant_id=tenant_id, conn=conn)
+    finally:
+        conn.close()
+    return {"items": items}
+
+
+@router.get("/cases/export")
+def export_cases(
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> Response:
+    check_permission(current_user, "disciplinary.read")
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = get_connection()
+    try:
+        csv_data = grievance_service.export_cases_csv(tenant_id=tenant_id, conn=conn)
+    finally:
+        conn.close()
+    filename = f"grievance-cases-{date.today().isoformat()}.csv"
+    return Response(
+        content=csv_data,
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.get("/cases")
@@ -92,6 +133,10 @@ def create_case(
             tenant_id=tenant_id,
             employee_id=payload.employee_id,
             allegation_type=payload.allegation_type,
+            allegation_type_other=payload.allegation_type_other,
+            date_received=payload.date_received,
+            acas_notification_date=payload.acas_notification_date,
+            severity=payload.severity,
             linked_absence_context=payload.linked_absence_context,
             is_anonymous_to_manager=payload.is_anonymous_to_manager,
             assigned_investigator=payload.assigned_investigator,
