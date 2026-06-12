@@ -196,7 +196,7 @@
       body.department = body.department_other;
     }
     delete body.department_other;
-    ["salary_range_min", "salary_range_max", "candidate_rating"].forEach((field) => {
+    ["salary_range_min", "salary_range_max", "candidate_rating", "offer_salary", "offer_hours_per_week", "offer_probation_weeks"].forEach((field) => {
       if (body[field] !== undefined && body[field] !== "") body[field] = Number(body[field]);
       else if (body[field] === "") body[field] = null;
     });
@@ -425,6 +425,329 @@
     if (contentHost) renderSectionContent(workspace, activeSection, contentHost);
   }
 
+  function screeningStatusPill(status) {
+    const map = {
+      pending: "Pending review",
+      shortlisted: "Shortlisted",
+      rejected: "Rejected",
+    };
+    const cls = {
+      pending: "recruitment-status-pill--pending",
+      shortlisted: "recruitment-status-pill--shortlisted",
+      rejected: "recruitment-status-pill--rejected",
+    };
+    return `<span class="recruitment-status-pill ${cls[status] || ""}">${escapeHtml(map[status] || status || "Pending")}</span>`;
+  }
+
+  function matchScoreBadge(score) {
+    if (score == null || score === "") return `<span class="muted">—</span>`;
+    const level = score >= 70 ? "good" : score >= 40 ? "mid" : "low";
+    return `<span class="recruitment-match recruitment-match--${level}">${escapeHtml(score)}%</span>`;
+  }
+
+  async function patchApplication(applicationId, updates) {
+    const res = await apiFetch(`/admin/recruitment/vacancies/${activeVacancyId}/applications/${applicationId}`, {
+      method: "PATCH",
+      body: JSON.stringify(updates),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Update failed");
+    return data;
+  }
+
+  function renderApplicationsTable(workspace, container, { showScreeningActions = false } = {}) {
+    const applications = workspace.applications || [];
+    const pending = applications.filter((a) => a.screening_status === "pending").length;
+    const shortlisted = applications.filter((a) => a.screening_status === "shortlisted").length;
+    const rejected = applications.filter((a) => a.screening_status === "rejected").length;
+
+    container.innerHTML = `
+      <div class="recruitment-step-stats">
+        <div class="recruitment-stat-card"><span class="recruitment-stat-value">${applications.length}</span><span class="muted">Applicants</span></div>
+        <div class="recruitment-stat-card"><span class="recruitment-stat-value">${pending}</span><span class="muted">Pending</span></div>
+        <div class="recruitment-stat-card recruitment-stat-card--good"><span class="recruitment-stat-value">${shortlisted}</span><span class="muted">Shortlisted</span></div>
+        <div class="recruitment-stat-card recruitment-stat-card--muted"><span class="recruitment-stat-value">${rejected}</span><span class="muted">Rejected</span></div>
+      </div>
+      <div class="hr-table-wrap">
+        <table class="data-table recruitment-applicants-table">
+          <thead>
+            <tr>
+              <th>Candidate</th>
+              <th>Source</th>
+              <th>Applied</th>
+              ${showScreeningActions ? "<th>Match</th><th>Status</th><th>Actions</th>" : ""}
+            </tr>
+          </thead>
+          <tbody id="recruitment-applicants-body"></tbody>
+        </table>
+      </div>`;
+
+    renderTableBody(container.querySelector("#recruitment-applicants-body"), {
+      emptyMessage: showScreeningActions
+        ? "No applicants yet. Add candidates in Application intake, or use the form below."
+        : "No applications yet. Add your first candidate below.",
+      columns: [
+        {
+          key: "name",
+          render: (row) =>
+            `<strong>${escapeHtml(row.candidate_name)}</strong>${row.is_primary ? ' <span class="recruitment-badge recruitment-badge--primary">Primary</span>' : ""}<div class="muted">${escapeHtml(row.candidate_email || "No email")}</div>`,
+        },
+        { key: "source", render: (row) => escapeHtml(row.application_source || "Direct") },
+        { key: "applied", render: (row) => escapeHtml((row.created_at || "").slice(0, 10) || "—") },
+        ...(showScreeningActions
+          ? [
+              { key: "match", render: (row) => matchScoreBadge(row.match_score) },
+              { key: "status", render: (row) => screeningStatusPill(row.screening_status) },
+              {
+                key: "actions",
+                render: (row) =>
+                  row.screening_status === "pending"
+                    ? `<div class="recruitment-row-actions">
+                        <button type="button" class="btn ghost" data-screen-action="shortlist" data-app-id="${row.id}">Shortlist</button>
+                        <button type="button" class="btn ghost" data-screen-action="reject" data-app-id="${row.id}">Reject</button>
+                        ${row.candidate_cv_url ? `<a class="btn ghost" href="${escapeHtml(row.candidate_cv_url)}" target="_blank" rel="noopener">CV</a>` : ""}
+                      </div>`
+                    : `<div class="recruitment-row-actions muted">${escapeHtml(row.screening_status)}${row.candidate_cv_url ? ` · <a href="${escapeHtml(row.candidate_cv_url)}" target="_blank" rel="noopener">CV</a>` : ""}</div>`,
+              },
+            ]
+          : []),
+      ],
+      rows: applications,
+    });
+
+    if (showScreeningActions) {
+      container.querySelectorAll("[data-screen-action]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const appId = Number(btn.dataset.appId);
+          const status = btn.dataset.screenAction === "shortlist" ? "shortlisted" : "rejected";
+          btn.disabled = true;
+          try {
+            const data = await patchApplication(appId, { screening_status: status });
+            renderWorkspace(data);
+          } catch (error) {
+            alert(error.message || "Could not update applicant");
+            btn.disabled = false;
+          }
+        });
+      });
+    }
+  }
+
+  function mountApplicationForm(container, workspace, onSaved) {
+    mountEditForm(container, SECTION_SCHEMAS.application_intake, {
+      values: {},
+      onSubmit: async (payload) => {
+        const res = await apiFetch(`/admin/recruitment/vacancies/${activeVacancyId}/applications`, {
+          method: "POST",
+          body: JSON.stringify(normalizePayload("application_intake", payload)),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Save failed");
+        if (onSaved) onSaved(data);
+        return data;
+      },
+    });
+  }
+
+  function renderApplicationIntakePanel(workspace, container) {
+    const section = (workspace.sections || []).find((s) => s.key === "application_intake");
+    container.innerHTML = `
+      <div class="employee-section-intro">
+        <h4>${escapeHtml(section?.label || "Application intake")}</h4>
+        <p class="muted">${escapeHtml(section?.description || "")}</p>
+        <p class="employee-section-hint">${RECRUITMENT_HINTS.application_intake}</p>
+      </div>
+      <div class="hr-surface-panel">
+        <h4 class="hr-section-title">Add candidate</h4>
+        <div id="recruitment-intake-form"></div>
+      </div>
+      <h4 class="hr-section-title">Applicants</h4>
+      <div id="recruitment-intake-applicants"></div>`;
+
+    mountApplicationForm(container.querySelector("#recruitment-intake-form"), workspace, (data) => {
+      renderWorkspace(data);
+    });
+    renderApplicationsTable(workspace, container.querySelector("#recruitment-intake-applicants"));
+  }
+
+  function renderScreeningPanel(workspace, container) {
+    const section = (workspace.sections || []).find((s) => s.key === "automated_screening");
+    const vacancy = workspace.vacancy || {};
+    container.innerHTML = `
+      <div class="employee-section-intro">
+        <h4>${escapeHtml(section?.label || "Screening")}</h4>
+        <p class="muted">Review applicants against your criteria. Shortlist at least one candidate to progress.</p>
+        <span class="lifecycle-tag">Step 4 · Screening</span>
+      </div>
+      <div id="recruitment-screening-applicants"></div>
+      <details class="recruitment-rules-panel hr-surface-panel" open>
+        <summary><strong>Screening criteria</strong> <span class="muted">Keywords and knockout questions</span></summary>
+        <div id="recruitment-screening-rules-form"></div>
+      </details>
+      <p class="edit-form-status muted" id="recruitment-screening-status"></p>`;
+
+    renderApplicationsTable(workspace, container.querySelector("#recruitment-screening-applicants"), {
+      showScreeningActions: true,
+    });
+
+    mountEditForm(container.querySelector("#recruitment-screening-rules-form"), SECTION_SCHEMAS.automated_screening, {
+      values: section?.data || {},
+      onSubmit: async (payload) => {
+        const res = await apiFetch(`/admin/recruitment/vacancies/${activeVacancyId}/sections/automated_screening`, {
+          method: "PATCH",
+          body: JSON.stringify(normalizePayload("automated_screening", payload)),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Save failed");
+        const status = container.querySelector("#recruitment-screening-status");
+        if (status) status.textContent = "Screening criteria saved.";
+        renderWorkspace(data);
+      },
+    });
+  }
+
+  function renderOfferPanel(workspace, container) {
+    const section = (workspace.sections || []).find((s) => s.key === "offer_management");
+    const vacancy = workspace.vacancy || {};
+    const primary =
+      (workspace.applications || []).find((a) => a.is_primary) ||
+      (workspace.applications || []).find((a) => a.screening_status === "shortlisted") ||
+      null;
+    const candidateName = primary?.candidate_name || vacancy.candidate_name || "No candidate selected";
+    const candidateEmail = primary?.candidate_email || vacancy.candidate_email || "—";
+    const offerStatus = vacancy.offer_status || "draft";
+    const statusSteps = [
+      { key: "draft", label: "Draft offer" },
+      { key: "sent", label: "Sent to candidate" },
+      { key: "accepted", label: "Accepted" },
+    ];
+    const statusIndex = statusSteps.findIndex((s) => s.key === offerStatus);
+    const defaultSalary = vacancy.offer_salary ?? vacancy.salary_range_min ?? vacancy.salary_range_max ?? "";
+
+    container.innerHTML = `
+      <div class="employee-section-intro">
+        <h4>${escapeHtml(section?.label || "Offer management")}</h4>
+        <p class="muted">Prepare and send the offer letter. Track acceptance before onboarding.</p>
+        <span class="lifecycle-tag">Step 8 · Offer</span>
+      </div>
+
+      <article class="recruitment-offer-candidate card hr-workspace">
+        <div class="recruitment-offer-candidate__head">
+          <div>
+            <h4>${escapeHtml(candidateName)}</h4>
+            <p class="muted">${escapeHtml(candidateEmail)} · ${escapeHtml(vacancy.job_title || "Role")}</p>
+          </div>
+          ${workerBadge(vacancy)}
+        </div>
+        <p class="muted">${escapeHtml(departmentLabel(vacancy.department))} · ${escapeHtml(vacancy.location || "Not set")}</p>
+      </article>
+
+      ${vacancy.worker_type === "sponsored"
+        ? `<div class="recruitment-rlmt-notice recruitment-offer-sponsor-notice">
+            <strong>Sponsored role</strong> — Confirm salary meets SOC minimum, assign CoS reference in onboarding, and retain RLMT advert evidence from Step 3.
+          </div>`
+        : ""}
+
+      <ol class="recruitment-offer-tracker">
+        ${statusSteps
+          .map((step, index) => {
+            const state =
+              offerStatus === "rejected"
+                ? index === 0
+                  ? "done"
+                  : "todo"
+                : index < statusIndex
+                  ? "done"
+                  : index === statusIndex
+                    ? "current"
+                    : "todo";
+            return `<li class="recruitment-offer-tracker__step recruitment-offer-tracker__step--${state}">
+              <span class="recruitment-offer-tracker__dot">${state === "done" ? "✓" : index + 1}</span>
+              <span>${escapeHtml(step.label)}</span>
+            </li>`;
+          })
+          .join("")}
+      </ol>
+
+      <div class="hr-surface-panel">
+        <h4 class="hr-section-title">Offer terms</h4>
+        <div id="recruitment-offer-form"></div>
+      </div>
+
+      <div class="recruitment-offer-actions">
+        <button type="button" class="btn ghost" id="recruitment-offer-draft-btn">Save as draft</button>
+        <button type="button" class="btn" id="recruitment-offer-send-btn">Mark offer as sent</button>
+      </div>
+      <p class="edit-form-status muted" id="recruitment-offer-status"></p>`;
+
+    const offerSchema = {
+      id: "recruitment-offer-details",
+      columns: 2,
+      submitLabel: "Save offer details",
+      successMessage: "Offer details saved.",
+      fields: [
+        { name: "offer_start_date", label: "Start date", type: "date", required: true },
+        { name: "offer_salary", label: "Salary offered (£)", type: "number", placeholder: String(defaultSalary || "24000"), required: true },
+        { name: "offer_hours_per_week", label: "Hours per week", type: "number", placeholder: "40" },
+        { name: "offer_probation_weeks", label: "Probation (weeks)", type: "number", placeholder: "12" },
+        { name: "offer_letter_url", label: "Offer letter URL", type: "url", span: 2, placeholder: "Link to signed PDF or document store" },
+        { name: "offer_notes", label: "Internal notes", type: "textarea", span: 2, rows: 3, placeholder: "Conditions, shift pattern, uniform allowance…" },
+      ],
+    };
+
+    const saveOffer = async (extra = {}) => {
+      const form = container.querySelector("#recruitment-offer-form form");
+      if (!form) return;
+      const payload = Object.fromEntries(new FormData(form).entries());
+      const body = normalizePayload("offer_management", { ...payload, ...extra });
+      const res = await apiFetch(`/admin/recruitment/vacancies/${activeVacancyId}/sections/offer_management`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Save failed");
+      renderWorkspace(data);
+      return data;
+    };
+
+    mountEditForm(container.querySelector("#recruitment-offer-form"), offerSchema, {
+      values: {
+        offer_start_date: (vacancy.offer_start_date || "").slice(0, 10),
+        offer_salary: vacancy.offer_salary ?? defaultSalary,
+        offer_hours_per_week: vacancy.offer_hours_per_week,
+        offer_probation_weeks: vacancy.offer_probation_weeks,
+        offer_letter_url: vacancy.offer_letter_url,
+        offer_notes: vacancy.offer_notes,
+        offer_status: offerStatus,
+      },
+      onSubmit: async (payload) => {
+        await saveOffer({ ...payload, offer_status: offerStatus });
+        const status = container.querySelector("#recruitment-offer-status");
+        if (status) status.textContent = "Offer details saved.";
+      },
+    });
+
+    container.querySelector("#recruitment-offer-draft-btn")?.addEventListener("click", async () => {
+      try {
+        await saveOffer({ offer_status: "draft" });
+        const status = container.querySelector("#recruitment-offer-status");
+        if (status) status.textContent = "Saved as draft.";
+      } catch (error) {
+        alert(error.message || "Could not save offer");
+      }
+    });
+
+    container.querySelector("#recruitment-offer-send-btn")?.addEventListener("click", async () => {
+      try {
+        await saveOffer({ offer_status: "sent" });
+        const status = container.querySelector("#recruitment-offer-status");
+        if (status) status.textContent = "Offer marked as sent.";
+      } catch (error) {
+        alert(error.message || "Could not send offer");
+      }
+    });
+  }
+
   function renderPostingPanel(workspace, container) {
     const vacancy = workspace.vacancy || {};
     container.innerHTML = `
@@ -528,6 +851,18 @@
     if (!container) return;
     if (sectionKey === "multi_channel_posting") {
       renderPostingPanel(workspace, container);
+      return;
+    }
+    if (sectionKey === "application_intake") {
+      renderApplicationIntakePanel(workspace, container);
+      return;
+    }
+    if (sectionKey === "automated_screening") {
+      renderScreeningPanel(workspace, container);
+      return;
+    }
+    if (sectionKey === "offer_management") {
+      renderOfferPanel(workspace, container);
       return;
     }
     if (sectionKey === "offer_accepted") {

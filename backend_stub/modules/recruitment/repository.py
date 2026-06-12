@@ -33,6 +33,12 @@ VACANCY_COLUMNS = (
     "rejection_reason",
     "offer_letter_url",
     "offer_status",
+    "offer_start_date",
+    "offer_salary",
+    "offer_hours_per_week",
+    "offer_probation_weeks",
+    "offer_sent_at",
+    "offer_notes",
     "worker_type",
     "current_stage",
     "status",
@@ -54,10 +60,12 @@ def _iso(value: Any) -> str | None:
 
 def _row_to_vacancy(row: tuple[Any, ...]) -> dict[str, Any]:
     data = dict(zip(VACANCY_COLUMNS, row, strict=True))
-    for key in ("salary_range_min", "salary_range_max"):
+    for key in ("salary_range_min", "salary_range_max", "offer_salary", "offer_hours_per_week"):
         if data[key] is not None:
             data[key] = float(data[key])
     data["interview_at"] = _iso(data.get("interview_at"))
+    data["offer_start_date"] = _iso(data.get("offer_start_date"))
+    data["offer_sent_at"] = _iso(data.get("offer_sent_at"))
     data["created_at"] = _iso(data.get("created_at"))
     data["updated_at"] = _iso(data.get("updated_at"))
     return data
@@ -190,3 +198,129 @@ def list_vacancy_adverts(*, tenant_id: int, vacancy_id: int, conn: Any) -> list[
 
 def section_field_names(section: str) -> tuple[str, ...]:
     return SECTION_FIELDS.get(section, ())
+
+
+APPLICATION_COLUMNS = (
+    "id",
+    "candidate_name",
+    "candidate_email",
+    "candidate_phone",
+    "candidate_cv_url",
+    "application_source",
+    "screening_status",
+    "screening_notes",
+    "match_score",
+    "is_primary",
+    "created_at",
+    "updated_at",
+)
+
+
+def _row_to_application(row: tuple[Any, ...]) -> dict[str, Any]:
+    data = dict(zip(APPLICATION_COLUMNS, row, strict=True))
+    data["created_at"] = _iso(data.get("created_at"))
+    data["updated_at"] = _iso(data.get("updated_at"))
+    return data
+
+
+def list_applications(*, tenant_id: int, vacancy_id: int, conn: Any) -> list[dict[str, Any]]:
+    cols = ", ".join(APPLICATION_COLUMNS)
+    with conn.cursor() as cur:
+        cur.execute(
+            f"""
+            SELECT {cols}
+            FROM recruitment_applications
+            WHERE tenant_id = %s AND vacancy_id = %s
+            ORDER BY is_primary DESC, created_at DESC
+            """,
+            (tenant_id, vacancy_id),
+        )
+        return [_row_to_application(row) for row in cur.fetchall()]
+
+
+def create_application(*, tenant_id: int, vacancy_id: int, data: dict[str, Any], conn: Any) -> dict[str, Any]:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO recruitment_applications (
+              tenant_id, vacancy_id, candidate_name, candidate_email,
+              candidate_phone, candidate_cv_url, application_source
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            RETURNING """
+            + ", ".join(APPLICATION_COLUMNS),
+            (
+                tenant_id,
+                vacancy_id,
+                data["candidate_name"],
+                data.get("candidate_email"),
+                data.get("candidate_phone"),
+                data.get("candidate_cv_url"),
+                data.get("application_source"),
+            ),
+        )
+        row = cur.fetchone()
+        conn.commit()
+    return _row_to_application(row)
+
+
+def update_application(
+    *,
+    tenant_id: int,
+    vacancy_id: int,
+    application_id: int,
+    updates: dict[str, Any],
+    conn: Any,
+) -> dict[str, Any]:
+    if not updates:
+        raise ValueError("no fields to update")
+    updates = {**updates, "updated_at": datetime.utcnow()}
+    sets = ", ".join(f"{key} = %s" for key in updates)
+    values = list(updates.values()) + [tenant_id, vacancy_id, application_id]
+    with conn.cursor() as cur:
+        cur.execute(
+            f"""
+            UPDATE recruitment_applications SET {sets}
+            WHERE tenant_id = %s AND vacancy_id = %s AND id = %s
+            RETURNING {", ".join(APPLICATION_COLUMNS)}
+            """,
+            values,
+        )
+        row = cur.fetchone()
+        if not row:
+            raise LookupError("application not found")
+        conn.commit()
+    return _row_to_application(row)
+
+
+def clear_primary_applications(*, tenant_id: int, vacancy_id: int, conn: Any) -> None:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE recruitment_applications SET is_primary = FALSE, updated_at = NOW()
+            WHERE tenant_id = %s AND vacancy_id = %s AND is_primary = TRUE
+            """,
+            (tenant_id, vacancy_id),
+        )
+        conn.commit()
+
+
+def sync_primary_candidate_to_vacancy(
+    *,
+    tenant_id: int,
+    vacancy_id: int,
+    application: dict[str, Any],
+    conn: Any,
+) -> None:
+    update_vacancy_fields(
+        tenant_id=tenant_id,
+        vacancy_id=vacancy_id,
+        updates={
+            "candidate_name": application.get("candidate_name"),
+            "candidate_email": application.get("candidate_email"),
+            "candidate_phone": application.get("candidate_phone"),
+            "candidate_cv_url": application.get("candidate_cv_url"),
+            "application_source": application.get("application_source"),
+        },
+        conn=conn,
+    )

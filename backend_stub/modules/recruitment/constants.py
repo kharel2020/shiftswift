@@ -116,6 +116,6 @@ SECTION_FIELDS: dict[str, tuple[str, ...]] = {
     "candidate_pipeline": ("pipeline_notes", "candidate_rating"),
     "interview_scheduling": ("interview_at", "interview_video_link", "scorecard_notes"),
     "hiring_decision": ("hiring_decision", "rejection_reason"),
-    "offer_management": ("offer_letter_url", "offer_status"),
+    "offer_management": ("offer_letter_url", "offer_status", "offer_start_date", "offer_salary", "offer_hours_per_week", "offer_probation_weeks", "offer_notes"),
     "offer_accepted": ("offer_status",),
 }

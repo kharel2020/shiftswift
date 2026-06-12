@@ -16,10 +16,13 @@ from modules.recruitment.constants import LINK_ONLY_SECTIONS, SECTION_ORDER
 from modules.recruitment.repository import create_vacancy, fetch_vacancy, list_vacancies
 from modules.recruitment.workspace import (
     accept_offer_and_start_onboarding,
+    add_vacancy_application,
     build_workspace,
     fetch_advert_counts_by_vacancy,
+    fetch_application_counts_by_vacancy,
     list_vacancy_completion_summary,
     patch_section,
+    patch_vacancy_application,
 )
 
 router = APIRouter(
@@ -66,6 +69,25 @@ class SectionPatch(BaseModel):
     rejection_reason: str | None = Field(default=None, max_length=500)
     offer_letter_url: str | None = Field(default=None, max_length=2048)
     offer_status: str | None = Field(default=None, pattern="^(draft|sent|accepted|rejected)$")
+    offer_start_date: date | None = None
+    offer_salary: float | None = Field(default=None, ge=0)
+    offer_hours_per_week: float | None = Field(default=None, ge=0, le=168)
+    offer_probation_weeks: int | None = Field(default=None, ge=0, le=104)
+    offer_notes: str | None = Field(default=None, max_length=4000)
+
+
+class ApplicationCreate(BaseModel):
+    candidate_name: str = Field(min_length=1, max_length=160)
+    candidate_email: EmailStr | None = None
+    candidate_phone: str | None = Field(default=None, max_length=32)
+    candidate_cv_url: str | None = Field(default=None, max_length=2048)
+    application_source: str | None = Field(default=None, max_length=120)
+
+
+class ApplicationPatch(BaseModel):
+    screening_status: str | None = Field(default=None, pattern="^(pending|shortlisted|rejected)$")
+    screening_notes: str | None = Field(default=None, max_length=4000)
+    is_primary: bool | None = None
 
 
 @router.get("/vacancies")
@@ -78,12 +100,19 @@ def read_vacancies(
     try:
         items = list_vacancies(tenant_id=tenant_id, conn=conn)
         advert_counts = fetch_advert_counts_by_vacancy(tenant_id=tenant_id, conn=conn)
+        application_groups = fetch_application_counts_by_vacancy(tenant_id=tenant_id, conn=conn)
         enriched = []
         for item in items:
+            app_rows = application_groups.get(item["id"], [])
+            app_count = sum(count for _, count in app_rows)
+            shortlisted = sum(count for status, count in app_rows if status == "shortlisted")
             summary = list_vacancy_completion_summary(
                 item,
                 advert_count=advert_counts.get(item["id"], 0),
             )
+            if app_count:
+                summary["candidate_count"] = app_count
+                summary["shortlisted_count"] = shortlisted
             enriched.append({**item, **summary})
     finally:
         conn.close()
@@ -167,6 +196,59 @@ def patch_vacancy_section(
             updates=updates,
             actor_username=current_user.username,
             actor_role=current_user.role,
+            conn=conn,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    finally:
+        conn.close()
+
+
+@router.post("/vacancies/{vacancy_id}/applications")
+def add_application(
+    vacancy_id: int,
+    payload: ApplicationCreate,
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, object]:
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = get_connection()
+    try:
+        return add_vacancy_application(
+            tenant_id=tenant_id,
+            vacancy_id=vacancy_id,
+            data=payload.model_dump(),
+            conn=conn,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    finally:
+        conn.close()
+
+
+@router.patch("/vacancies/{vacancy_id}/applications/{application_id}")
+def patch_application(
+    vacancy_id: int,
+    application_id: int,
+    payload: ApplicationPatch,
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, object]:
+    updates = payload.model_dump(exclude_unset=True)
+    if not updates:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = get_connection()
+    try:
+        return patch_vacancy_application(
+            tenant_id=tenant_id,
+            vacancy_id=vacancy_id,
+            application_id=application_id,
+            updates=updates,
             conn=conn,
         )
     except LookupError as exc:
