@@ -1,8 +1,8 @@
 /** HR process templates + AI document assistant. */
 (async function initAdminTemplates() {
-  const { apiFetch, renderTableBody, escapeHtml, downloadAuthenticated, parseHashBaseSection } = window.Admin;
+  const { apiFetch, escapeHtml, downloadAuthenticated, parseHashBaseSection } = window.Admin;
 
-  let ready = false;
+  let controlsBound = false;
   let selectedId = null;
   let aiStatus = null;
   let listCache = [];
@@ -68,6 +68,81 @@
     await loadAiStatus();
   }
 
+  function renderTemplateSidePanel(item) {
+    const empty = document.getElementById("templates-side-empty");
+    const content = document.getElementById("templates-side-content");
+    if (!content) return;
+    if (!item) {
+      empty?.removeAttribute("hidden");
+      content.hidden = true;
+      return;
+    }
+    empty?.setAttribute("hidden", "");
+    content.hidden = false;
+    const versionLine = item.is_customised
+      ? `Your copy · platform latest v${escapeHtml(item.platform_version)}`
+      : `Platform v${escapeHtml(item.platform_version)}`;
+    content.innerHTML = `
+      <div class="hr-detail-head">
+        <div>
+          <h3>${escapeHtml(item.display_title)}</h3>
+          ${syncStatusPill(item)}
+        </div>
+      </div>
+      <p class="muted">${escapeHtml(item.description || "")}</p>
+      <dl class="hr-detail-grid">
+        <div><dt>Category</dt><dd>${escapeHtml(categoryLabel(item.category))}</dd></div>
+        <div><dt>Version</dt><dd>${versionLine}</dd></div>
+        ${item.change_summary && item.update_available ? `<div><dt>Update note</dt><dd>${escapeHtml(item.change_summary)}</dd></div>` : ""}
+      </dl>
+      <div class="hr-detail-foot">
+        <button type="button" class="btn" id="templates-side-edit-btn">Edit template</button>
+        <button type="button" class="btn ghost" id="templates-side-dl-platform-btn">Download latest</button>
+        ${item.is_customised ? `<button type="button" class="btn ghost" id="templates-side-dl-copy-btn">Download my copy</button>` : ""}
+      </div>`;
+    content.querySelector("#templates-side-edit-btn")?.addEventListener("click", () => openEditor(item.id));
+    content.querySelector("#templates-side-dl-platform-btn")?.addEventListener("click", () =>
+      downloadAuthenticated(`/hr-templates/${item.id}/download?variant=platform`, `${item.id}.md`)
+    );
+    content.querySelector("#templates-side-dl-copy-btn")?.addEventListener("click", () =>
+      downloadAuthenticated(`/hr-templates/${item.id}/download?variant=effective`, `${item.id}.md`)
+    );
+  }
+
+  function selectTemplate(templateId) {
+    selectedId = templateId;
+    renderTemplateTable();
+    renderTemplateSidePanel(listCache.find((t) => t.id === templateId));
+  }
+
+  function renderTemplateTable() {
+    const tbody = document.getElementById("hr-templates-body");
+    if (!tbody) return;
+    if (!listCache.length) {
+      tbody.innerHTML =
+        '<tr><td colspan="4" class="muted">No HR templates seeded. Run scripts/seed_hr_templates.py.</td></tr>';
+      renderTemplateSidePanel(null);
+      return;
+    }
+    tbody.innerHTML = listCache
+      .map((row) => {
+        const selected = selectedId === row.id ? " hr-register-row--selected" : "";
+        return `<tr class="hr-register-row${selected}" data-template-id="${escapeHtml(row.id)}">
+          <td><strong>${escapeHtml(row.display_title)}</strong><div class="muted">${escapeHtml(row.description)}</div></td>
+          <td>${escapeHtml(categoryLabel(row.category))}</td>
+          <td>Platform v${escapeHtml(row.platform_version)}</td>
+          <td>${syncStatusPill(row)}</td>
+        </tr>`;
+      })
+      .join("");
+    tbody.querySelectorAll(".hr-register-row").forEach((row) => {
+      row.addEventListener("click", () => selectTemplate(row.dataset.templateId));
+    });
+    if (selectedId) {
+      renderTemplateSidePanel(listCache.find((t) => t.id === selectedId));
+    }
+  }
+
   async function loadTemplateList() {
     const tbody = document.getElementById("hr-templates-body");
     if (!tbody) return;
@@ -77,54 +152,11 @@
       const data = await res.json();
       listCache = data.items || [];
       renderUpdatesBanner(data);
-      renderTableBody(tbody, {
-        emptyMessage: "No HR templates seeded. Run scripts/seed_hr_templates.py.",
-        columns: [
-          {
-            key: "title",
-            render: (r) =>
-              `<strong>${escapeHtml(r.display_title)}</strong><div class="muted">${escapeHtml(r.description)}</div>`,
-          },
-          { key: "category", render: (r) => escapeHtml(categoryLabel(r.category)) },
-          {
-            key: "version",
-            render: (r) =>
-              `<div>Platform v${escapeHtml(r.platform_version)}</div>
-               <div style="margin-top:0.25rem;">${syncStatusPill(r)}</div>
-               ${r.change_summary && !r.is_customised ? `<div class="muted" style="margin-top:0.25rem;font-size:0.85rem;">${escapeHtml(r.change_summary)}</div>` : ""}`,
-          },
-          {
-            key: "actions",
-            render: (r) =>
-              `<div class="table-actions">
-                <button type="button" class="btn ghost" data-open="${escapeHtml(r.id)}">Edit</button>
-                <button type="button" class="btn ghost" data-dl-platform="${escapeHtml(r.id)}" title="Latest ShiftSwift HR version">Latest</button>
-                ${r.is_customised ? `<button type="button" class="btn ghost" data-dl-effective="${escapeHtml(r.id)}" title="Your organisation copy">My copy</button>` : ""}
-              </div>`,
-          },
-        ],
-        rows: listCache,
-      });
-
-      tbody.querySelectorAll("[data-open]").forEach((btn) => {
-        btn.addEventListener("click", () => openEditor(btn.dataset.open));
-      });
-      tbody.querySelectorAll("[data-dl-platform]").forEach((btn) => {
-        btn.addEventListener("click", () =>
-          downloadAuthenticated(`/hr-templates/${btn.dataset.dlPlatform}/download?variant=platform`, `${btn.dataset.dlPlatform}.md`)
-        );
-      });
-      tbody.querySelectorAll("[data-dl-effective]").forEach((btn) => {
-        btn.addEventListener("click", () =>
-          downloadAuthenticated(`/hr-templates/${btn.dataset.dlEffective}/download?variant=effective`, `${btn.dataset.dlEffective}.md`)
-        );
-      });
+      renderTemplateTable();
     } catch {
-      renderTableBody(tbody, {
-        columns: [{ key: "a" }, { key: "b" }, { key: "c" }, { key: "d" }],
-        rows: [],
-        emptyMessage: "Could not load templates.",
-      });
+      listCache = [];
+      tbody.innerHTML = '<tr><td colspan="4" class="muted">Could not load templates.</td></tr>';
+      renderTemplateSidePanel(null);
     }
   }
 
@@ -286,6 +318,8 @@
   }
 
   function bindControls() {
+    if (controlsBound) return;
+    controlsBound = true;
     document.getElementById("ai-tenant-toggle")?.addEventListener("change", (e) => {
       saveAiToggle(e.target.checked).catch((err) => alert(err.message));
     });
@@ -305,25 +339,18 @@
     document.getElementById("ai-draft-btn")?.addEventListener("click", () => runAiDraft());
     document.getElementById("template-editor-close")?.addEventListener("click", () => {
       document.getElementById("template-editor-panel").hidden = true;
-      selectedId = null;
     });
   }
 
-  async function init() {
+  async function initTemplatesSection() {
     bindControls();
     await loadAiStatus();
     await loadTemplateList();
   }
 
   window.addEventListener("admin:section", (event) => {
-    if (event.detail?.section === "templates" && !ready) {
-      ready = true;
-      init();
-    }
+    if (event.detail?.section === "templates") initTemplatesSection();
   });
 
-  if (parseHashBaseSection(window.location.hash) === "templates") {
-    ready = true;
-    init();
-  }
+  if (parseHashBaseSection(window.location.hash) === "templates") initTemplatesSection();
 })();

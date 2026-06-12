@@ -79,22 +79,27 @@ def list_workflows(*, tenant_id: int, conn: Any, limit: int = 100) -> list[dict[
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT id, employee_id, grievance_case_id, reason, status,
-                   acas_appeal_deadline, sponsorship_cessation_required,
-                   sponsorship_cessation_reported_at, sponsorship_cessation_reference, started_at
-            FROM offboarding_workflows
-            WHERE tenant_id = %s
-            ORDER BY started_at DESC
+            SELECT w.id, w.employee_id, w.grievance_case_id, w.reason, w.status,
+                   w.acas_appeal_deadline, w.sponsorship_cessation_required,
+                   w.sponsorship_cessation_reported_at, w.sponsorship_cessation_reference,
+                   w.started_at, e.first_name, e.last_name, e.department
+            FROM offboarding_workflows w
+            JOIN employees e ON e.id = w.employee_id AND e.tenant_id = w.tenant_id
+            WHERE w.tenant_id = %s
+            ORDER BY w.started_at DESC
             LIMIT %s
             """,
             (tenant_id, limit),
         )
         items = []
         for row in cur.fetchall():
+            employee_name = " ".join(filter(None, [row[10], row[11]])).strip()
             items.append(
                 {
                     "id": row[0],
                     "employee_id": row[1],
+                    "employee_name": employee_name or str(row[1]),
+                    "employee_department": row[12],
                     "grievance_case_id": row[2],
                     "reason": row[3],
                     "status": row[4],

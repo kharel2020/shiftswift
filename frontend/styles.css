@@ -5320,3 +5320,120 @@ button.lifecycle-accordion-header .lifecycle-accordion-chevron {
   }
 }
 
+/* ── Shared HR workspace pattern (register + detail panel) ── */
+.hr-status-workflow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.hr-workflow-step {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #f3f3f1;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ink-600);
+}
+
+.hr-workflow-arrow {
+  color: var(--ink-400);
+  font-size: 0.82rem;
+}
+
+.hr-workspace-layout {
+  display: flex;
+  align-items: stretch;
+  gap: 16px;
+  min-height: 420px;
+}
+
+.hr-main-pane {
+  flex: 1;
+  min-width: 0;
+}
+
+.hr-detail-panel {
+  flex: 0 0 340px;
+  width: 340px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  padding: 16px 18px;
+}
+
+.hr-detail-empty {
+  padding: 24px 8px;
+  text-align: center;
+}
+
+.hr-register-row {
+  cursor: pointer;
+}
+
+.hr-register-row--selected {
+  background: #f0faf6;
+}
+
+.hr-detail-grid {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 14px;
+}
+
+.hr-detail-grid div {
+  display: grid;
+  gap: 2px;
+}
+
+.hr-detail-grid dt {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--ink-500);
+}
+
+.hr-detail-grid dd {
+  margin: 0;
+}
+
+.hr-detail-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.hr-detail-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--card-border);
+}
+
+.hr-template-library {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.hr-template-card {
+  padding: 14px 16px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  background: var(--white);
+}
+
+.hr-template-card__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+

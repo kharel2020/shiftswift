@@ -130,6 +130,8 @@
   };
 
   let activeEmployeeId = null;
+  let selectedEmployeeId = null;
+  let employeesCache = [];
   let activeSection = "recruitment";
   let workspaceCache = null;
   let sectionLoaded = false;
@@ -703,59 +705,87 @@
       const res = await apiFetch("/admin/employees");
       if (!res.ok) throw new Error("Load failed");
       const data = await res.json();
-      renderTableBody(tbody, {
-        emptyMessage: "No employees yet. Add your first team member above.",
-        columns: [
-          {
-            key: "name",
-            render: (row) =>
-              `<strong>${escapeHtml(row.first_name)} ${escapeHtml(row.last_name)}</strong>${row.job_title ? `<div class="muted">${escapeHtml(row.job_title)}</div>` : ""}`,
-          },
-          { key: "department", render: (row) => escapeHtml(row.department || "Not set") },
-          { key: "status", render: (row) => statusPill(row.status) },
-          {
-            key: "profile",
-            render: (row) => {
-              const next = row.next_section ? sectionLabel(row.next_section) : "Complete";
-              return `<span class="employee-profile-pill">${escapeHtml(String(row.completion_pct ?? 0))}%</span>
-                <div class="muted">${escapeHtml(next)}</div>`;
-            },
-          },
-          {
-            key: "actions",
-            render: (row) =>
-              `<div class="table-actions">
-                <button type="button" class="btn" data-open="${row.id}">Open lifecycle</button>
-                <button type="button" class="btn ghost" data-delete="${row.id}">Remove</button>
-              </div>`,
-          },
-        ],
-        rows: data.items || [],
-      });
+      employeesCache = data.items || [];
 
-      tbody.querySelectorAll("[data-open]").forEach((btn) => {
-        btn.addEventListener("click", () => openEmployee(Number(btn.dataset.open)));
-      });
+      if (!employeesCache.length) {
+        tbody.innerHTML =
+          '<tr><td colspan="4" class="muted">No employees yet. Add your first team member above.</td></tr>';
+        renderEmployeeSidePanel(null);
+        return;
+      }
 
-      tbody.querySelectorAll("[data-delete]").forEach((btn) => {
-        btn.addEventListener("click", async () => {
-          if (!window.confirm("Remove this employee record?")) return;
-          const res = await apiFetch(`/admin/employees/${btn.dataset.delete}`, { method: "DELETE" });
-          if (!res.ok) {
-            const err = await res.json();
-            alert(err.detail || "Delete failed");
-            return;
-          }
-          await refreshEmployeesTable();
+      tbody.innerHTML = employeesCache
+        .map((row) => {
+          const selected = selectedEmployeeId === row.id ? " hr-register-row--selected" : "";
+          const next = row.next_section ? sectionLabel(row.next_section) : "Complete";
+          return `<tr class="hr-register-row${selected}" data-employee-id="${row.id}">
+            <td><strong>${escapeHtml(row.first_name)} ${escapeHtml(row.last_name)}</strong>${row.job_title ? `<div class="muted">${escapeHtml(row.job_title)}</div>` : ""}</td>
+            <td>${escapeHtml(row.department || "Not set")}</td>
+            <td>${statusPill(row.status)}</td>
+            <td><span class="employee-profile-pill">${escapeHtml(String(row.completion_pct ?? 0))}%</span><div class="muted">${escapeHtml(next)}</div></td>
+          </tr>`;
+        })
+        .join("");
+
+      tbody.querySelectorAll(".hr-register-row").forEach((row) => {
+        row.addEventListener("click", () => {
+          selectedEmployeeId = Number(row.dataset.employeeId);
+          tbody.querySelectorAll(".hr-register-row").forEach((el) => {
+            el.classList.toggle("hr-register-row--selected", Number(el.dataset.employeeId) === selectedEmployeeId);
+          });
+          renderEmployeeSidePanel(employeesCache.find((e) => e.id === selectedEmployeeId));
         });
       });
+
+      if (selectedEmployeeId) {
+        renderEmployeeSidePanel(employeesCache.find((e) => e.id === selectedEmployeeId));
+      }
     } catch {
-      renderTableBody(tbody, {
-        columns: [{ key: "a" }, { key: "b" }, { key: "c" }, { key: "d" }, { key: "e" }],
-        rows: [],
-        emptyMessage: "Could not load employees.",
-      });
+      tbody.innerHTML = '<tr><td colspan="4" class="muted">Could not load employees.</td></tr>';
     }
+  }
+
+  function renderEmployeeSidePanel(row) {
+    const empty = $("employees-side-empty");
+    const content = $("employees-side-content");
+    if (!content) return;
+    if (!row) {
+      empty?.removeAttribute("hidden");
+      content.hidden = true;
+      return;
+    }
+    empty?.setAttribute("hidden", "");
+    content.hidden = false;
+    const next = row.next_section ? sectionLabel(row.next_section) : "Complete";
+    content.innerHTML = `
+      <div class="hr-detail-head">
+        <div>
+          <h3>${escapeHtml(row.first_name)} ${escapeHtml(row.last_name)}</h3>
+          ${statusPill(row.status)}
+        </div>
+      </div>
+      <dl class="hr-detail-grid">
+        <div><dt>Job title</dt><dd>${escapeHtml(row.job_title || "Not set")}</dd></div>
+        <div><dt>Department</dt><dd>${escapeHtml(row.department || "Not set")}</dd></div>
+        <div><dt>Lifecycle progress</dt><dd>${escapeHtml(String(row.completion_pct ?? 0))}% · ${escapeHtml(next)}</dd></div>
+        <div><dt>Email</dt><dd>${escapeHtml(row.email || "Not set")}</dd></div>
+      </dl>
+      <div class="hr-detail-foot">
+        <button type="button" class="btn" id="employees-side-open-btn">Open lifecycle</button>
+        <button type="button" class="btn ghost" id="employees-side-delete-btn">Remove</button>
+      </div>`;
+    content.querySelector("#employees-side-open-btn")?.addEventListener("click", () => openEmployee(row.id));
+    content.querySelector("#employees-side-delete-btn")?.addEventListener("click", async () => {
+      if (!window.confirm("Remove this employee record?")) return;
+      const res = await apiFetch(`/admin/employees/${row.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.detail || "Delete failed");
+        return;
+      }
+      selectedEmployeeId = null;
+      await refreshEmployeesTable();
+    });
   }
 
   function mountQuickAddForm() {
@@ -779,10 +809,11 @@
   }
 
   async function initEmployeesSection() {
-    if (sectionLoaded) return;
-    sectionLoaded = true;
-    await loadFormOptions();
-    mountQuickAddForm();
+    if (!sectionLoaded) {
+      sectionLoaded = true;
+      await loadFormOptions();
+      mountQuickAddForm();
+    }
     await refreshEmployeesTable();
   }
 

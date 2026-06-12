@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon.png?v=brandkit-v1" />
     <link rel="icon" type="image/svg+xml" href="./assets/shiftswift-hr-icon.svg?v=brandkit-v1" />
     <link rel="apple-touch-icon" href="./assets/shiftswift-hr-icon.png?v=brandkit-v1" />
-    <link rel="stylesheet" href="./styles.css?v=admin-v18" />
+    <link rel="stylesheet" href="./styles.css?v=admin-v20" />
   </head>
   <body>
     <div id="sidebar-overlay" class="sidebar-overlay" aria-hidden="true"></div>
@@ -29,7 +29,8 @@
           <a class="nav-link" href="#promotions" data-section="promotions">Promotions</a>
           <a class="nav-link" href="#templates" data-section="templates">HR Templates & AI</a>
           <a class="nav-link" href="#compliance" data-section="compliance" data-feature="sponsor-compliance">Sponsor Compliance</a>
-          <a class="nav-link" href="#contracts" data-section="contracts">Contracts</a>
+          <a class="nav-link" href="#contracts" data-section="contracts">Platform contracts</a>
+          <a class="nav-link" href="#employment-contracts" data-section="employment-contracts">Employment contracts</a>
           <a class="nav-link" href="#time-punch" data-section="time-punch">Time punch</a>
           <a class="nav-link" href="#rota" data-section="rota">Rota</a>
           <a class="nav-link" href="#settings" data-section="settings">Settings</a>
@@ -68,41 +69,54 @@
               <h2>Employees</h2>
               <p class="muted">Follow the employee lifecycle from recruitment through off-boarding, one step at a time.</p>
             </div>
+            <div class="section-actions">
+              <a class="btn ghost" href="#recruitment">Recruitment</a>
+              <a class="btn ghost" href="#offboarding">Offboarding</a>
+            </div>
           </header>
 
+          <div class="hr-status-workflow" aria-label="Employee lifecycle overview">
+            <span class="hr-workflow-step">Recruitment</span>
+            <span class="hr-workflow-arrow" aria-hidden="true">→</span>
+            <span class="hr-workflow-step">Onboarding</span>
+            <span class="hr-workflow-arrow" aria-hidden="true">→</span>
+            <span class="hr-workflow-step">Active</span>
+            <span class="hr-workflow-arrow" aria-hidden="true">→</span>
+            <span class="hr-workflow-step">Offboarding</span>
+          </div>
+
           <div id="employees-list-view">
-            <article class="card hr-workspace">
-              <header class="hr-workspace-header section-header section-header--compact">
-                <div>
-                  <h3>Employees</h3>
-                  <p class="muted">Follow the employee lifecycle from recruitment through off-boarding, one step at a time.</p>
-                </div>
-              </header>
-              <div class="hr-workspace-body">
-                <div class="hr-surface-panel hr-log-panel">
+            <div class="hr-workspace-layout">
+              <div class="hr-main-pane">
+                <article class="hr-surface-panel hr-log-panel">
                   <h4 class="hr-section-title">Add employee</h4>
                   <p class="muted">Start at step 1 (Recruitment). Employee type and sponsor licence steps unlock as you progress.</p>
                   <div id="employee-quick-add-form"></div>
-                </div>
+                </article>
                 <h4 class="hr-section-title">Employee register</h4>
                 <div class="hr-table-wrap">
                   <table class="data-table">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Department</th>
-                      <th>Status</th>
-                      <th>Progress</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody id="employees-table-body">
-                    <tr><td colspan="5" class="muted">Loading employees…</td></tr>
-                  </tbody>
-                </table>
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Department</th>
+                        <th>Status</th>
+                        <th>Progress</th>
+                      </tr>
+                    </thead>
+                    <tbody id="employees-table-body">
+                      <tr><td colspan="4" class="muted">Open this section to load employees…</td></tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
-            </article>
+              <aside class="hr-detail-panel" id="employees-side-panel">
+                <div id="employees-side-empty" class="hr-detail-empty muted">
+                  <p>Select an employee to preview lifecycle progress and open their workspace.</p>
+                </div>
+                <div id="employees-side-content" hidden></div>
+              </aside>
+            </div>
           </div>
 
           <div id="employees-detail-view" hidden>
@@ -277,44 +291,58 @@
               <h2>Offboarding</h2>
               <p class="muted">ACAS appeal windows and sponsorship cessation reporting.</p>
             </div>
+            <div class="section-actions">
+              <a class="btn ghost" href="#grievance">Grievance cases</a>
+            </div>
           </header>
-          <article class="card hr-workspace">
-            <header class="hr-workspace-header section-header section-header--compact">
-              <div>
-                <h3>Offboarding workflows</h3>
-                <p class="muted">ACAS appeal windows and sponsorship cessation reporting.</p>
-              </div>
-            </header>
-            <div class="hr-workspace-body">
-              <div class="hr-surface-panel hr-log-panel">
+
+          <div class="hr-status-workflow" aria-label="Offboarding workflow">
+            <span class="hr-workflow-step">Leaver identified</span>
+            <span class="hr-workflow-arrow" aria-hidden="true">→</span>
+            <span class="hr-workflow-step">ACAS appeal window</span>
+            <span class="hr-workflow-arrow" aria-hidden="true">→</span>
+            <span class="hr-workflow-step">Sponsor cessation</span>
+            <span class="hr-workflow-arrow" aria-hidden="true">→</span>
+            <span class="hr-workflow-step">Complete</span>
+          </div>
+
+          <div class="hr-workspace-layout">
+            <div class="hr-main-pane">
+              <article class="hr-surface-panel hr-log-panel">
                 <h4 class="hr-section-title">Start leaver workflow</h4>
+                <p class="muted employee-section-hint employee-section-hint--warn">Starting offboarding creates an ACAS appeal deadline and sponsor cessation tasks where applicable.</p>
                 <div class="edit-form edit-form--cols-2">
                   <label class="edit-field"><span class="edit-label">Employee</span><select id="offboarding-employee"></select></label>
                   <label class="edit-field"><span class="edit-label">Reason</span><input id="offboarding-reason" type="text" placeholder="Resignation, dismissal…" /></label>
                   <div class="edit-form-actions" data-span="2"><button type="button" class="btn" id="offboarding-start-btn">Start workflow</button></div>
                 </div>
-              </div>
+              </article>
               <h4 class="hr-section-title">Active workflows</h4>
               <div class="hr-table-wrap">
                 <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Employee</th>
-                    <th>Reason</th>
-                    <th>Status</th>
-                    <th>ACAS appeal by</th>
-                    <th>Cessation</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody id="offboarding-body">
-                  <tr><td colspan="7" class="muted">Open this section to load workflows…</td></tr>
-                </tbody>
-              </table>
+                  <thead>
+                    <tr>
+                      <th>Reference</th>
+                      <th>Employee</th>
+                      <th>Reason</th>
+                      <th>Status</th>
+                      <th>ACAS appeal by</th>
+                      <th>Cessation</th>
+                    </tr>
+                  </thead>
+                  <tbody id="offboarding-body">
+                    <tr><td colspan="6" class="muted">Open this section to load workflows…</td></tr>
+                  </tbody>
+                </table>
               </div>
             </div>
-          </article>
+            <aside class="hr-detail-panel" id="offboarding-detail-panel">
+              <div id="offboarding-detail-empty" class="hr-detail-empty muted">
+                <p>Select a workflow to view ACAS deadlines and sponsor cessation actions.</p>
+              </div>
+              <div id="offboarding-detail-content" hidden></div>
+            </aside>
+          </div>
         </section>
 
         <section id="promotions" class="admin-section" hidden>
@@ -325,14 +353,16 @@
             </div>
           </header>
 
-          <article class="card hr-workspace">
-            <header class="hr-workspace-header section-header section-header--compact">
-              <div>
-                <h3>Promotion codes</h3>
-                <p class="muted">Validate billing codes against platform plans before signup or checkout.</p>
-              </div>
-            </header>
-            <div class="hr-workspace-body">
+          <div class="hr-status-workflow" aria-label="Promotion workflow">
+            <span class="hr-workflow-step">Validate</span>
+            <span class="hr-workflow-arrow" aria-hidden="true">→</span>
+            <span class="hr-workflow-step">Browse codes</span>
+            <span class="hr-workflow-arrow" aria-hidden="true">→</span>
+            <span class="hr-workflow-step">Test pricing</span>
+          </div>
+
+          <div class="hr-workspace-layout">
+            <div class="hr-main-pane">
               <div class="hr-surface-panel hr-log-panel">
                 <h4 class="hr-section-title">Billing code validator</h4>
                 <p class="muted">Uses the same rules as signup. Select a plan, enter codes, and preview adjusted pricing.</p>
@@ -342,21 +372,20 @@
               <h4 class="hr-section-title">Discount codes</h4>
               <div class="hr-table-wrap">
                 <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>Code</th>
-                    <th>Label</th>
-                    <th>Discount</th>
-                    <th>Plans</th>
-                    <th>Usage</th>
-                    <th>Status</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody id="discount-codes-body">
-                  <tr><td colspan="7" class="muted">Open this section to load discount codes…</td></tr>
-                </tbody>
-              </table>
+                  <thead>
+                    <tr>
+                      <th>Code</th>
+                      <th>Label</th>
+                      <th>Discount</th>
+                      <th>Plans</th>
+                      <th>Usage</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="discount-codes-body">
+                    <tr><td colspan="6" class="muted">Open this section to load discount codes…</td></tr>
+                  </tbody>
+                </table>
               </div>
               <div class="section-header section-header--compact" style="margin-top:1.25rem;">
                 <div>
@@ -369,24 +398,29 @@
               </div>
               <div class="hr-table-wrap">
                 <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>Code</th>
-                    <th>Partner</th>
-                    <th>Reward</th>
-                    <th>Agreed % (manual payout)</th>
-                    <th>Usage</th>
-                    <th>Status</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody id="referral-codes-body">
-                  <tr><td colspan="7" class="muted">Open this section to load referral codes…</td></tr>
-                </tbody>
-              </table>
+                  <thead>
+                    <tr>
+                      <th>Code</th>
+                      <th>Partner</th>
+                      <th>Reward</th>
+                      <th>Agreed % (manual payout)</th>
+                      <th>Usage</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="referral-codes-body">
+                    <tr><td colspan="6" class="muted">Open this section to load referral codes…</td></tr>
+                  </tbody>
+                </table>
               </div>
             </div>
-          </article>
+            <aside class="hr-detail-panel" id="promo-detail-panel">
+              <div id="promo-detail-empty" class="hr-detail-empty muted">
+                <p>Select a discount or referral code to preview details and test in the validator.</p>
+              </div>
+              <div id="promo-detail-content" hidden></div>
+            </aside>
+          </div>
         </section>
 
         <section id="templates" class="admin-section" hidden>
@@ -399,39 +433,46 @@
 
           <div id="hr-template-updates-banner" class="promo-result" hidden></div>
 
-          <article class="card hr-workspace">
-            <header class="hr-workspace-header section-header section-header--compact">
-              <div>
-                <h3>AI document assistant</h3>
-                <p class="muted">Powered by Google Gemini 2.0 Flash (low cost). Set <code>GEMINI_API_KEY</code> in backend .env.</p>
+          <div class="hr-status-workflow" aria-label="Template workflow">
+            <span class="hr-workflow-step">Browse</span>
+            <span class="hr-workflow-arrow" aria-hidden="true">→</span>
+            <span class="hr-workflow-step">Customise</span>
+            <span class="hr-workflow-arrow" aria-hidden="true">→</span>
+            <span class="hr-workflow-step">Download</span>
+          </div>
+
+          <div class="hr-workspace-layout">
+            <div class="hr-main-pane">
+              <div class="hr-surface-panel hr-log-panel" style="margin-bottom:14px;">
+                <div class="section-header section-header--compact" style="margin:0;">
+                  <div>
+                    <h4 class="hr-section-title">AI document assistant</h4>
+                    <p class="muted">Powered by Google Gemini 2.0 Flash. Set <code>GEMINI_API_KEY</code> in backend .env.</p>
+                  </div>
+                  <label class="edit-field edit-field--checkbox" style="margin:0;">
+                    <input type="checkbox" id="ai-tenant-toggle" />
+                    <span class="edit-label">Enable AI for this business</span>
+                  </label>
+                </div>
+                <div id="ai-status-panel" class="promo-result"></div>
               </div>
-              <label class="edit-field edit-field--checkbox" style="margin:0;">
-                <input type="checkbox" id="ai-tenant-toggle" />
-                <span class="edit-label">Enable AI for this business</span>
-              </label>
-            </header>
-            <div class="hr-workspace-body">
-              <div id="ai-status-panel" class="promo-result"></div>
               <h4 class="hr-section-title">Process template library</h4>
               <div class="hr-table-wrap">
                 <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>Template</th>
-                    <th>Category</th>
-                    <th>Version</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="hr-templates-body">
-                  <tr><td colspan="4" class="muted">Open this section to load templates…</td></tr>
-                </tbody>
-              </table>
+                  <thead>
+                    <tr>
+                      <th>Template</th>
+                      <th>Category</th>
+                      <th>Version</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="hr-templates-body">
+                    <tr><td colspan="4" class="muted">Open this section to load templates…</td></tr>
+                  </tbody>
+                </table>
               </div>
-            </div>
-          </article>
-
-          <article class="card hr-workspace" id="template-editor-panel" hidden>
+              <article class="card hr-workspace" id="template-editor-panel" hidden style="margin-top:16px;">
             <header class="section-header section-header--compact">
               <div>
                 <h3 id="template-editor-title">Edit template</h3>
@@ -472,6 +513,14 @@
               <p class="muted" id="ai-draft-status"></p>
             </div>
           </article>
+            </div>
+            <aside class="hr-detail-panel" id="templates-side-panel">
+              <div id="templates-side-empty" class="hr-detail-empty muted">
+                <p>Select a template to preview version status and open the editor.</p>
+              </div>
+              <div id="templates-side-content" hidden></div>
+            </aside>
+          </div>
         </section>
 
         <section id="compliance" class="admin-section" hidden data-feature="sponsor-compliance">
@@ -855,8 +904,8 @@
         <section id="contracts" class="admin-section" hidden>
           <header class="section-header contracts-page-header">
             <div>
-              <h2>Legal contracts</h2>
-              <p class="muted">Generate MSA, DPA, and subscription order forms from customer data. Send for e-signature and store signed copies.</p>
+              <h2>Platform contracts</h2>
+              <p class="muted">ShiftSwift ↔ your business: MSA, DPA, and subscription order forms. For employee contracts, use Employment contracts.</p>
             </div>
             <div class="section-actions">
               <a class="btn ghost" href="./payment-terms.html" target="_blank" rel="noopener">Payment terms</a>
@@ -912,6 +961,92 @@
           </div>
         </section>
 
+        <section id="employment-contracts" class="admin-section" hidden>
+          <header class="section-header contracts-page-header">
+            <div>
+              <h2>Employment contracts</h2>
+              <p class="muted">Contracts between your business and employees. Templates are curated from ACAS guidance and updated when UK employment law changes — apply platform updates in HR Templates.</p>
+            </div>
+            <div class="section-actions">
+              <a class="btn ghost" href="#templates">HR Templates</a>
+              <a class="btn ghost" href="https://www.acas.org.uk/templates" target="_blank" rel="noopener">ACAS templates →</a>
+            </div>
+          </header>
+
+          <div class="contracts-status-workflow" aria-label="Employment contract workflow">
+            <span class="contracts-workflow-step">Choose template</span>
+            <span class="contracts-workflow-arrow" aria-hidden="true">→</span>
+            <span class="contracts-workflow-step">Generate</span>
+            <span class="contracts-workflow-arrow" aria-hidden="true">→</span>
+            <span class="contracts-workflow-step">Employee signs</span>
+            <span class="contracts-workflow-arrow" aria-hidden="true">→</span>
+            <span class="contracts-workflow-step">Stored on file</span>
+          </div>
+
+          <div id="employment-template-sync-note" class="promo-result promo-result-message" style="margin-bottom:14px;">
+            <p><strong>Platform sync:</strong> Employment templates live in the HR template catalog (category: contracts). When UK law changes, we publish a new platform version — tenants with custom edits see “Update available” in HR Templates.</p>
+          </div>
+
+          <div class="contracts-workspace-layout">
+            <div class="contracts-main-pane">
+              <article class="hr-surface-panel hr-log-panel contracts-generate-panel">
+                <h4 class="hr-section-title">Generate employment contract</h4>
+                <p class="muted">Prefills employee and employer details from the employee profile and business settings. Employee must have an email address before sending for signature.</p>
+                <form id="employment-contract-generate-form" class="edit-form edit-form--cols-2">
+                  <label class="edit-field"><span class="edit-label">Employee</span>
+                    <select name="employee_id" id="employment-contract-employee" required></select>
+                  </label>
+                  <label class="edit-field"><span class="edit-label">Template</span>
+                    <select name="template_id" id="employment-contract-template" required></select>
+                  </label>
+                  <div class="edit-form-actions" data-span="2">
+                    <button type="submit" class="btn">Generate contract</button>
+                  </div>
+                </form>
+                <p class="muted" id="employment-contract-generate-status"></p>
+              </article>
+
+              <h4 class="hr-section-title">Template library (contracts category)</h4>
+              <div id="employment-template-list" class="hr-template-library">
+                <p class="muted">Open this section to load templates…</p>
+              </div>
+
+              <h4 class="hr-section-title">Employment contract register</h4>
+              <div class="hr-table-wrap">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Reference</th>
+                      <th>Employee</th>
+                      <th>Template</th>
+                      <th>Status</th>
+                      <th>Version</th>
+                      <th>Signed</th>
+                    </tr>
+                  </thead>
+                  <tbody id="employment-contracts-body">
+                    <tr><td colspan="6" class="muted">Open this section to load contracts…</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <aside class="contracts-detail-panel" id="employment-contracts-detail-panel">
+              <div id="employment-contracts-detail-empty" class="contracts-detail-empty muted">
+                <p>Select a contract to preview, send to the employee for signature, or open their document store.</p>
+              </div>
+              <div id="employment-contracts-detail-content" hidden></div>
+            </aside>
+          </div>
+
+          <article class="card hr-workspace hr-workspace--compact legal-note" style="margin-top:16px;">
+            <div class="hr-workspace-body">
+              <h3>ACAS guidance — not automatic live import</h3>
+              <p class="muted legal-note-copy">ShiftSwift curates templates aligned to <a href="https://www.acas.org.uk/templates" target="_blank" rel="noopener">ACAS templates</a>. We do not scrape acas.org.uk automatically — legal-reviewed platform updates are synced on deploy. Always have contracts reviewed by qualified UK employment solicitors before issue.</p>
+            </div>
+          </article>
+        </section>
+
         <section id="time-punch" class="admin-section" hidden>
           <header class="section-header">
             <div>
@@ -919,77 +1054,87 @@
               <p class="muted">Geofenced clock in/out sites and recent punch activity.</p>
             </div>
             <div class="section-actions">
-              <button type="button" class="btn primary" id="sync-punch-site-btn">Sync site from address</button>
+              <button type="button" class="btn" id="sync-punch-site-btn">Sync site from address</button>
             </div>
           </header>
           <p id="punch-admin-message" class="muted" aria-live="polite"></p>
-          <article class="card hr-workspace">
-            <header class="hr-workspace-header section-header section-header--compact">
-              <div>
-                <h3>Time punch</h3>
-                <p class="muted">Geofenced clock in/out sites and recent punch activity.</p>
-              </div>
-            </header>
-            <div class="hr-stats-grid" aria-label="Time punch summary">
-              <div class="hr-stat-card">
-                <span class="hr-stat-card__label">Punch sites</span>
-                <span class="hr-stat-card__value" id="punch-stat-sites">0</span>
-                <span class="hr-stat-card__sub">Configured locations</span>
-              </div>
-              <div class="hr-stat-card hr-stat-card--ok">
-                <span class="hr-stat-card__label">Recent punches</span>
-                <span class="hr-stat-card__value" id="punch-stat-punches">0</span>
-                <span class="hr-stat-card__sub">Last 50 loaded</span>
-              </div>
-              <div class="hr-stat-card">
-                <span class="hr-stat-card__label">Primary site</span>
-                <span class="hr-stat-card__value" id="punch-stat-primary">—</span>
-                <span class="hr-stat-card__sub" id="punch-stat-primary-sub">Sync from business address</span>
-              </div>
-              <div class="hr-stat-card">
-                <span class="hr-stat-card__label">Geofence</span>
-                <span class="hr-stat-card__value">Active</span>
-                <span class="hr-stat-card__sub">Staff must be on site to punch</span>
-              </div>
+
+          <div class="hr-stats-grid" aria-label="Time punch summary">
+            <div class="hr-stat-card">
+              <span class="hr-stat-card__label">Punch sites</span>
+              <span class="hr-stat-card__value" id="punch-stat-sites">0</span>
+              <span class="hr-stat-card__sub">Configured locations</span>
             </div>
-            <div class="hr-workspace-body">
+            <div class="hr-stat-card hr-stat-card--ok">
+              <span class="hr-stat-card__label">Recent punches</span>
+              <span class="hr-stat-card__value" id="punch-stat-punches">0</span>
+              <span class="hr-stat-card__sub">Last 50 loaded</span>
+            </div>
+            <div class="hr-stat-card">
+              <span class="hr-stat-card__label">Primary site</span>
+              <span class="hr-stat-card__value" id="punch-stat-primary">—</span>
+              <span class="hr-stat-card__sub" id="punch-stat-primary-sub">Sync from business address</span>
+            </div>
+            <div class="hr-stat-card">
+              <span class="hr-stat-card__label">Geofence</span>
+              <span class="hr-stat-card__value">Active</span>
+              <span class="hr-stat-card__sub">Staff must be on site to punch</span>
+            </div>
+          </div>
+
+          <div class="hr-status-workflow" aria-label="Time punch workflow">
+            <span class="hr-workflow-step">Configure sites</span>
+            <span class="hr-workflow-arrow" aria-hidden="true">→</span>
+            <span class="hr-workflow-step">Clock in / out</span>
+            <span class="hr-workflow-arrow" aria-hidden="true">→</span>
+            <span class="hr-workflow-step">Review activity</span>
+          </div>
+
+          <div class="hr-workspace-layout">
+            <div class="hr-main-pane">
               <h4 class="hr-section-title">Punch sites</h4>
               <div class="hr-table-wrap">
                 <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Address</th>
-                    <th>Coordinates</th>
-                    <th>Radius</th>
-                    <th>Role</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody id="punch-sites-body">
-                  <tr><td colspan="6" class="muted">Open this section to load sites…</td></tr>
-                </tbody>
-              </table>
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Address</th>
+                      <th>Coordinates</th>
+                      <th>Radius</th>
+                      <th>Role</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="punch-sites-body">
+                    <tr><td colspan="6" class="muted">Open this section to load sites…</td></tr>
+                  </tbody>
+                </table>
               </div>
               <h4 class="hr-section-title hr-section-title--muted">Recent punches</h4>
               <div class="hr-table-wrap">
                 <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>When</th>
-                    <th>Employee</th>
-                    <th>Type</th>
-                    <th>Site</th>
-                    <th>Distance</th>
-                  </tr>
-                </thead>
-                <tbody id="recent-punches-body">
-                  <tr><td colspan="5" class="muted">Open this section to load punches…</td></tr>
-                </tbody>
-              </table>
+                  <thead>
+                    <tr>
+                      <th>When</th>
+                      <th>Employee</th>
+                      <th>Type</th>
+                      <th>Site</th>
+                      <th>Distance</th>
+                    </tr>
+                  </thead>
+                  <tbody id="recent-punches-body">
+                    <tr><td colspan="5" class="muted">Open this section to load punches…</td></tr>
+                  </tbody>
+                </table>
               </div>
             </div>
-          </article>
+            <aside class="hr-detail-panel" id="punch-detail-panel">
+              <div id="punch-detail-empty" class="hr-detail-empty muted">
+                <p>Select a punch site or recent punch to view geofence details.</p>
+              </div>
+              <div id="punch-detail-content" hidden></div>
+            </aside>
+          </div>
         </section>
 
         <section id="rota" class="admin-section" hidden>
@@ -1342,19 +1487,20 @@
     <script src="./admin-workspace.js?v=admin-v8"></script>
     <script src="./admin-settings.js?v=1"></script>
     <script src="./admin-documents.js?v=3"></script>
-    <script src="./admin-employees.js?v=8"></script>
+    <script src="./admin-employees.js?v=9"></script>
     <script src="./admin-recruitment.js?v=6"></script>
-    <script src="./admin-promotions.js?v=admin-v4"></script>
+    <script src="./admin-promotions.js?v=admin-v5"></script>
     <script src="./admin-compliance.js?v=admin-v8"></script>
     <script src="./admin-absence.js?v=1"></script>
     <script src="./admin-rtw.js?v=1"></script>
     <script src="./admin-grievance.js?v=5"></script>
-    <script src="./admin-offboarding.js?v=admin-v4"></script>
-    <script src="./admin-templates.js?v=admin-v6"></script>
-    <script src="./admin-time-punch.js?v=2"></script>
+    <script src="./admin-offboarding.js?v=admin-v5"></script>
+    <script src="./admin-templates.js?v=admin-v7"></script>
+    <script src="./admin-time-punch.js?v=3"></script>
     <script src="./admin-rota.js?v=4"></script>
     <script src="./app.js?v=admin-v4"></script>
     <script src="./contracts.js?v=5"></script>
+    <script src="./employment-contracts.js?v=1"></script>
       <script src="./cookie-consent.js?v=1"></script>
   </body>
 </html>

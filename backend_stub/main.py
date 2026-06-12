@@ -18,6 +18,7 @@ from modules.events.routes import router as events_router
 from modules.grievance.routes import router as grievance_router
 from modules.offboarding.routes import router as offboarding_router
 from modules.ai.routes import router as ai_router
+from modules.employee_contracts.routes import router as employment_contracts_router
 from modules.hr_templates.routes import router as hr_templates_router
 from modules.employees.routes import router as employees_router
 from modules.recruitment.routes import router as recruitment_router
@@ -108,6 +109,7 @@ app.include_router(grievance_router)
 app.include_router(offboarding_router)
 app.include_router(ai_router)
 app.include_router(hr_templates_router)
+app.include_router(employment_contracts_router)
 app.include_router(events_router)
 app.include_router(billing_router)
 app.include_router(signup_router)

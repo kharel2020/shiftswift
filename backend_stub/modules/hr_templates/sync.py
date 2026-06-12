@@ -63,8 +63,9 @@ def sync_catalog_entry(cur: Any, entry: dict[str, Any], *, published_at: datetim
             """
             INSERT INTO hr_process_templates (
               id, category, title, description, content_markdown, sort_order, version,
-              legal_basis, change_summary, published_at, content_sha256
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+              legal_basis, change_summary, published_at, content_sha256,
+              source, source_url, source_label
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 entry["id"],
@@ -78,6 +79,9 @@ def sync_catalog_entry(cur: Any, entry: dict[str, Any], *, published_at: datetim
                 entry.get("change_summary", ""),
                 published,
                 digest,
+                entry.get("source", "shiftswift"),
+                entry.get("source_url"),
+                entry.get("source_label"),
             ),
         )
         _insert_revision(cur, entry, published_at=published)
@@ -106,6 +110,9 @@ def sync_catalog_entry(cur: Any, entry: dict[str, Any], *, published_at: datetim
           change_summary = %s,
           published_at = %s,
           content_sha256 = %s,
+          source = %s,
+          source_url = %s,
+          source_label = %s,
           updated_at = NOW()
         WHERE id = %s
         """,
@@ -120,6 +127,9 @@ def sync_catalog_entry(cur: Any, entry: dict[str, Any], *, published_at: datetim
             entry.get("change_summary", ""),
             published,
             digest,
+            entry.get("source", "shiftswift"),
+            entry.get("source_url"),
+            entry.get("source_label"),
             entry["id"],
         ),
     )

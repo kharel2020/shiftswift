@@ -657,9 +657,12 @@ _Allergen failure is a serious risk — do not hire without satisfactory allerge
         "title": "Employment contract — Full-time",
         "description": "UK full-time contract of employment for restaurant and hospitality staff (chefs, FOH, managers).",
         "sort_order": 130,
-        "version": "1.0",
+        "version": "1.1",
         "legal_basis": "Employment Rights Act 1996 (written particulars); Working Time Regulations 1998; National Minimum Wage Act 1998; Equality Act 2010",
-        "change_summary": "Initial release — full-time hospitality employment contract template.",
+        "change_summary": "ACAS written-statement structure aligned; hospitality schedule retained.",
+        "source": "acas",
+        "source_url": "https://www.acas.org.uk/templates/written-statement-templates",
+        "source_label": "ACAS written statement of employment particulars",
         "content_markdown": """# Contract of employment — Full-time
 
 **This document is a template only.** Have it reviewed by qualified UK employment solicitors before use. ShiftSwift HR does not provide legal advice.
@@ -914,9 +917,12 @@ _Review with qualified employment law counsel before issue. Keep signed copy in 
         "title": "Employment contract — Part-time",
         "description": "UK part-time contract for restaurant staff with pro-rata terms and PTWR compliance.",
         "sort_order": 140,
-        "version": "1.0",
+        "version": "1.1",
         "legal_basis": "Employment Rights Act 1996; Part-time Workers (Prevention of Less Favourable Treatment) Regulations 2000; Working Time Regulations 1998",
-        "change_summary": "Initial release — part-time hospitality employment contract template.",
+        "change_summary": "ACAS written-statement structure aligned; part-time schedule retained.",
+        "source": "acas",
+        "source_url": "https://www.acas.org.uk/templates/written-statement-templates",
+        "source_label": "ACAS written statement of employment particulars",
         "content_markdown": """# Contract of employment — Part-time
 
 **This document is a template only.** Have it reviewed by qualified UK employment solicitors before use. ShiftSwift HR does not provide legal advice.
@@ -1118,5 +1124,164 @@ Signature: __________ Date: __________
 
 ---
 _Ensure hourly rate and holiday pro-rata calculations are checked each April (NMW/NLW updates). Solicitor review required before use._""",
+    },
+    {
+        "id": "written_statement_acas",
+        "category": "contracts",
+        "title": "Written statement of employment particulars",
+        "description": "Statutory written particulars (ERA 1996 s.1) — ACAS structure for UK employers.",
+        "sort_order": 120,
+        "version": "1.0",
+        "legal_basis": "Employment Rights Act 1996 s.1–4; ACAS written statement templates",
+        "change_summary": "Initial release — ACAS-aligned written statement for hospitality employers.",
+        "source": "acas",
+        "source_url": "https://www.acas.org.uk/templates/written-statement-templates",
+        "source_label": "ACAS written statement templates",
+        "content_markdown": """# Written statement of employment particulars
+
+**Template aligned to ACAS guidance.** Not legal advice — review with qualified employment solicitors before issue.
+
+---
+
+## 1. Employer and employee
+
+**Employer name:** __________  
+**Employee name:** __________  
+**Start date:** __________  
+**Date statement issued:** __________  
+
+---
+
+## 2. Job title and description
+
+**Job title:** __________  
+**Duties:** __________  
+
+---
+
+## 3. Place of work
+
+**Primary location:** __________  
+**Other locations:** __________  
+
+---
+
+## 4. Pay
+
+**Rate / salary:** £__________ per __________  
+**Pay interval:** __________ (weekly / monthly / four-weekly)  
+**Method:** BACS  
+
+---
+
+## 5. Hours of work
+
+**Normal hours:** __________ hours per week  
+**Days / shift pattern:** __________  
+**Overtime:** __________  
+
+---
+
+## 6. Holiday entitlement
+
+**Annual leave:** __________ days (including bank holidays: __________)  
+**Holiday year:** __________ to __________  
+
+---
+
+## 7. Sick pay
+
+**Statutory Sick Pay:** As required by law  
+**Company sick pay (if any):** __________  
+
+---
+
+## 8. Pension
+
+Auto-enrolment scheme: __________  
+
+---
+
+## 9. Notice periods
+
+**Employer notice:** __________  
+**Employee notice:** __________  
+
+---
+
+## 10. Disciplinary and grievance
+
+Procedures are in the employee handbook / separate policy (ACAS-aligned). Summary available on request.
+
+---
+
+## 11. Training
+
+Mandatory training entitlements (if any): __________  
+
+---
+
+## Signatures
+
+**Employer:** Name __________ Title __________ Signature __________ Date __________  
+
+**Employee:** I confirm receipt of this written statement.
+
+Signature __________ Date __________  
+
+---
+_Source structure: [ACAS written statement templates](https://www.acas.org.uk/templates/written-statement-templates). Platform updates when UK law changes._""",
+    },
+    {
+        "id": "job_offer_letter_acas",
+        "category": "contracts",
+        "title": "Job offer letter",
+        "description": "Conditional job offer to a successful candidate — ACAS employer letter structure.",
+        "sort_order": 125,
+        "version": "1.0",
+        "legal_basis": "Employment Rights Act 1996; Equality Act 2010; ACAS recruitment templates",
+        "change_summary": "Initial release — ACAS-aligned job offer letter.",
+        "source": "acas",
+        "source_url": "https://www.acas.org.uk/job-offer-letters",
+        "source_label": "ACAS job offer letters",
+        "content_markdown": """# Job offer letter
+
+**Private and confidential**
+
+Dear __________,
+
+We are pleased to offer you the position of **__________** at **__________**, subject to the conditions below.
+
+## Role details
+
+- **Start date:** __________  
+- **Work location:** __________  
+- **Reporting to:** __________  
+- **Employment type:** __________ (full-time / part-time / fixed-term)  
+- **Salary / hourly rate:** £__________  
+
+## Conditions
+
+This offer is subject to:
+
+- [ ] Satisfactory Right to Work check  
+- [ ] Satisfactory references  
+- [ ] Signed contract of employment / written statement  
+- [ ] Any probation period: __________ months  
+
+## Next steps
+
+Please confirm acceptance by __________ by replying to __________.
+
+If you accept, we will send your contract and onboarding checklist.
+
+Yours sincerely,
+
+__________  
+__________  
+__________  
+
+---
+_Source structure: [ACAS job offer letters](https://www.acas.org.uk/job-offer-letters). Not a binding contract until signed employment terms are agreed._""",
     },
 ]
