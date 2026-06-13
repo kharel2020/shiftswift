@@ -395,10 +395,8 @@ window.Admin = (() => {
   function initNavigation() {
     const sections = [...document.querySelectorAll(".admin-section")];
     const links = [...document.querySelectorAll(".nav-link[data-section]")];
-    const toggle = document.getElementById("sidebar-toggle");
-    const closeBtn = document.getElementById("sidebar-close");
-    const sidebar = document.querySelector(".sidebar");
-    const overlay = document.getElementById("sidebar-overlay");
+    const sidebarCtl =
+      typeof window.MobileShell?.initSidebar === "function" ? window.MobileShell.initSidebar() : null;
 
     function showSection(sectionId) {
       sections.forEach((section) => {
@@ -409,21 +407,9 @@ window.Admin = (() => {
       links.forEach((link) => {
         link.classList.toggle("active", link.dataset.section === sectionId);
       });
-      if (sidebar?.classList.contains("sidebar--open")) {
-        closeSidebar();
+      if (sidebarCtl?.isOpen?.()) {
+        sidebarCtl.closeSidebar();
       }
-    }
-
-    function closeSidebar() {
-      sidebar?.classList.remove("sidebar--open");
-      overlay?.classList.remove("sidebar-overlay--visible");
-      document.body.classList.remove("no-scroll");
-    }
-
-    function openSidebar() {
-      sidebar?.classList.add("sidebar--open");
-      overlay?.classList.add("sidebar-overlay--visible");
-      document.body.classList.add("no-scroll");
     }
 
     function routeFromHash() {
@@ -458,13 +444,6 @@ window.Admin = (() => {
         window.location.hash = target;
       });
     });
-
-    toggle?.addEventListener("click", () => {
-      if (sidebar?.classList.contains("sidebar--open")) closeSidebar();
-      else openSidebar();
-    });
-    closeBtn?.addEventListener("click", closeSidebar);
-    overlay?.addEventListener("click", closeSidebar);
 
     window.addEventListener("hashchange", routeFromHash);
     routeFromHash();

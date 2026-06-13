@@ -89,7 +89,7 @@
     recruitment: "Set employee type here. Sponsor compliance (step 9) unlocks only for sponsored workers.",
     onboarding: "Set status to <strong>Onboarding</strong> for new starters. Probation end must be on or after start date.",
     induction: "Phone, home address, and emergency contact are required. NI number is validated when provided.",
-    job_performance: "Salary and job details are stored on the employee HR record.",
+    job_performance: "Salary is stored here for payroll CSV export. Run probation and annual reviews using HR Templates — file signed forms in Document store.",
     compliance_reporting: "Visa type plus a GOV.UK share code <em>or</em> CoS reference required.",
     support: "Add HR-only internal notes or messages the employee will see in their portal.",
     offboarding: "Set employee status to <strong>Terminated</strong> in on-boarding (or off-boarding workflow) to unlock this step.",
@@ -98,8 +98,10 @@
   const LINK_SECTIONS = {
     development: {
       title: "Development",
-      body: "Training and career path planning. Use HR templates to assign development plans and role progression documents.",
-      links: [{ href: "#templates", label: "HR Templates & AI" }],
+      body: "Store training certificates in Document store (step 4) using the <strong>Qualification</strong> category and an expiry date — food hygiene, first aid, and other mandatory courses.",
+      links: [
+        { href: "#templates", label: "HR Templates & AI" },
+      ],
     },
     support: {
       title: "Support",
@@ -113,8 +115,11 @@
     performance_improvement: {
       title: "Performance improvement",
       branch: "Training & CPD",
-      body: "Review sessions, feedback, and continuing professional development records.",
-      links: [{ href: "#templates", label: "Training templates" }],
+      body: "Use HR templates for probation reviews, annual appraisals, and PIP meetings. Store signed copies in Document store.",
+      links: [
+        { href: "#templates", label: "Probation & appraisal templates" },
+        { href: "#disciplinary", label: "Disciplinary cases (Growth+)" },
+      ],
     },
   };
 
@@ -560,8 +565,8 @@
       <form id="employee-document-upload-form" class="edit-form edit-form--cols-2" enctype="multipart/form-data" style="margin-bottom:1rem;">
         <label class="edit-field"><span class="edit-label">Upload title</span><input name="title" required placeholder="e.g. Signed contract" /></label>
         <label class="edit-field"><span class="edit-label">File</span><input name="file" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,application/pdf,image/*" required /></label>
-        <label class="edit-field"><span class="edit-label">Category</span><select name="category"><option value="contract">Employment contract</option><option value="id">ID / passport</option><option value="rtw">Right to work</option><option value="qualification">Qualification</option><option value="policy">Signed policy / handbook</option><option value="general">General</option><option value="other">Other</option></select></label>
-        <label class="edit-field"><span class="edit-label">Expiry date</span><input name="expires_at" type="date" /></label>
+        <label class="edit-field"><span class="edit-label">Category</span><select name="category"><option value="contract">Employment contract</option><option value="id">ID / passport</option><option value="rtw">Right to work</option><option value="qualification">Qualification / training cert</option><option value="policy">Signed policy / handbook</option><option value="general">General</option><option value="other">Other</option></select></label>
+        <label class="edit-field"><span class="edit-label">Expiry date</span><input name="expires_at" type="date" /><span class="muted edit-hint">Set for food hygiene, first aid, and other renewable certificates.</span></label>
         <div class="edit-form-actions" data-span="2"><button class="btn secondary" type="submit">Upload file</button><p class="edit-form-status muted" data-upload-status></p></div>
       </form>
       <div class="table-wrap">
@@ -798,6 +803,7 @@
       intro += `<p class="employee-section-hint">${hint}</p>`;
     }
     if (section.key === "job_performance") {
+      intro += `<p class="employee-section-hint"><a href="#templates">Open HR Templates</a> for probation review and annual appraisal forms.</p>`;
     }
     return intro;
   }

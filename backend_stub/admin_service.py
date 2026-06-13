@@ -743,6 +743,10 @@ def admin_overview(*, tenant_id: int, conn: Any) -> dict[str, Any]:
 
         pending_leave_requests = count_pending_leave_requests(tenant_id=tenant_id, conn=conn)
 
+        from modules.documents.service import qualification_certificate_summary
+
+        qualification_certs = qualification_certificate_summary(tenant_id=tenant_id, conn=conn)
+
     plan_flags = effective_features_for_tenant(
         plan_id=profile["subscription_plan"],
         payroll_enabled=bool(profile["payroll_enabled"]),
@@ -793,6 +797,27 @@ def admin_overview(*, tenant_id: int, conn: Any) -> dict[str, Any]:
                 "detail": "Review holiday and absence requests from staff.",
                 "href": "#leave",
                 "section": "leave",
+            }
+        )
+    qual_alerts = qualification_certs.get("expired", 0) + qualification_certs.get("expiring_soon", 0)
+    if qualification_certs.get("expired"):
+        open_actions.append(
+            {
+                "severity": "critical",
+                "title": f"{qualification_certs['expired']} expired training certificate{'s' if qualification_certs['expired'] != 1 else ''}",
+                "detail": "Upload renewed certificates in employee Document store (Qualification category).",
+                "href": "#employees",
+                "section": "employees",
+            }
+        )
+    elif qualification_certs.get("expiring_soon"):
+        open_actions.append(
+            {
+                "severity": "warn",
+                "title": f"{qualification_certs['expiring_soon']} training certificate{'s' if qualification_certs['expiring_soon'] != 1 else ''} expiring within 30 days",
+                "detail": "Check employee Document store — Qualification category with expiry dates.",
+                "href": "#employees",
+                "section": "employees",
             }
         )
     if not punch_sites:
@@ -948,11 +973,13 @@ def admin_overview(*, tenant_id: int, conn: Any) -> dict[str, Any]:
             "contracts": {"pending_signature": contracts_pending},
             "documents": {"count": document_count},
             "leave": {"pending_requests": pending_leave_requests},
+            "qualifications": qualification_certs,
         },
         "nav_badges": {
             "compliance": day9_alerts + rtw_expired + rtw_expiring_soon,
             "leave": pending_leave_requests,
             "disciplinary": open_disciplinary,
+            "employees": qual_alerts,
         },
         **plan_flags,
     }

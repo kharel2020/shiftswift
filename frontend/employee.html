@@ -10,28 +10,30 @@
     <meta name="apple-mobile-web-app-title" content="Employee" />
     <meta name="description" content="View payslips, documents, shifts, and clock in from your phone." />
     <title>ShiftSwift HR | Employee Portal</title>
-    <link rel="manifest" href="./employee-manifest.webmanifest?v=1" />
+    <link rel="manifest" href="./employee-manifest.webmanifest?v=2" />
     <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon.png?v=brandkit-v1" />
     <link rel="icon" type="image/svg+xml" href="./assets/shiftswift-hr-icon.svg?v=brandkit-v1" />
     <link rel="apple-touch-icon" href="./assets/shiftswift-hr-icon.png?v=brandkit-v1" />
-    <link rel="stylesheet" href="./styles.css?v=brandkit-v3" />
+    <link rel="stylesheet" href="./styles.css?v=brandkit-v4" />
   </head>
   <body>
+    <div id="sidebar-overlay" class="sidebar-overlay" aria-hidden="true"></div>
     <div class="app employee-app">
-      <aside class="sidebar">
+      <aside class="sidebar" id="app-sidebar">
         <div class="sidebar-head">
           <a class="brand" href="./index.html">
             <img class="brand-logo brand-logo--compact" src="./assets/shiftswift-hr-logo-nav.svg?v=brandkit-v4" alt="ShiftSwift HR" />
           </a>
+          <button type="button" class="sidebar-close" id="sidebar-close" aria-label="Close menu">×</button>
         </div>
         <nav class="nav">
-          <a class="nav-link active" href="#overview">Overview</a>
-          <a class="nav-link" href="#time-clock">Time clock</a>
-          <a class="nav-link" href="#my-shifts">My shifts</a>
-          <a class="nav-link" href="#leave">Leave</a>
-          <a class="nav-link" href="#documents">My documents</a>
-          <a class="nav-link" href="#notes">Notes from HR</a>
-          <a class="nav-link" href="#payslips">Payslips</a>
+          <a class="nav-link active" href="#overview" data-section="overview">Overview</a>
+          <a class="nav-link" href="#time-clock" data-section="time-clock">Time clock</a>
+          <a class="nav-link" href="#my-shifts" data-section="my-shifts">My shifts</a>
+          <a class="nav-link" href="#leave" data-section="leave">Leave</a>
+          <a class="nav-link" href="#documents" data-section="documents">My documents</a>
+          <a class="nav-link" href="#notes" data-section="notes">Notes from HR</a>
+          <a class="nav-link" href="#payslips" data-section="payslips">Payslips</a>
         </nav>
         <div class="badge pill">Employee portal</div>
       </aside>
@@ -49,9 +51,21 @@
 
         <div class="topbar">
           <div class="topbar-main">
+            <button
+              type="button"
+              class="sidebar-toggle sidebar-toggle--menu"
+              id="sidebar-toggle"
+              aria-label="Open menu"
+              aria-expanded="false"
+              aria-controls="app-sidebar"
+            >
+              <span class="sidebar-toggle__bar" aria-hidden="true"></span>
+              <span class="sidebar-toggle__bar" aria-hidden="true"></span>
+              <span class="sidebar-toggle__bar" aria-hidden="true"></span>
+            </button>
             <div>
               <h1>Employee portal</h1>
-              <p class="muted">Self-service for payslips, documents, and profile updates.</p>
+              <p class="muted topbar-tagline">Self-service for payslips, documents, and profile updates.</p>
             </div>
           </div>
           <div class="stack topbar-actions">
@@ -291,13 +305,14 @@
 
     <script src="./brand-config.js?v=brand-v4"></script>
     <script
-      src="./portal-pwa-install.js?v=1"
+      src="./portal-pwa-install.js?v=2"
       data-portal="employee"
       data-app-name="ShiftSwift Employee Portal"
-      data-manifest="./employee-manifest.webmanifest?v=1"
-      data-sw="./app-sw.js?v=1"
+      data-manifest="./employee-manifest.webmanifest?v=2"
+      data-sw="./app-sw.js?v=2"
     ></script>
-    <script src="./employee.js?v=3"></script>
+    <script src="./mobile-shell.js?v=1"></script>
+    <script src="./employee.js?v=4"></script>
     <script src="./employee-time-punch.js?v=3"></script>
     <script src="./employee-rota.js?v=1"></script>
     <script src="./employee-documents.js?v=3"></script>

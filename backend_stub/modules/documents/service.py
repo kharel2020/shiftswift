@@ -622,3 +622,32 @@ def list_all_employee_documents(
             [*params, limit],
         )
         return [_row_to_employee_document(row) for row in cur.fetchall()]
+
+
+def qualification_certificate_summary(*, tenant_id: int, conn: Any) -> dict[str, int]:
+    """Count qualification documents by expiry status (training certs via document store)."""
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT
+              COUNT(*) FILTER (WHERE expires_at IS NOT NULL AND expires_at < CURRENT_DATE),
+              COUNT(*) FILTER (
+                WHERE expires_at IS NOT NULL
+                  AND expires_at >= CURRENT_DATE
+                  AND expires_at <= CURRENT_DATE + INTERVAL '30 days'
+              ),
+              COUNT(*) FILTER (
+                WHERE expires_at IS NULL OR expires_at > CURRENT_DATE + INTERVAL '30 days'
+              )
+            FROM employee_documents
+            WHERE tenant_id = %s AND category = 'qualification'
+            """,
+            (tenant_id,),
+        )
+        expired, expiring_soon, valid = cur.fetchone()
+    return {
+        "expired": int(expired or 0),
+        "expiring_soon": int(expiring_soon or 0),
+        "valid": int(valid or 0),
+        "total": int((expired or 0) + (expiring_soon or 0) + (valid or 0)),
+    }

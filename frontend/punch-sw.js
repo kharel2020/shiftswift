@@ -1,5 +1,5 @@
 /* ShiftSwift Time Clock — PWA service worker (offline shell + safe caching). */
-const CACHE_NAME = "shiftswift-punch-v2";
+const CACHE_NAME = "shiftswift-punch-v3";
 const SHELL = [
   "./punch.html",
   "./punch.css",

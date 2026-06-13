@@ -10,16 +10,16 @@
     <meta name="apple-mobile-web-app-title" content="HR Admin" />
     <meta name="description" content="Manage employees, compliance, rotas, and HR for your business." />
     <title>ShiftSwift HR | Admin Console</title>
-    <link rel="manifest" href="./admin-manifest.webmanifest?v=1" />
+    <link rel="manifest" href="./admin-manifest.webmanifest?v=2" />
     <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon.png?v=brandkit-v1" />
     <link rel="icon" type="image/svg+xml" href="./assets/shiftswift-hr-icon.svg?v=brandkit-v1" />
     <link rel="apple-touch-icon" href="./assets/shiftswift-hr-icon.png?v=brandkit-v1" />
-    <link rel="stylesheet" href="./styles.css?v=admin-v27" />
+    <link rel="stylesheet" href="./styles.css?v=admin-v28" />
   </head>
   <body>
     <div id="sidebar-overlay" class="sidebar-overlay" aria-hidden="true"></div>
     <div class="app">
-      <aside class="sidebar">
+      <aside class="sidebar" id="app-sidebar">
         <div class="sidebar-head">
           <a class="brand" href="./index.html">
             <img class="brand-logo brand-logo--compact" src="./assets/shiftswift-hr-logo-nav.svg?v=brandkit-v4" alt="ShiftSwift HR" />
@@ -60,10 +60,21 @@
 
         <div class="topbar">
           <div class="topbar-main">
-            <button type="button" class="sidebar-toggle" id="sidebar-toggle" aria-label="Open menu">Menu</button>
+            <button
+              type="button"
+              class="sidebar-toggle sidebar-toggle--menu"
+              id="sidebar-toggle"
+              aria-label="Open menu"
+              aria-expanded="false"
+              aria-controls="app-sidebar"
+            >
+              <span class="sidebar-toggle__bar" aria-hidden="true"></span>
+              <span class="sidebar-toggle__bar" aria-hidden="true"></span>
+              <span class="sidebar-toggle__bar" aria-hidden="true"></span>
+            </button>
             <div>
               <h1>ShiftSwift HR Admin</h1>
-              <p class="muted">Sponsor licence compliance, workforce records, and billing for your organisation.</p>
+              <p class="muted topbar-tagline">Sponsor licence compliance, workforce records, and billing for your organisation.</p>
             </div>
           </div>
           <div class="stack topbar-actions">
@@ -1810,13 +1821,14 @@
     <script src="./auth-guard.js?v=security-v1"></script>
     <script src="./brand-config.js?v=brand-v4"></script>
     <script
-      src="./portal-pwa-install.js?v=1"
+      src="./portal-pwa-install.js?v=2"
       data-portal="admin"
       data-app-name="ShiftSwift HR Admin"
-      data-manifest="./admin-manifest.webmanifest?v=1"
-      data-sw="./app-sw.js?v=1"
+      data-manifest="./admin-manifest.webmanifest?v=2"
+      data-sw="./app-sw.js?v=2"
     ></script>
-    <script src="./admin-shared.js?v=admin-v8"></script>
+    <script src="./mobile-shell.js?v=1"></script>
+    <script src="./admin-shared.js?v=admin-v9"></script>
     <script src="./admin-workspace.js?v=admin-v10"></script>
     <script src="./admin-settings.js?v=3"></script>
     <script src="./admin-documents.js?v=4"></script>

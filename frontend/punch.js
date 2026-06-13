@@ -456,6 +456,29 @@
     return /iPad|iPhone|iPod/.test(navigator.userAgent);
   }
 
+  function isAndroid() {
+    return /Android/i.test(navigator.userAgent);
+  }
+
+  function punchManualInstallSteps() {
+    if (isIos()) {
+      return "In Safari: tap Share → Add to Home Screen. Then open Time Clock from your home screen.";
+    }
+    if (isAndroid()) {
+      return "In Chrome: tap ⋮ → Install app or Add to Home screen. You may also see an install icon in the address bar.";
+    }
+    return "In Chrome or Edge: use the install icon in the address bar, or open the browser menu and choose Install app.";
+  }
+
+  function showPunchManualHelp() {
+    if (installCopy) installCopy.textContent = punchManualInstallSteps();
+    if (installBtn) {
+      installBtn.hidden = false;
+      installBtn.textContent = "Install steps shown above";
+    }
+    if (installBanner) installBanner.hidden = false;
+  }
+
   function installDismissed() {
     return localStorage.getItem("punchPwaInstallDismissed") === "1";
   }
@@ -468,16 +491,22 @@
       if (installCopy) {
         installCopy.textContent = "Install ShiftSwift Time Clock on your home screen for quick access.";
       }
-      if (installBtn) installBtn.hidden = false;
+      if (installBtn) {
+        installBtn.hidden = false;
+        installBtn.textContent = "Install app";
+      }
       return;
     }
 
-    if (isIos()) {
-      installBanner.hidden = false;
-      if (installCopy) {
-        installCopy.textContent = "On iPhone: tap Share, then Add to Home Screen to install the Time Clock app.";
-      }
-      if (installBtn) installBtn.hidden = true;
+    installBanner.hidden = false;
+    if (installCopy) {
+      installCopy.textContent = isIos()
+        ? "On iPhone: tap Share, then Add to Home Screen to install the Time Clock app."
+        : "Add ShiftSwift Time Clock to your home screen for quick access.";
+    }
+    if (installBtn) {
+      installBtn.hidden = false;
+      installBtn.textContent = "How to install";
     }
   }
 
@@ -497,7 +526,7 @@
 
     window.addEventListener("load", () => {
       navigator.serviceWorker
-        .register("./app-sw.js?v=1", { scope: "./" })
+        .register("./punch-sw.js?v=3", { scope: "./" })
         .then((registration) => {
           if (registration.waiting) {
             showUpdateBanner(registration.waiting);
@@ -526,17 +555,28 @@
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
     deferredInstallPrompt = event;
-    if (clockView && !clockView.hidden) {
-      maybeShowInstallBanner();
-    }
+    maybeShowInstallBanner();
+  });
+
+  window.addEventListener("appinstalled", () => {
+    deferredInstallPrompt = null;
+    if (installBanner) installBanner.hidden = true;
   });
 
   installBtn?.addEventListener("click", async () => {
-    if (!deferredInstallPrompt) return;
-    deferredInstallPrompt.prompt();
-    await deferredInstallPrompt.userChoice.catch(() => null);
-    deferredInstallPrompt = null;
-    if (installBanner) installBanner.hidden = true;
+    if (deferredInstallPrompt) {
+      try {
+        await deferredInstallPrompt.prompt();
+        await deferredInstallPrompt.userChoice.catch(() => null);
+        deferredInstallPrompt = null;
+        if (installBanner) installBanner.hidden = true;
+        return;
+      } catch {
+        deferredInstallPrompt = null;
+        maybeShowInstallBanner();
+      }
+    }
+    showPunchManualHelp();
   });
 
   installDismiss?.addEventListener("click", () => {

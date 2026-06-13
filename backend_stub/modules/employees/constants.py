@@ -79,10 +79,10 @@ SECTION_DESCRIPTIONS = {
     "onboarding": "Role, start date, employment type, and work location.",
     "induction": "Contact details, NI number, address, and emergency contact.",
     "document_store": "Contracts, ID, policies, and required HR evidence.",
-    "development": "Training plans and career progression (guidance).",
-    "job_performance": "Salary and annual pay records — included in payroll CSV export.",
+    "development": "Training certificates — upload in Document store using Qualification category and expiry date.",
+    "job_performance": "Salary for payroll CSV export. Appraisals via HR Templates (probation / annual review).",
     "support": "Notes and messages for this employee.",
-    "performance_improvement": "Reviews, feedback, and CPD (guidance).",
+    "performance_improvement": "Probation reviews, PIPs, and CPD — HR Templates; file signed copies in Document store.",
     "compliance_reporting": "Visa, CoS, and right-to-work reporting for sponsored workers.",
     "offboarding": "Leave date and exit admin when employment ends.",
 }

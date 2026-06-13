@@ -111,5 +111,14 @@
 
   document.getElementById("employee-gdpr-submit")?.addEventListener("click", submitGdprConsent);
 
+  if (window.MobileShell) {
+    const sidebar = window.MobileShell.initSidebar();
+    window.MobileShell.initHashSections({
+      defaultSection: "overview",
+      sectionEvent: "employee:section",
+      sidebar,
+    });
+  }
+
   loadProfile();
 })();

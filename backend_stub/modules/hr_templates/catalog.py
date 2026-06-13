@@ -139,6 +139,67 @@ HR copy filed: Yes / No
 _Ensure fair process and ACAS guidance if dismissal is possible._""",
     },
     {
+        "id": "annual_performance_review",
+        "category": "probation",
+        "title": "Annual performance review template",
+        "description": "Structured annual appraisal for line managers — objectives, ratings, and development plan.",
+        "sort_order": 35,
+        "version": "1.0",
+        "legal_basis": "ACAS guidance on performance management; Employment Rights Act 1996",
+        "change_summary": "Initial platform release.",
+        "content_markdown": """# Annual performance review
+
+**Employee:**  
+**Role:**  
+**Department:**  
+**Line manager:**  
+**Review period:**  
+**Review date:**  
+
+## Objectives for the period
+| Objective | Outcome (Met / Partly / Not met) | Notes |
+|-----------|----------------------------------|-------|
+|           |                                  |       |
+
+## Performance summary (1–5 scale)
+| Area | Rating | Evidence / examples |
+|------|--------|---------------------|
+| Quality of work | | |
+| Reliability & attendance | | |
+| Teamwork & communication | | |
+| Customer service | | |
+| Health & safety compliance | | |
+
+## Strengths
+
+## Development areas
+
+## Training & CPD completed this year
+
+## Goals for next period
+| Goal | Target date | Support needed |
+|------|-------------|----------------|
+|      |             |                |
+
+## Overall rating
+- [ ] Exceeds expectations
+- [ ] Meets expectations
+- [ ] Needs improvement — PIP or support plan required
+
+## Pay / promotion discussion (optional)
+Notes (no obligation to award increase):
+
+## Employee comments
+
+## Sign-off
+Manager signature / date:  
+Employee signature / date:  
+HR copy filed in Document store: Yes / No
+
+---
+_Store the signed form in the employee Document store. Use a separate disciplinary workflow if conduct issues arise._""",
+    },
+    {
         "id": "employee_handbook_outline",
         "category": "policy",
         "title": "Employee handbook outline",

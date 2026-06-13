@@ -146,6 +146,7 @@
       ["compliance", badges.compliance],
       ["leave", badges.leave],
       ["disciplinary", badges.disciplinary],
+      ["employees", badges.employees],
     ].forEach(([section, count]) => {
       const link = document.querySelector(`.nav-link[data-section="${section}"]`);
       if (!link) return;
@@ -247,6 +248,7 @@
         const contracts = m.contracts || {};
         const docs = m.documents || {};
         const leave = m.leave || {};
+        const qualifications = m.qualifications || {};
         const rotaLabel =
           rota.status === "published"
             ? "Published this week"
@@ -261,11 +263,20 @@
             value: String(employees.active ?? 0),
             sub: employees.portal_setup_pending
               ? `${employees.portal_setup_pending} portal setup pending`
-              : employees.onboarding
-                ? `${employees.onboarding} onboarding`
-                : "Active register",
+              : (qualifications.expired ?? 0) > 0
+                ? `${qualifications.expired} expired training cert(s)`
+                : (qualifications.expiring_soon ?? 0) > 0
+                  ? `${qualifications.expiring_soon} cert(s) expiring soon`
+                  : employees.onboarding
+                    ? `${employees.onboarding} onboarding`
+                    : "Active register",
             href: "#employees",
-            tone: employees.portal_setup_pending ? "warn" : undefined,
+            tone:
+              (qualifications.expired ?? 0) > 0
+                ? "danger"
+                : employees.portal_setup_pending || (qualifications.expiring_soon ?? 0) > 0
+                  ? "warn"
+                  : undefined,
           }),
           moduleCard({
             icon: "📋",
