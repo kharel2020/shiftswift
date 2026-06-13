@@ -158,29 +158,45 @@ def welcome_trial_email(
     billing_email: str,
     plan_name: str,
     trial_days: int,
+    admin_url: str | None = None,
 ) -> EmailContent:
     login_url = f"{APP_URL}/business-login.html"
+    dashboard_url = admin_url or f"{APP_URL}/admin.html"
     subject = f"Welcome to {APP_NAME} — your {trial_days}-day trial is active"
     text = (
         f"Hello,\n\n"
         f"Your {APP_NAME} workspace for {business_name} is ready.\n\n"
+        f"What you can use now:\n"
+        f"- Employee records and HR lifecycle\n"
+        f"- Document store and payslip sharing tools\n"
+        f"- Rota publishing and employee portal invites\n"
+        f"- Sponsor compliance alerts and audit exports (if enabled on your plan)\n"
+        f"- Geofenced time clock for staff\n\n"
         f"Sign in: {login_url}\n"
         f"Username: {billing_email}\n"
         f"Plan: {plan_name}\n"
         f"Trial: {trial_days} days\n\n"
-        f"Need help? Reply to {SUPPORT_EMAIL}\n\n"
+        f"Open your admin dashboard: {dashboard_url}\n\n"
+        f"We also email your Master Services Agreement for electronic signature. "
+        f"ShiftSwift HR is software only — your organisation remains responsible for HR, "
+        f"payroll, immigration, and sponsor licence compliance decisions.\n\n"
+        f"Need help? {SUPPORT_EMAIL}\n\n"
         f"{APP_NAME}\n"
     )
     html = render_email(
         preheader=f"Your {trial_days}-day trial for {business_name} is ready.",
         title=f"Your {trial_days}-day trial is active",
-        intro=f"Your {APP_NAME} workspace for {business_name} is ready. Sign in below to set up HR, compliance, and your team.",
+        intro=f"Your {APP_NAME} workspace for {business_name} is ready. Sign in to set up HR, compliance, and your team.",
+        paragraphs=[
+            "You can now use employee records, documents, rota tools, employee portal invites, compliance alerts, and the time clock (by plan).",
+            "We will send your Master Services Agreement separately for electronic signature. ShiftSwift HR provides software tools and alerts only — your organisation remains responsible for HR, payroll, immigration, and sponsor licence compliance.",
+        ],
         details=[
             ("Username", billing_email),
             ("Plan", plan_name),
             ("Trial", f"{trial_days} days"),
         ],
-        cta_url=login_url,
+        cta_url=dashboard_url,
         cta_label="Open HR dashboard",
     )
     return EmailContent(subject=subject, text=text, html=html)

@@ -834,6 +834,36 @@
   text-decoration: underline;
 }
 
+.signup-service-scope {
+  margin: 0 0 16px;
+  padding: 16px 18px;
+  border: 1px solid var(--gray-200);
+  border-radius: 14px;
+  background: var(--white);
+}
+
+.signup-service-scope h3 {
+  margin: 0 0 8px;
+  font-size: 0.92rem;
+  color: var(--green-900);
+}
+
+.signup-service-scope h3:not(:first-child) {
+  margin-top: 16px;
+}
+
+.signup-service-scope__list {
+  margin: 0;
+  padding-left: 1.15rem;
+  color: var(--gray-700);
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+.signup-service-scope__list li + li {
+  margin-top: 6px;
+}
+
 .signup-form__actions {
   display: grid;
   gap: 10px;

@@ -138,6 +138,27 @@ document.getElementById("signup-form")?.addEventListener("submit", async (event)
     return;
   }
 
+  if (!form.accept_service_scope?.checked) {
+    if (status) status.textContent = "Please confirm you have read the service scope and your responsibilities.";
+    return;
+  }
+  if (!form.accept_eula?.checked) {
+    if (status) status.textContent = "Please accept the HR Module EULA.";
+    return;
+  }
+  if (!form.accept_payment_terms?.checked) {
+    if (status) status.textContent = "Please accept the B2B payment terms.";
+    return;
+  }
+  if (!form.accept_dpa?.checked) {
+    if (status) status.textContent = "Please accept the DPA and privacy policy.";
+    return;
+  }
+  if (form.sponsor_licence_acknowledged?.checked && !form.holds_sponsor_licence?.checked) {
+    if (status) status.textContent = "Confirm your organisation holds a UK Sponsor Licence first.";
+    return;
+  }
+
   const { discount_code, referral_code } = parsePromoCode(form.promo_code?.value);
 
   const payload = {
@@ -151,6 +172,10 @@ document.getElementById("signup-form")?.addEventListener("submit", async (event)
     referral_code,
     holds_sponsor_licence: Boolean(form.holds_sponsor_licence?.checked),
     sponsor_licence_acknowledged: Boolean(form.sponsor_licence_acknowledged?.checked),
+    accept_service_scope: Boolean(form.accept_service_scope?.checked),
+    accept_eula: Boolean(form.accept_eula?.checked),
+    accept_payment_terms: Boolean(form.accept_payment_terms?.checked),
+    accept_dpa: Boolean(form.accept_dpa?.checked),
   };
 
   if (status) status.textContent = "Creating your workspace…";

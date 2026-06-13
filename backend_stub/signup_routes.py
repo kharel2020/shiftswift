@@ -16,8 +16,9 @@ from billing_plans import get_plan
 from billing_promotions import validate_promotions
 from billing_stripe_service import provision_tenant_billing
 from config import load_settings
-from contracts_service import generate_contract_pack
+from contracts_service import generate_contract_pack, send_contract_for_signature
 from deps import client_ip
+from legal_acceptance import record_signup_acceptance, validate_signup_legal_acceptances
 from payroll_plans import get_payroll_plan
 
 router = APIRouter(prefix="/signup", tags=["Signup"])
@@ -35,6 +36,10 @@ class SignupStartRequest(BaseModel):
     referral_code: str | None = Field(default=None, max_length=64)
     holds_sponsor_licence: bool = False
     sponsor_licence_acknowledged: bool = False
+    accept_service_scope: bool = False
+    accept_eula: bool = False
+    accept_payment_terms: bool = False
+    accept_dpa: bool = False
 
 
 def _validate_payroll_for_platform(platform_plan, payroll_plan_id: str | None):
@@ -111,11 +116,13 @@ def _send_signup_welcome_email(
     from core.email_templates import welcome_trial_email
     from core.notifications import send_email_content
 
+    app_url = os.getenv("APP_URL", "https://app.shiftswifthr.co.uk").rstrip("/")
     content = welcome_trial_email(
         business_name=business_name,
         billing_email=billing_email,
         plan_name=plan_name,
         trial_days=trial_days,
+        admin_url=f"{app_url}/admin.html",
     )
     conn = _db_conn()
     try:
@@ -130,6 +137,35 @@ def _send_signup_welcome_email(
         )
     except Exception:
         logger.exception("Welcome email failed for tenant %s", tenant_id)
+    finally:
+        conn.close()
+
+
+def _send_signup_contract_email(
+    *,
+    tenant_id: int,
+    contract_id: int,
+    billing_email: str,
+) -> dict[str, object] | None:
+    app_url = os.getenv("APP_URL", "https://app.shiftswifthr.co.uk").rstrip("/")
+    conn = _db_conn()
+    try:
+        result = send_contract_for_signature(
+            conn,
+            contract_id=contract_id,
+            tenant_id=tenant_id,
+            actor="signup",
+            frontend_base=app_url,
+        )
+        from core.notifications import process_queued_notifications
+
+        process_queued_notifications(conn=conn)
+        conn.commit()
+        return result
+    except Exception:
+        logger.exception("MSA signing email failed for tenant %s", tenant_id)
+        conn.rollback()
+        return None
     finally:
         conn.close()
 
@@ -152,11 +188,14 @@ def signup_start(payload: SignupStartRequest, request: Request) -> dict[str, obj
     if not promotion.valid:
         raise HTTPException(status_code=400, detail=promotion.message)
 
-    if payload.sponsor_licence_acknowledged and not payload.holds_sponsor_licence:
-        raise HTTPException(
-            status_code=400,
-            detail="Confirm your organisation holds a UK Sponsor Licence before accepting sponsor duty terms.",
-        )
+    validate_signup_legal_acceptances(
+        accept_eula=payload.accept_eula,
+        accept_payment_terms=payload.accept_payment_terms,
+        accept_dpa=payload.accept_dpa,
+        accept_service_scope=payload.accept_service_scope,
+        holds_sponsor_licence=payload.holds_sponsor_licence,
+        sponsor_licence_acknowledged=payload.sponsor_licence_acknowledged,
+    )
 
     ip = client_ip(request)
     user_agent = request.headers.get("User-Agent")
@@ -239,6 +278,18 @@ def signup_start(payload: SignupStartRequest, request: Request) -> dict[str, obj
             )
         except Exception:
             logger.exception("Contract pack generation failed during signup for tenant %s", tenant_id)
+        record_signup_acceptance(
+            conn=conn,
+            tenant_id=tenant_id,
+            accept_eula=payload.accept_eula,
+            accept_payment_terms=payload.accept_payment_terms,
+            accept_dpa=payload.accept_dpa,
+            accept_service_scope=payload.accept_service_scope,
+            holds_sponsor_licence=payload.holds_sponsor_licence,
+            sponsor_licence_acknowledged=payload.sponsor_licence_acknowledged,
+            ip_address=ip,
+            user_agent=user_agent,
+        )
         if payload.holds_sponsor_licence and payload.sponsor_licence_acknowledged:
             from sponsor_licence_ack import acknowledge_sponsor_licence
 
@@ -271,6 +322,16 @@ def signup_start(payload: SignupStartRequest, request: Request) -> dict[str, obj
         plan_name=plan.name,
         trial_days=int(billing_info.get("trial_days") or 14),
     )
+
+    msa_contract = next((item for item in contracts_created if item.get("template_id") == "msa"), None)
+    contract_email_sent = False
+    if msa_contract:
+        send_result = _send_signup_contract_email(
+            tenant_id=tenant_id,
+            contract_id=int(msa_contract["id"]),
+            billing_email=str(payload.billing_email).strip().lower(),
+        )
+        contract_email_sent = bool(send_result)
 
     log_security_event(
         settings,
@@ -318,5 +379,7 @@ def signup_start(payload: SignupStartRequest, request: Request) -> dict[str, obj
         "refresh_token": tokens.refresh_token,
         "tenant_id_token": tokens.tenant_id,
         "contracts_generated": contracts_count,
-        "message": "Workspace, billing, and legal contract drafts created automatically.",
+        "contract_signing_email_sent": contract_email_sent,
+        "message": "Workspace, billing, and legal contract drafts created automatically."
+        + (" Signing email sent for your Master Services Agreement." if contract_email_sent else ""),
     }

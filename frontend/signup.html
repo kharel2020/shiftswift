@@ -8,7 +8,7 @@
     <link rel="icon" type="image/svg+xml" href="./assets/shiftswift-hr-icon.svg?v=brandkit-v1" />
     <link rel="apple-touch-icon" href="./assets/shiftswift-hr-icon.png?v=brandkit-v1" />
     <link rel="stylesheet" href="./landing.css?v=brandkit-v8" />
-    <link rel="stylesheet" href="./pricing.css?v=9" />
+    <link rel="stylesheet" href="./pricing.css?v=10" />
   </head>
   <body class="signup-page">
     <div class="signup-page-inner">
@@ -98,11 +98,35 @@
             </fieldset>
 
             <fieldset class="signup-form__section signup-form__section--legal">
-              <legend class="signup-form__legend">Agreement</legend>
+              <legend class="signup-form__legend">Service scope &amp; agreement</legend>
+              <div class="signup-service-scope" aria-labelledby="signup-service-scope-title">
+                <h3 id="signup-service-scope-title">What ShiftSwift HR provides</h3>
+                <ul class="signup-service-scope__list">
+                  <li>Cloud HR software: employee records, onboarding lifecycle, document store, rota, and employee portal</li>
+                  <li>Tools to share payslips, publish rotas, and invite staff to the employee portal</li>
+                  <li>Sponsor compliance <strong>recording and alert tools</strong> (RTW evidence storage, absence tracking, SMS change logs) — not legal advice</li>
+                  <li>Geofenced time clock (mobile PWA) and audit export features (by plan)</li>
+                  <li>UK-hosted workspace with role-based HR admin access</li>
+                </ul>
+                <h3>Your organisation remains responsible for</h3>
+                <ul class="signup-service-scope__list signup-service-scope__list--resp">
+                  <li>All HR, payroll, tax, and employment law decisions and accurate employee data</li>
+                  <li>Right to Work checks, Home Office SMS reporting, and acting on compliance alerts</li>
+                  <li>Immigration and sponsor licence compliance — ShiftSwift HR does <strong>not</strong> submit Home Office reports for you</li>
+                  <li>Paying subscription fees per the selected plan and B2B payment terms</li>
+                  <li>Designating competent staff to review alerts and maintain records</li>
+                </ul>
+              </div>
               <p class="signup-sponsor-duty-note muted" id="signup-sponsor-duty-note" hidden>
                 ShiftSwift HR provides <strong>recording tools and alerts</strong> for sponsor licence compliance.
                 Your organisation remains responsible for Right to Work checks, Home Office SMS reporting, and acting on alerts.
               </p>
+              <label class="signup-check">
+                <input type="checkbox" name="accept_service_scope" required />
+                <span>
+                  I have read the service scope above and understand what ShiftSwift HR provides and what remains my organisation&rsquo;s responsibility.
+                </span>
+              </label>
               <label class="signup-check">
                 <input type="checkbox" name="start_trial" checked />
                 <span>Start my 14-day free trial before billing begins</span>
@@ -112,8 +136,23 @@
                 <span>
                   I accept the
                   <a href="./eula.html" target="_blank" rel="noopener">HR Module EULA</a>
-                  and
+                  on behalf of my organisation.
+                </span>
+              </label>
+              <label class="signup-check">
+                <input type="checkbox" name="accept_payment_terms" required />
+                <span>
+                  I accept the
                   <a href="./payment-terms.html" target="_blank" rel="noopener">B2B payment terms</a>.
+                </span>
+              </label>
+              <label class="signup-check">
+                <input type="checkbox" name="accept_dpa" required />
+                <span>
+                  I accept the
+                  <a href="./dpa.html" target="_blank" rel="noopener">Data Processing Addendum (DPA)</a>
+                  and
+                  <a href="./privacy-policy.html" target="_blank" rel="noopener">privacy policy</a>.
                 </span>
               </label>
               <label class="signup-check">
@@ -165,6 +204,7 @@
             <div class="site-footer__label">Legal</div>
             <a href="./eula.html" target="_blank" rel="noopener">EULA</a>
             <a href="./payment-terms.html" target="_blank" rel="noopener">Payment terms</a>
+            <a href="./dpa.html" target="_blank" rel="noopener">DPA</a>
             <a href="./privacy-policy.html" target="_blank" rel="noopener">Privacy</a>
             <a href="./cookies.html" target="_blank" rel="noopener">Cookies</a>
           </div>
@@ -180,7 +220,7 @@
     </div>
     <script src="./brand-config.js?v=brand-v5"></script>
     <script src="./pricing.js?v=6"></script>
-    <script src="./signup.js?v=6"></script>
+    <script src="./signup.js?v=7"></script>
       <script src="./cookie-consent.js?v=1"></script>
   </body>
 </html>
