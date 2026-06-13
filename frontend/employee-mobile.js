@@ -58,6 +58,10 @@
     });
 
     document.body.classList.toggle("employee-mobile-more-open", tab === "more");
+
+    if (isMobile()) {
+      window.MobileShell?.resetPortalScroll?.();
+    }
   }
 
   function setTab(tab, options = {}) {
@@ -92,6 +96,7 @@
     if (toggle) toggle.hidden = true;
     const morePanel = document.getElementById("mobile-more-panel");
     if (morePanel) morePanel.hidden = true;
+    window.MobileShell?.resetPortalScroll?.();
   }
 
   function exitDetailView() {

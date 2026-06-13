@@ -53,10 +53,26 @@
     return sidebarCtl;
   }
 
+  function isMobileViewport() {
+    return window.matchMedia("(max-width: 860px)").matches;
+  }
+
+  function resetPortalScroll() {
+    const content = document.querySelector("main.content");
+    if (content) content.scrollTop = 0;
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    window.scrollTo(0, 0);
+  }
+
   function scrollToAnchor(anchorId) {
     if (!anchorId) return;
     const el = document.getElementById(anchorId);
     if (!el) return;
+    if (isMobileViewport() && el.classList.contains("admin-section")) {
+      resetPortalScroll();
+      return;
+    }
     requestAnimationFrame(() => {
       el.scrollIntoView({ behavior: "smooth", block: "start" });
     });
@@ -144,6 +160,10 @@
 
       if (sidebar?.isOpen?.()) sidebar.closeSidebar();
 
+      if (isMobileViewport()) {
+        resetPortalScroll();
+      }
+
       if (sectionEvent) {
         window.dispatchEvent(new CustomEvent(sectionEvent, { detail: { section: target } }));
       }
@@ -183,5 +203,7 @@
     initHashSections,
     parseHashSection,
     scrollToAnchor,
+    resetPortalScroll,
+    isMobileViewport,
   };
 })();

@@ -2099,6 +2099,25 @@ textarea:focus {
       max(16px, env(safe-area-inset-left));
     min-width: 0;
   }
+  body:has(#mobile-tab-bar) {
+    height: 100%;
+    overflow: hidden;
+  }
+  body:has(#mobile-tab-bar) .app {
+    min-height: 100dvh;
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+  }
+  body:has(#mobile-tab-bar) main.content {
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  body:has(#mobile-tab-bar) .admin-section[hidden] {
+    display: none !important;
+  }
   .topbar {
     position: sticky;
     top: 0;

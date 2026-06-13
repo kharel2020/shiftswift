@@ -401,8 +401,12 @@ window.Admin = (() => {
       typeof window.MobileShell?.initSidebar === "function" ? window.MobileShell.initSidebar() : null;
 
     function scrollToHashAnchor() {
-      const anchor = window.location.hash.replace("#", "");
-      if (!anchor || anchor === "overview") return;
+      const anchor = window.location.hash.replace("#", "").split("/")[0];
+      const sectionId = resolveSectionFromHash(window.location.hash);
+      if (!anchor || anchor === "overview" || anchor === sectionId) {
+        window.MobileShell?.resetPortalScroll?.();
+        return;
+      }
       const el = document.getElementById(anchor);
       if (el && !el.closest(".admin-section[hidden]")) {
         window.MobileShell?.scrollToAnchor?.(anchor);
@@ -420,6 +424,9 @@ window.Admin = (() => {
       });
       if (sidebarCtl?.isOpen?.()) {
         sidebarCtl.closeSidebar();
+      }
+      if (window.MobileShell?.isMobileViewport?.()) {
+        window.MobileShell.resetPortalScroll();
       }
       scrollToHashAnchor();
     }

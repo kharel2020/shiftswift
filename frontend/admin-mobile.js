@@ -79,6 +79,10 @@
     }
 
     document.body.classList.toggle("admin-mobile-more-open", tab === "more");
+
+    if (isMobile()) {
+      window.MobileShell?.resetPortalScroll?.();
+    }
   }
 
   function setTab(tab, options = {}) {
@@ -118,6 +122,7 @@
     const toggle = document.getElementById("sidebar-toggle");
     if (back) back.hidden = false;
     if (toggle) toggle.hidden = true;
+    window.MobileShell?.resetPortalScroll?.();
   }
 
   function exitDetailView() {
