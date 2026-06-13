@@ -60,6 +60,9 @@ class MfaDisableRequest(BaseModel):
     password: str = Field(min_length=1, max_length=256)
     code: str = Field(min_length=6, max_length=8)
 
+class EmployeeGdprConsentRequest(BaseModel):
+    accept_employee_gdpr: bool = False
+
 
 class ForgotPasswordRequest(BaseModel):
     email: str = Field(min_length=3, max_length=254)
@@ -69,6 +72,7 @@ class ForgotPasswordRequest(BaseModel):
 class ResetPasswordRequest(BaseModel):
     token: str = Field(min_length=20, max_length=256)
     new_password: str = Field(min_length=8, max_length=256)
+    accept_employee_gdpr: bool = False
 
 
 def _db_conn():
@@ -378,6 +382,7 @@ def reset_password(request: Request, payload: ResetPasswordRequest) -> dict[str,
             conn=conn,
             raw_token=payload.token,
             new_password=payload.new_password,
+            accept_employee_gdpr=payload.accept_employee_gdpr,
             ip_address=client_ip(request),
             user_agent=request.headers.get("User-Agent"),
         )
@@ -387,6 +392,60 @@ def reset_password(request: Request, payload: ResetPasswordRequest) -> dict[str,
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     finally:
         conn.close()
+
+
+@router.get("/reset-password/context")
+def reset_password_context(token: str) -> dict[str, object]:
+    if not settings.use_db or not settings.database_url:
+        raise HTTPException(status_code=503, detail="Password reset requires database")
+    conn = _db_conn()
+    try:
+        from employee_portal_consent import get_password_reset_context
+
+        return get_password_reset_context(settings=settings, conn=conn, raw_token=token)
+    except LookupError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    finally:
+        conn.close()
+
+
+@router.post("/employee/gdpr-consent")
+def accept_employee_gdpr_consent(
+    request: Request,
+    payload: EmployeeGdprConsentRequest,
+    current_user: Annotated[AuthUser, Depends(get_current_user)],
+) -> dict[str, str]:
+    if current_user.role != "employee":
+        raise HTTPException(status_code=403, detail="Employee portal access only")
+    if not settings.use_db or not settings.database_url:
+        raise HTTPException(status_code=503, detail="Consent recording requires database")
+    from employee_portal_consent import (
+        has_employee_gdpr_consent,
+        record_employee_gdpr_consent,
+        tenant_display_name,
+        validate_employee_gdpr_acceptance,
+    )
+
+    tenant_id = int(current_user.tenant_id)
+    conn = _db_conn()
+    try:
+        if has_employee_gdpr_consent(tenant_id=tenant_id, username=current_user.username, conn=conn):
+            return {"message": "Privacy notice already accepted."}
+        validate_employee_gdpr_acceptance(accept_employee_gdpr=payload.accept_employee_gdpr)
+        record_employee_gdpr_consent(
+            tenant_id=tenant_id,
+            username=current_user.username,
+            employer_name=tenant_display_name(tenant_id=tenant_id, conn=conn),
+            ip_address=client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+            conn=conn,
+        )
+        conn.commit()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    finally:
+        conn.close()
+    return {"message": "Privacy notice accepted."}
 
 
 @router.post("/refresh")
@@ -400,10 +459,28 @@ def refresh_token(payload: RefreshRequest) -> dict[str, object]:
 
 
 @router.get("/verify")
-def verify_auth(current_user: Annotated[AuthUser, Depends(get_current_user)]) -> dict[str, str]:
-    return {
+def verify_auth(current_user: Annotated[AuthUser, Depends(get_current_user)]) -> dict[str, object]:
+    result: dict[str, object] = {
         "status": "ok",
         "username": current_user.username,
         "role": current_user.role,
         "tenant_id": current_user.tenant_id,
     }
+    if current_user.role != "employee" or not settings.use_db or not settings.database_url:
+        return result
+    from employee_portal_consent import has_employee_gdpr_consent, tenant_display_name
+
+    tenant_id = int(current_user.tenant_id)
+    conn = _db_conn()
+    try:
+        requires = not has_employee_gdpr_consent(
+            tenant_id=tenant_id,
+            username=current_user.username,
+            conn=conn,
+        )
+        result["gdpr_consent_required"] = requires
+        if requires:
+            result["employer_name"] = tenant_display_name(tenant_id=tenant_id, conn=conn)
+    finally:
+        conn.close()
+    return result

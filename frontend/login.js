@@ -231,6 +231,11 @@ function initBusinessLoginTabs() {
   });
 
   switchLoginMode("business");
+  const portalHint = new URLSearchParams(window.location.search).get("portal");
+  if (portalHint === "employee") {
+    const employeeTab = document.querySelector('[data-login-tab="employee"]');
+    employeeTab?.click();
+  }
   bindPortalLogin();
 }
 

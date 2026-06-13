@@ -389,15 +389,24 @@ def employee_portal_invite_email(
 ) -> EmailContent:
     subject = f"{APP_NAME} — Set up your employee portal"
     intro = f"{tenant_name} has invited you to ShiftSwift HR's employee portal."
+    privacy_url = f"{APP_URL}/privacy-policy.html"
+    gdpr_note = (
+        f"{tenant_name} is your employer and is responsible for managing your personal data, "
+        f"workplace privacy notices, and UK GDPR obligations for your employment records. "
+        f"ShiftSwift HR provides the software platform only. When you choose your password, "
+        f"you will be asked to confirm you understand this and agree to the privacy notice."
+    )
     text = (
         f"Hello {employee_name},\n\n"
         f"{intro}\n\n"
+        f"{gdpr_note}\n\n"
         f"Choose a password using this secure link (expires in {reset_hours} hours):\n"
         f"{setup_url}\n\n"
         f"After that, sign in as an employee at:\n{login_url}\n"
         f"On the sign-in page, choose the Employee tab (not Business HR).\n"
         f"Use the same work email address this invite was sent to.\n"
         f"If you do not see this email, check your junk or spam folder.\n\n"
+        f"Privacy policy: {privacy_url}\n\n"
         f"— {APP_NAME}\n"
     )
     html = render_email(
@@ -405,10 +414,12 @@ def employee_portal_invite_email(
         title="Welcome to your employee portal",
         intro=f"Hello {employee_name}, {intro}",
         paragraphs=[
+            gdpr_note,
             f"This link expires in {reset_hours} hours. Choose a password, then sign in using your work email.",
             "On the sign-in page, open the Employee tab (not Business HR).",
             "If you do not see this email, check your junk or spam folder.",
             f"Portal sign-in: {login_url}",
+            f'Privacy policy: <a href="{privacy_url}">{privacy_url}</a>',
         ],
         cta_url=setup_url,
         cta_label="Choose your password",

@@ -192,6 +192,35 @@
         </section>
       </main>
     </div>
+
+    <div id="employee-gdpr-modal" class="employee-gdpr-modal" hidden role="dialog" aria-modal="true" aria-labelledby="employee-gdpr-title">
+      <div class="employee-gdpr-modal__backdrop"></div>
+      <div class="employee-gdpr-modal__panel">
+        <h2 id="employee-gdpr-title">Privacy notice</h2>
+        <p>
+          <strong id="employee-gdpr-employer">Your employer</strong> is responsible for managing your personal data,
+          workplace privacy notices, and UK GDPR obligations for your employment records. ShiftSwift HR provides the
+          software platform only.
+        </p>
+        <p class="muted">
+          Please confirm you understand this before using the employee portal. You can also read our
+          <a href="./privacy-policy.html" target="_blank" rel="noopener">privacy policy</a>.
+        </p>
+        <label class="employee-gdpr-modal__check">
+          <input type="checkbox" id="employee-gdpr-checkbox" />
+          <span>
+            I understand my employer manages my employment data and I agree to the
+            <a href="./privacy-policy.html" target="_blank" rel="noopener">privacy policy</a>.
+          </span>
+        </label>
+        <p id="employee-gdpr-status" class="form-error-message" hidden></p>
+        <div class="employee-gdpr-modal__actions">
+          <button type="button" class="btn ghost" data-sign-out>Sign out</button>
+          <button type="button" class="btn primary" id="employee-gdpr-submit">Continue</button>
+        </div>
+      </div>
+    </div>
+
     <script src="./brand-config.js?v=brand-v4"></script>
     <script
       src="./portal-pwa-install.js?v=1"
@@ -200,7 +229,7 @@
       data-manifest="./employee-manifest.webmanifest?v=1"
       data-sw="./app-sw.js?v=1"
     ></script>
-    <script src="./employee.js?v=2"></script>
+    <script src="./employee.js?v=3"></script>
     <script src="./employee-time-punch.js?v=3"></script>
     <script src="./employee-rota.js?v=1"></script>
     <script src="./employee-documents.js?v=2"></script>

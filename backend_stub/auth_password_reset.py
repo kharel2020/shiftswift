@@ -166,11 +166,19 @@ def complete_password_reset(
     conn: Any,
     raw_token: str,
     new_password: str,
+    accept_employee_gdpr: bool = False,
     ip_address: str | None = None,
     user_agent: str | None = None,
 ) -> dict[str, str]:
     if len(new_password) < 8:
         raise ValueError("Password must be at least 8 characters")
+    from employee_portal_consent import (
+        has_employee_gdpr_consent,
+        record_employee_gdpr_consent,
+        tenant_display_name,
+        validate_employee_gdpr_acceptance,
+    )
+
     token_hash = _hash_token(raw_token.strip())
     now = datetime.now(timezone.utc)
     with conn.cursor() as cur:
@@ -192,6 +200,14 @@ def complete_password_reset(
         user = fetch_user_from_db(settings, username)
         if not user or not user.get("is_active"):
             raise LookupError("This reset link is invalid or has expired. Request a new one.")
+        tenant_id = int(user["tenant_id"])
+        needs_gdpr_consent = user.get("role") == "employee" and not has_employee_gdpr_consent(
+            tenant_id=tenant_id,
+            username=username,
+            conn=conn,
+        )
+        if needs_gdpr_consent:
+            validate_employee_gdpr_acceptance(accept_employee_gdpr=accept_employee_gdpr)
         cur.execute(
             """
             UPDATE app_users
@@ -204,6 +220,15 @@ def complete_password_reset(
             "UPDATE password_reset_tokens SET used_at = NOW() WHERE id = %s",
             (token_id,),
         )
+        if needs_gdpr_consent:
+            record_employee_gdpr_consent(
+                tenant_id=tenant_id,
+                username=username,
+                employer_name=tenant_display_name(tenant_id=tenant_id, conn=conn),
+                ip_address=ip_address,
+                user_agent=user_agent,
+                conn=conn,
+            )
     conn.commit()
     log_security_event(
         settings,

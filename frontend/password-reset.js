@@ -30,6 +30,17 @@
     return message || "Request failed";
   }
 
+  async function getJson(path) {
+    const response = await fetch(`${apiBase()}${path}`);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const detail = data.detail;
+      const message = typeof detail === "string" ? detail : Array.isArray(detail) ? detail[0]?.msg : null;
+      throw new Error(message || "Request failed");
+    }
+    return data;
+  }
+
   async function postJson(path, body) {
     const response = await fetch(`${apiBase()}${path}`, {
       method: "POST",
@@ -93,10 +104,35 @@
 
     const token = new URLSearchParams(window.location.search).get("token");
     const status = document.getElementById("reset-status");
+    const gdprNotice = document.getElementById("employee-gdpr-notice");
+    const gdprCheckbox = form.querySelector('input[name="accept_employee_gdpr"]');
+    let requiresGdprConsent = false;
+
     if (!token) {
       setStatus(status, "Missing reset token. Request a new link from the forgot password page.", false);
       return;
     }
+
+    getJson(`/auth/reset-password/context?token=${encodeURIComponent(token)}`)
+      .then((context) => {
+        if (context.role === "employee" && context.requires_gdpr_consent) {
+          requiresGdprConsent = true;
+          if (gdprNotice) gdprNotice.hidden = false;
+          const employerEl = document.getElementById("employee-gdpr-employer");
+          if (employerEl && context.employer_name) {
+            employerEl.textContent = context.employer_name;
+          }
+          if (gdprCheckbox) gdprCheckbox.required = true;
+          const lead = document.querySelector(".portal-login-card-lead");
+          if (lead) {
+            lead.textContent = "Choose a password and confirm the privacy notice to finish setting up your account.";
+          }
+        }
+      })
+      .catch((error) => {
+        setStatus(status, friendlyError(error.message), false);
+        form.querySelector('button[type="submit"]')?.setAttribute("disabled", "disabled");
+      });
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -109,15 +145,24 @@
         setStatus(status, "Passwords do not match.", false);
         return;
       }
+      if (requiresGdprConsent && !data.accept_employee_gdpr) {
+        setStatus(
+          status,
+          "Please confirm you understand your employer manages your data and agree to the privacy policy.",
+          false,
+        );
+        return;
+      }
       setStatus(status, "Updating password…", false);
       try {
         const result = await postJson("/auth/reset-password", {
           token,
           new_password: data.new_password,
+          accept_employee_gdpr: Boolean(data.accept_employee_gdpr),
         });
         setStatus(status, result.message || "Password updated.", true);
         setTimeout(() => {
-          window.location.href = "./business-login.html";
+          window.location.href = "./business-login.html?portal=employee";
         }, 1500);
       } catch (error) {
         setStatus(status, friendlyError(error.message), false);
