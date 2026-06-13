@@ -252,15 +252,33 @@
     });
   }
 
+  function formatInviteError(error, data) {
+    const message = error?.message || "";
+    if (message === "Failed to fetch" || message === "Load failed") {
+      return "Could not reach the API. Check your connection, then try again. If this keeps happening, sign out and back in.";
+    }
+    if (typeof data?.detail === "string" && data.detail) return data.detail;
+    if (Array.isArray(data?.detail)) {
+      const first = data.detail.find((item) => item?.msg)?.msg;
+      if (first) return first;
+    }
+    return message || "Invite failed.";
+  }
+
   async function sendPortalInvite(employeeId, statusId = "employees-bulk-invite-status") {
     const statusEl = document.getElementById(statusId);
     if (statusEl) statusEl.textContent = "Sending invite…";
+    let data = {};
     try {
       const res = await apiFetch(`/admin/employees/${employeeId}/invite-portal`, { method: "POST", body: "{}" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "Invite failed");
+      data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(formatInviteError(null, data));
       if (statusEl) statusEl.textContent = data.message || "Invite sent.";
-      await refreshEmployeesTable();
+      try {
+        await refreshEmployeesTable();
+      } catch {
+        /* invite succeeded even if the register refresh fails */
+      }
       if (activeEmployeeId === employeeId && workspaceCache) {
         workspaceCache.employee = {
           ...workspaceCache.employee,
@@ -270,24 +288,29 @@
         renderPortalInviteActions(workspaceCache.employee);
       }
     } catch (error) {
-      if (statusEl) statusEl.textContent = error.message || "Invite failed.";
+      if (statusEl) statusEl.textContent = formatInviteError(error, data);
     }
   }
 
   async function sendBulkPortalInvites() {
     const statusEl = document.getElementById("employees-bulk-invite-status");
     if (statusEl) statusEl.textContent = "Sending invites…";
+    let data = {};
     try {
       const res = await apiFetch("/admin/employees/invite-portal", {
         method: "POST",
         body: JSON.stringify({ resend_existing: false }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "Bulk invite failed");
+      data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(formatInviteError(null, data));
       if (statusEl) statusEl.textContent = data.message || "Invites sent.";
-      await refreshEmployeesTable();
+      try {
+        await refreshEmployeesTable();
+      } catch {
+        /* keep success message */
+      }
     } catch (error) {
-      if (statusEl) statusEl.textContent = error.message || "Bulk invite failed.";
+      if (statusEl) statusEl.textContent = formatInviteError(error, data);
     }
   }
 
