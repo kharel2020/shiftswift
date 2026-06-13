@@ -263,6 +263,8 @@
     { id: "absence_day5", label: "Absence day-5 warning", default: "email" },
     { id: "absence_day9", label: "Absence day-9 alert", default: "email_sms" },
     { id: "rota_published", label: "Rota published", default: "email" },
+    { id: "missed_punch_hr", label: "Missed clock-in (HR alert)", default: "email" },
+    { id: "missed_punch_employee", label: "Missed clock-in (employee reminder)", default: "email" },
   ];
 
   function loadNotificationsPanel() {

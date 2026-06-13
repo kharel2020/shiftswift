@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 import os
 import sys
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,6 +22,7 @@ from sponsor_licence_compliance import (  # noqa: E402
     refresh_sms_change_alert_statuses,
 )
 from modules.hr_templates.sync import sync_all_templates  # noqa: E402
+from modules.rota.missed_punch import evaluate_missed_punch_alerts  # noqa: E402
 from core.notifications import queue_notification  # noqa: E402
 from trial_service import process_trial_reminders  # noqa: E402
 from license_service import process_payment_failure_cycle  # noqa: E402
@@ -73,8 +74,10 @@ def main() -> int:
         "payment_failure": {"checked": 0, "reminders_sent": 0, "holds_applied": 0},
         "portal_setup_reminders": {"tenants_checked": 0, "reminders_sent": 0, "pending_employees": 0},
         "payroll_hours_reports": {"tenants_checked": 0, "reports_sent": 0, "skipped": 0},
+        "missed_punch_alerts": 0,
     }
     try:
+        job_now = datetime.now(timezone.utc)
         for tenant_id in _tenant_ids(conn):
             alerts = evaluate_day9_absence_alerts(tenant_id=tenant_id, as_of=as_of, conn=conn)
             for alert in alerts:
@@ -93,6 +96,8 @@ def main() -> int:
             summary["visa_expiry_alerts"] += len(visa_alerts)
             rtw_alerts = evaluate_rtw_expiry_alerts(tenant_id=tenant_id, as_of=as_of, conn=conn)
             summary["rtw_expiry_alerts"] += len(rtw_alerts)
+            missed = evaluate_missed_punch_alerts(tenant_id=tenant_id, conn=conn, now=job_now)
+            summary["missed_punch_alerts"] += len(missed)
         summary["events_processed"] = process_pending_events(conn=conn)
         summary["hr_templates"] = sync_all_templates(conn=conn)
         summary["trial_reminders"] = process_trial_reminders(conn=conn)

@@ -56,6 +56,8 @@ NOTIFICATION_PREF_DEFAULTS: dict[str, str] = {
     "absence_day5": "email",
     "absence_day9": "email_sms",
     "rota_published": "email",
+    "missed_punch_hr": "email",
+    "missed_punch_employee": "email",
 }
 
 NOTIFICATION_PREF_EVENTS = (
@@ -63,6 +65,8 @@ NOTIFICATION_PREF_EVENTS = (
     {"id": "absence_day5", "label": "Absence day-5 warning"},
     {"id": "absence_day9", "label": "Absence day-9 alert"},
     {"id": "rota_published", "label": "Rota published"},
+    {"id": "missed_punch_hr", "label": "Missed clock-in (HR alert)"},
+    {"id": "missed_punch_employee", "label": "Missed clock-in (employee reminder)"},
 )
 
 VALID_NOTIFICATION_DELIVERY = frozenset({"email", "email_sms", "off"})
@@ -743,6 +747,12 @@ def admin_overview(*, tenant_id: int, conn: Any) -> dict[str, Any]:
 
         pending_leave_requests = count_pending_leave_requests(tenant_id=tenant_id, conn=conn)
 
+        from modules.rota.missed_punch import count_missed_punch_alerts_on_date
+
+        missed_punch_today = count_missed_punch_alerts_on_date(
+            tenant_id=tenant_id, on_date=date.today(), conn=conn
+        )
+
         from modules.documents.service import qualification_certificate_summary
 
         qualification_certs = qualification_certificate_summary(tenant_id=tenant_id, conn=conn)
@@ -836,6 +846,16 @@ def admin_overview(*, tenant_id: int, conn: Any) -> dict[str, Any]:
                 "severity": "warn" if rota_shifts else "info",
                 "title": "This week's rota not published" if rota_shifts else "No rota shifts this week",
                 "detail": "Staff see shifts only after you publish the rota.",
+                "href": "#rota",
+                "section": "rota",
+            }
+        )
+    if missed_punch_today:
+        open_actions.append(
+            {
+                "severity": "warn",
+                "title": f"{missed_punch_today} missed clock-in{'s' if missed_punch_today != 1 else ''} today",
+                "detail": "Scheduled staff have not punched in within 15 minutes of shift start.",
                 "href": "#rota",
                 "section": "rota",
             }

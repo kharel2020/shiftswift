@@ -565,6 +565,79 @@ def rota_published_email(
     return EmailContent(subject=subject, text=text, html=html)
 
 
+def missed_punch_hr_email(
+    *,
+    tenant_name: str,
+    employee_name: str,
+    shift_label: str,
+    role_label: str,
+    grace_minutes: int,
+) -> EmailContent:
+    rota_url = f"{APP_URL}/admin.html#rota"
+    role_bit = f" ({role_label})" if role_label else ""
+    subject = f"{APP_NAME} — missed clock-in: {employee_name}"
+    intro = (
+        f"{employee_name} has not clocked in {grace_minutes} minutes after their scheduled shift start{role_bit}."
+    )
+    text = (
+        f"Hello,\n\n"
+        f"{intro}\n\n"
+        f"Shift: {shift_label}\n"
+        f"Organisation: {tenant_name}\n\n"
+        f"Review attendance in the rota:\n{rota_url}\n\n"
+        f"— {APP_NAME}\n"
+    )
+    html = render_email(
+        preheader=f"No clock-in for {employee_name} ({shift_label}).",
+        title="Missed clock-in alert",
+        intro=intro,
+        details=[
+            ("Employee", employee_name),
+            ("Shift", shift_label),
+            ("Organisation", tenant_name),
+        ],
+        cta_url=rota_url,
+        cta_label="Open rota attendance",
+    )
+    return EmailContent(subject=subject, text=text, html=html)
+
+
+def missed_punch_employee_email(
+    *,
+    employee_name: str,
+    tenant_name: str,
+    shift_label: str,
+    grace_minutes: int,
+) -> EmailContent:
+    clock_url = f"{APP_URL}/punch.html"
+    subject = f"{APP_NAME} — please clock in for your shift"
+    intro = (
+        f"Your shift at {tenant_name} started at least {grace_minutes} minutes ago and we have not "
+        f"received a clock-in yet."
+    )
+    text = (
+        f"Hello {employee_name},\n\n"
+        f"{intro}\n\n"
+        f"Shift: {shift_label}\n\n"
+        f"Open the Time Clock app and clock in when you are at your work site:\n{clock_url}\n\n"
+        f"Location access is required at punch time.\n\n"
+        f"— {APP_NAME}\n"
+    )
+    html = render_email(
+        preheader=f"Please clock in for {shift_label}.",
+        title="Clock in reminder",
+        intro=f"Hello {employee_name}, {intro}",
+        details=[("Shift", shift_label)],
+        paragraphs=[
+            "Open the Time Clock app on your phone and tap Clock in when you arrive at your assigned site.",
+            "Allow location when prompted — you must be within your employer's geofence to punch.",
+        ],
+        cta_url=clock_url,
+        cta_label="Open Time Clock",
+    )
+    return EmailContent(subject=subject, text=text, html=html)
+
+
 def payment_failure_email(
     *,
     tenant_name: str,
