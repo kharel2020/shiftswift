@@ -28,6 +28,7 @@ SPONSOR_ABSENCE_REPORT_LIMIT_DAYS = int(os.getenv("SPONSOR_ABSENCE_REPORT_LIMIT_
 SMS_REPORTING_WINDOW_DAYS = int(os.getenv("SMS_REPORTING_WINDOW_DAYS", "10"))
 SMS_DUE_SOON_DAYS = int(os.getenv("SMS_DUE_SOON_DAYS", "3"))
 RTW_STORAGE_DIR = Path(os.getenv("RTW_STORAGE_DIR", "uploads/rtw_immutable"))
+ADVERT_EVIDENCE_DIR = Path(os.getenv("ADVERT_EVIDENCE_DIR", "uploads/recruitment_adverts"))
 
 SMS_REPORTABLE_FIELDS = frozenset({"job_title", "salary", "work_location"})
 
@@ -862,7 +863,8 @@ def _build_absence_record(
         cur.execute(
             """
             SELECT id, consecutive_working_days, alert_status, triggered_at,
-                   home_office_report_required_by, acknowledged_by, acknowledged_at
+                   home_office_report_required_by, acknowledged_by, acknowledged_at,
+                   home_office_report_reference, reported_at
             FROM sponsor_absence_alerts
             WHERE tenant_id = %s AND employee_id = %s
             ORDER BY triggered_at DESC
@@ -921,6 +923,8 @@ def _build_absence_record(
         "logged_at": logged_at.isoformat() if logged_at else None,
         "alert_id": alert_row[0] if alert_row else None,
         "alert_status": alert_row[2] if alert_row else None,
+        "home_office_report_reference": alert_row[7] if alert_row else None,
+        "reported_at": alert_row[8].isoformat() if alert_row and alert_row[8] else None,
         "is_critical": unexcused_streak >= SPONSOR_ABSENCE_ALERT_DAY,
     }
     if include_timeline:
@@ -1096,20 +1100,28 @@ def get_absence_monitoring_detail(
 
 
 def mark_absence_sms_reported(
-    *, tenant_id: int, employee_id: int, acknowledged_by: str, conn: Any
+    *,
+    tenant_id: int,
+    employee_id: int,
+    acknowledged_by: str,
+    conn: Any,
+    home_office_report_reference: str | None = None,
 ) -> dict[str, Any]:
+    reference = (home_office_report_reference or "").strip() or None
     with conn.cursor() as cur:
         cur.execute(
             """
             UPDATE sponsor_absence_alerts
             SET alert_status = 'reported',
                 acknowledged_by = %s,
-                acknowledged_at = NOW()
+                acknowledged_at = NOW(),
+                home_office_report_reference = %s,
+                reported_at = NOW()
             WHERE tenant_id = %s AND employee_id = %s
               AND alert_status IN ('pending', 'sent')
             RETURNING id
             """,
-            (acknowledged_by.strip(), tenant_id, employee_id),
+            (acknowledged_by.strip(), reference, tenant_id, employee_id),
         )
         row = cur.fetchone()
         if not row:
@@ -1122,11 +1134,19 @@ def mark_absence_sms_reported(
             (
                 tenant_id,
                 row[0],
-                {"employee_id": employee_id, "acknowledged_by": acknowledged_by.strip()},
+                {
+                    "employee_id": employee_id,
+                    "acknowledged_by": acknowledged_by.strip(),
+                    "home_office_report_reference": reference,
+                },
             ),
         )
     conn.commit()
-    return {"message": "Marked as reported via SMS.", "alert_id": row[0]}
+    return {
+        "message": "Marked as reported to the Home Office.",
+        "alert_id": row[0],
+        "home_office_report_reference": reference,
+    }
 
 
 def mark_absence_returned(
@@ -1540,6 +1560,7 @@ def _serialize_advert_row(row: tuple) -> dict[str, Any]:
         record_status,
         additional_links,
         notes,
+        evidence_storage_path,
     ) = row
     return {
         "id": record_id,
@@ -1554,6 +1575,7 @@ def _serialize_advert_row(row: tuple) -> dict[str, Any]:
         "record_status": record_status,
         "additional_links": additional_links or [],
         "notes": notes,
+        "has_evidence": bool(evidence_storage_path),
     }
 
 
@@ -1567,7 +1589,7 @@ def list_advertisement_records(
     query = """
         SELECT id, job_reference, job_title, platform, advert_url, advert_reference,
                posted_date, closing_date, is_sponsored_vacancy, record_status,
-               additional_links, notes
+               additional_links, notes, evidence_storage_path
         FROM recruitment_advertisement_records
         WHERE tenant_id = %s
     """
@@ -1707,7 +1729,7 @@ def get_advertisement_record(*, tenant_id: int, record_id: int, conn: Any) -> di
             """
             SELECT id, job_reference, job_title, platform, advert_url, advert_reference,
                    posted_date, closing_date, is_sponsored_vacancy, record_status,
-                   additional_links, notes
+                   additional_links, notes, evidence_storage_path
             FROM recruitment_advertisement_records
             WHERE tenant_id = %s AND id = %s
             """,
@@ -1729,6 +1751,60 @@ def get_advertisement_record(*, tenant_id: int, record_id: int, conn: Any) -> di
     item = _serialize_advert_row(row)
     item["links"] = links
     return item
+
+
+def store_advertisement_evidence(
+    *,
+    tenant_id: int,
+    record_id: int,
+    file_bytes: bytes,
+    original_filename: str,
+    conn: Any,
+) -> dict[str, Any]:
+    if not file_bytes:
+        raise ValueError("Evidence file is empty")
+    if not file_bytes.startswith(b"%PDF"):
+        raise ValueError("Advert evidence must be a PDF document")
+
+    digest = _sha256_bytes(file_bytes)
+    tenant_dir = ADVERT_EVIDENCE_DIR / str(tenant_id) / str(record_id)
+    tenant_dir.mkdir(parents=True, exist_ok=True)
+    filename = f"evidence_{digest[:16]}.pdf"
+    path = tenant_dir / filename
+    if not path.exists():
+        path.write_bytes(file_bytes)
+
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT 1 FROM recruitment_advertisement_records
+            WHERE tenant_id = %s AND id = %s
+            """,
+            (tenant_id, record_id),
+        )
+        if not cur.fetchone():
+            raise LookupError("advertisement record not found")
+        cur.execute(
+            """
+            UPDATE recruitment_advertisement_records
+            SET evidence_storage_path = %s, updated_at = NOW()
+            WHERE tenant_id = %s AND id = %s
+            """,
+            (str(path), tenant_id, record_id),
+        )
+        cur.execute(
+            """
+            INSERT INTO compliance_audit_events (tenant_id, event_type, entity_type, entity_id, payload)
+            VALUES (%s, 'advertisement_evidence_uploaded', 'recruitment_advertisement_records', %s, %s::jsonb)
+            """,
+            (
+                tenant_id,
+                record_id,
+                {"original_filename": original_filename, "content_sha256": digest},
+            ),
+        )
+    conn.commit()
+    return {"message": "Advert evidence uploaded.", "has_evidence": True}
 
 
 def add_advertisement_link(

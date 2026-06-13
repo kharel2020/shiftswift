@@ -731,6 +731,10 @@ def admin_overview(*, tenant_id: int, conn: Any) -> dict[str, Any]:
         )
         contracts_pending = int(cur.fetchone()[0])
 
+        from modules.leave.service import count_pending_leave_requests
+
+        pending_leave_requests = count_pending_leave_requests(tenant_id=tenant_id, conn=conn)
+
     plan_flags = effective_features_for_tenant(
         plan_id=profile["subscription_plan"],
         payroll_enabled=bool(profile["payroll_enabled"]),
@@ -759,7 +763,7 @@ def admin_overview(*, tenant_id: int, conn: Any) -> dict[str, Any]:
                 "severity": "critical",
                 "title": f"{rtw_needs_review} RTW check{'s' if rtw_needs_review != 1 else ''} need review",
                 "detail": "Expired right to work documentation.",
-                "href": "#compliance",
+                "href": "#compliance-rtw",
                 "section": "compliance",
             }
         )
@@ -769,8 +773,18 @@ def admin_overview(*, tenant_id: int, conn: Any) -> dict[str, Any]:
                 "severity": "warn",
                 "title": f"{rtw_expiring_soon} RTW expiring within 30 days",
                 "detail": "Schedule reverification before expiry.",
-                "href": "#compliance",
+                "href": "#compliance-rtw",
                 "section": "compliance",
+            }
+        )
+    if pending_leave_requests:
+        open_actions.append(
+            {
+                "severity": "warn",
+                "title": f"{pending_leave_requests} leave request{'s' if pending_leave_requests != 1 else ''} awaiting approval",
+                "detail": "Review holiday and absence requests from staff.",
+                "href": "#leave",
+                "section": "leave",
             }
         )
     if not punch_sites:
@@ -914,6 +928,11 @@ def admin_overview(*, tenant_id: int, conn: Any) -> dict[str, Any]:
             "offboarding": {"in_progress": offboarding_in_progress},
             "contracts": {"pending_signature": contracts_pending},
             "documents": {"count": document_count},
+            "leave": {"pending_requests": pending_leave_requests},
+        },
+        "nav_badges": {
+            "compliance": day9_alerts + rtw_expired + rtw_expiring_soon,
+            "leave": pending_leave_requests,
         },
         **plan_flags,
     }

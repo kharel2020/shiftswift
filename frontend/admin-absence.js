@@ -237,6 +237,13 @@
         <span class="absence-notes-field__label">Notes</span>
         <textarea id="absence-detail-notes" rows="2" placeholder="Add notes — e.g. contact attempts, context…"></textarea>
       </label>`;
+    const hoWrap = document.getElementById("absence-ho-ref-wrap");
+    const hoInput = document.getElementById("absence-ho-ref-input");
+    if (hoWrap && hoInput) {
+      const showRef = item.unexcused_streak >= 9 && item.alert_status !== "reported";
+      hoWrap.hidden = !showRef;
+      hoInput.value = item.home_office_report_reference || "";
+    }
   }
 
   async function selectEmployee(employeeId) {
@@ -287,10 +294,14 @@
 
   async function markSmsReported() {
     if (!selectedEmployeeId) return;
+    const reference = document.getElementById("absence-ho-ref-input")?.value?.trim() || null;
     try {
       const res = await apiFetch(
         `/compliance/sponsor-licence/absence-monitoring/${selectedEmployeeId}/mark-sms-reported`,
-        { method: "POST", body: JSON.stringify({}) }
+        {
+          method: "POST",
+          body: JSON.stringify({ home_office_report_reference: reference }),
+        }
       );
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Could not update record");

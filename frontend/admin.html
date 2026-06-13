@@ -40,6 +40,7 @@
           <a class="nav-link" href="#employment-contracts" data-section="employment-contracts">Employment contracts</a>
           <a class="nav-link" href="#time-punch" data-section="time-punch">Time punch</a>
           <a class="nav-link" href="#rota" data-section="rota">Rota</a>
+          <a class="nav-link" href="#leave" data-section="leave">Leave</a>
           <a class="nav-link" href="#settings" data-section="settings">Settings</a>
         </nav>
         <div class="badge pill">shiftswifthr.co.uk</div>
@@ -718,6 +719,10 @@
                   <span id="absence-detail-badge" class="absence-panel-badge" hidden></span>
                 </div>
                 <div id="absence-detail-content" class="absence-detail-panel__body"></div>
+                <label class="edit-field absence-ho-ref-field" id="absence-ho-ref-wrap" hidden>
+                  <span class="edit-label">Home Office report reference (optional)</span>
+                  <input type="text" id="absence-ho-ref-input" maxlength="120" placeholder="SMS reference or case ID" />
+                </label>
                 <div class="absence-detail-panel__foot">
                   <button type="button" class="btn outline" id="absence-mark-sms-btn">Mark SMS reported</button>
                   <button type="button" class="btn" id="absence-mark-returned-btn">Mark returned to work</button>
@@ -1498,6 +1503,47 @@
           </article>
         </section>
 
+        <section id="leave" class="admin-section" hidden>
+          <header class="section-header">
+            <div>
+              <h2>Leave &amp; holiday</h2>
+              <p class="muted">Staff submit requests in the employee portal. Approve or reject here — working days Mon–Fri are counted automatically.</p>
+            </div>
+          </header>
+          <article class="card hr-workspace">
+            <header class="hr-workspace-header section-header section-header--compact">
+              <div>
+                <h3>Leave requests</h3>
+                <p class="muted"><span id="leave-pending-count">0</span> pending approval</p>
+              </div>
+              <div class="stack">
+                <button type="button" class="btn secondary" data-leave-filter="pending">Pending</button>
+                <button type="button" class="btn ghost" data-leave-filter="approved">Approved</button>
+                <button type="button" class="btn ghost" data-leave-filter="rejected">Rejected</button>
+                <button type="button" class="btn ghost" data-leave-filter="">All</button>
+              </div>
+            </header>
+            <div class="hr-table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Employee</th>
+                    <th>Type</th>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>Days</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="leave-requests-body">
+                  <tr><td colspan="7" class="muted">Open this section to load leave requests…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
         <section id="settings" class="admin-section" hidden>
           <header class="section-header">
             <div>
@@ -1735,6 +1781,7 @@
     <script src="./admin-templates.js?v=admin-v8"></script>
     <script src="./admin-time-punch.js?v=6"></script>
     <script src="./admin-rota.js?v=6"></script>
+    <script src="./admin-leave.js?v=1"></script>
     <script src="./app.js?v=admin-v4"></script>
     <script src="./contracts.js?v=5"></script>
     <script src="./employment-contracts.js?v=2"></script>

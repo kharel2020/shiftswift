@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
+from pathlib import Path
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile
@@ -35,6 +36,7 @@ from sponsor_licence_compliance import (
     refresh_sms_change_alert_statuses,
     send_rtw_expiry_reminder,
     store_immutable_rtw_pdf,
+    store_advertisement_evidence,
     upsert_working_calendar,
 )
 
@@ -95,6 +97,10 @@ class AdvertisementLinkRequest(BaseModel):
     label: str = Field(min_length=1, max_length=200)
     url: str = Field(min_length=8, max_length=2048)
     type: str = "listing"
+
+
+class MarkAbsenceReportedRequest(BaseModel):
+    home_office_report_reference: str | None = Field(default=None, max_length=120)
 
 
 def _db_conn() -> Any:
@@ -491,6 +497,66 @@ def add_advert_link(
     return link
 
 
+@router.post("/advertisement-records/{record_id}/evidence")
+async def upload_advert_evidence(
+    record_id: int,
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    evidence_pdf: UploadFile = File(...),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, Any]:
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    pdf_bytes = await _read_validated_pdf(evidence_pdf)
+    conn = _db_conn()
+    try:
+        _require_sponsor_compliance_access(tenant_id=tenant_id, conn=conn)
+        return store_advertisement_evidence(
+            tenant_id=tenant_id,
+            record_id=record_id,
+            file_bytes=pdf_bytes,
+            original_filename=evidence_pdf.filename or "advert-evidence.pdf",
+            conn=conn,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    finally:
+        conn.close()
+
+
+@router.get("/advertisement-records/{record_id}/evidence")
+def download_advert_evidence(
+    record_id: int,
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+):
+    from fastapi.responses import FileResponse
+
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = _db_conn()
+    try:
+        _require_sponsor_compliance_access(tenant_id=tenant_id, conn=conn)
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT evidence_storage_path, job_title
+                FROM recruitment_advertisement_records
+                WHERE tenant_id = %s AND id = %s
+                """,
+                (tenant_id, record_id),
+            )
+            row = cur.fetchone()
+    finally:
+        conn.close()
+    if not row or not row[0]:
+        raise HTTPException(status_code=404, detail="Advert evidence not found")
+    path = Path(row[0])
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="Evidence file missing on server")
+    safe_title = str(row[1] or "advert").replace(" ", "-")[:40]
+    return FileResponse(path, media_type="application/pdf", filename=f"{safe_title}-evidence.pdf")
+
+
 class AbsenceDayRequest(BaseModel):
     employee_id: int
     absence_date: date
@@ -659,6 +725,7 @@ def get_absence_monitoring_record(
 @router.post("/absence-monitoring/{employee_id}/mark-sms-reported")
 def mark_absence_monitoring_sms_reported(
     employee_id: int,
+    payload: MarkAbsenceReportedRequest,
     current_user: Annotated[AuthUser, Depends(get_hr_user)],
     x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
 ) -> dict[str, Any]:
@@ -671,6 +738,7 @@ def mark_absence_monitoring_sms_reported(
             employee_id=employee_id,
             acknowledged_by=current_user.username,
             conn=conn,
+            home_office_report_reference=payload.home_office_report_reference,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

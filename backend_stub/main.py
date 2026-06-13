@@ -27,6 +27,8 @@ from modules.time_punch.routes import admin_router as time_punch_admin_router
 from modules.time_punch.routes import employee_router as time_punch_router
 from modules.rota.routes import admin_router as rota_admin_router
 from modules.rota.routes import employee_router as rota_employee_router
+from modules.leave.routes import admin_router as leave_admin_router
+from modules.leave.routes import employee_router as leave_employee_router
 from modules.registry import module_catalog
 from signup_routes import router as signup_router
 from config import load_settings
@@ -122,3 +124,5 @@ app.include_router(recruitment_router)
 app.include_router(time_punch_admin_router)
 app.include_router(rota_admin_router)
 app.include_router(rota_employee_router)
+app.include_router(leave_admin_router)
+app.include_router(leave_employee_router)

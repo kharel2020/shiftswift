@@ -28,6 +28,7 @@
           <a class="nav-link active" href="#overview">Overview</a>
           <a class="nav-link" href="#time-clock">Time clock</a>
           <a class="nav-link" href="#my-shifts">My shifts</a>
+          <a class="nav-link" href="#leave">Leave</a>
           <a class="nav-link" href="#documents">My documents</a>
           <a class="nav-link" href="#notes">Notes from HR</a>
           <a class="nav-link" href="#payslips">Payslips</a>
@@ -77,6 +78,11 @@
               <p class="muted">Messages your employer has shared with you in the portal.</p>
               <p class="muted" id="employee-notes-summary">Loading…</p>
               <a class="btn ghost" href="#notes">View notes</a>
+            </article>
+            <article class="card">
+              <h3>Leave balance</h3>
+              <p class="muted" id="employee-leave-balance">Loading…</p>
+              <a class="btn ghost" href="#leave">Request leave</a>
             </article>
             <article class="card">
               <h3>Payslips</h3>
@@ -154,6 +160,47 @@
               <li class="muted">Loading…</li>
             </ul>
             <p id="employee-shift-message" class="muted" aria-live="polite"></p>
+          </article>
+        </section>
+
+        <section id="leave" class="admin-section">
+          <header class="section-header">
+            <div>
+              <h2>Leave &amp; holiday</h2>
+              <p class="muted">Request time off — HR approves in the admin console. Days are counted Mon–Fri.</p>
+            </div>
+          </header>
+          <article class="card">
+            <form id="employee-leave-form" class="edit-form edit-form--cols-2">
+              <label class="edit-field">
+                <span class="edit-label">Leave type</span>
+                <select name="leave_type" required>
+                  <option value="annual">Annual leave</option>
+                  <option value="sick">Sick leave</option>
+                  <option value="unpaid">Unpaid leave</option>
+                  <option value="other">Other</option>
+                </select>
+              </label>
+              <label class="edit-field">
+                <span class="edit-label">From</span>
+                <input type="date" name="start_date" required />
+              </label>
+              <label class="edit-field">
+                <span class="edit-label">To</span>
+                <input type="date" name="end_date" required />
+              </label>
+              <label class="edit-field" data-span="2">
+                <span class="edit-label">Reason (optional)</span>
+                <textarea name="reason" rows="2" maxlength="2000" placeholder="Brief note for HR"></textarea>
+              </label>
+              <div class="edit-form-actions" data-span="2">
+                <button type="submit" class="btn primary">Submit request</button>
+                <p class="edit-form-status muted" id="employee-leave-status" aria-live="polite"></p>
+              </div>
+            </form>
+            <div id="employee-leave-list" class="employee-leave-list-wrap">
+              <p class="muted">Loading leave requests…</p>
+            </div>
           </article>
         </section>
 
@@ -255,6 +302,7 @@
     <script src="./employee-rota.js?v=1"></script>
     <script src="./employee-documents.js?v=3"></script>
     <script src="./employee-notes.js?v=1"></script>
+    <script src="./employee-leave.js?v=1"></script>
       <script src="./cookie-consent.js?v=1"></script>
   </body>
 </html>

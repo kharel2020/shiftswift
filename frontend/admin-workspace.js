@@ -140,6 +140,29 @@
       </a>`;
   }
 
+  function applyNavBadges(badges) {
+    if (!badges) return;
+    [
+      ["compliance", badges.compliance],
+      ["leave", badges.leave],
+    ].forEach(([section, count]) => {
+      const link = document.querySelector(`.nav-link[data-section="${section}"]`);
+      if (!link) return;
+      let badge = link.querySelector(".nav-badge");
+      const total = Number(count) || 0;
+      if (total > 0) {
+        if (!badge) {
+          badge = document.createElement("span");
+          badge.className = "nav-badge";
+          link.appendChild(badge);
+        }
+        badge.textContent = String(total);
+      } else if (badge) {
+        badge.remove();
+      }
+    });
+  }
+
   function actionItem(item) {
     return `
       <a class="overview-action overview-action--${escapeHtml(item.severity)}" href="${escapeHtml(item.href)}">
@@ -162,6 +185,7 @@
       const data = await res.json();
       await loadTenantFeatures();
       applyFeatureGates();
+      applyNavBadges(data.nav_badges);
 
       const businessName = data.trading_name || data.tenant_name || "your business";
       if (subtitle) {
@@ -220,6 +244,7 @@
         const offboarding = m.offboarding || {};
         const contracts = m.contracts || {};
         const docs = m.documents || {};
+        const leave = m.leave || {};
         const rotaLabel =
           rota.status === "published"
             ? "Published this week"
@@ -254,7 +279,7 @@
             title: "Right to work",
             value: String(rtw.verified ?? 0),
             sub: `${rtw.expiring_soon ?? 0} expiring · ${rtw.needs_review ?? 0} need review`,
-            href: "#compliance",
+            href: "#compliance-rtw",
             tone: (rtw.needs_review ?? 0) > 0 ? "danger" : (rtw.expiring_soon ?? 0) > 0 ? "warn" : "",
           }),
           moduleCard({
@@ -310,6 +335,14 @@
             value: String(offboarding.in_progress ?? 0),
             sub: offboarding.in_progress ? "In progress" : "No active leavers",
             href: "#offboarding",
+          }),
+          moduleCard({
+            icon: "🏖️",
+            title: "Leave",
+            value: String(leave.pending_requests ?? 0),
+            sub: leave.pending_requests ? "Awaiting HR approval" : "No pending requests",
+            href: "#leave",
+            tone: (leave.pending_requests ?? 0) > 0 ? "warn" : "",
           }),
           moduleCard({
             icon: "🗂️",
