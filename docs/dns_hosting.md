@@ -25,7 +25,7 @@ At your registrar (e.g. Cloudflare, Namecheap, Route 53):
 | `CNAME` | `api` | API host / load balancer | Must support HTTPS + long-lived connections |
 | `TXT` | `@` | SPF for email | e.g. `v=spf1 include:_spf.google.com ~all` |
 | `TXT` | `_dmarc` | DMARC policy | Start with `p=none`, tighten later |
-| `MX` | `@` | Mail provider | For `hello@`, `support@`, `noreply@` |
+| `MX` | `@` | Mail provider | For `support@`, `noreply@` |
 
 **Example (single VPS, all on one IP):**
 
@@ -128,8 +128,7 @@ Configure MX + SPF/DKIM for these (defaults in `backend_stub/brand.py`):
 
 | Address | Use |
 |---------|-----|
-| `hello@shiftswifthr.co.uk` | General contact |
-| `support@shiftswifthr.co.uk` | Customer support |
+| `support@shiftswifthr.co.uk` | General contact & customer support |
 | `legal@shiftswifthr.co.uk` | Legal / DPA |
 | `noreply@shiftswifthr.co.uk` | SMTP_FROM, system mail |
 | `compliance@shiftswifthr.co.uk` | Sponsor compliance alerts |

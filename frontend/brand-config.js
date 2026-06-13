@@ -17,7 +17,7 @@ window.ShiftSwiftBrand = {
     localApi: "http://localhost:3000",
   },
   emails: {
-    hello: "hello@shiftswifthr.co.uk",
+    hello: "support@shiftswifthr.co.uk",
     support: "support@shiftswifthr.co.uk",
     legal: "legal@shiftswifthr.co.uk",
     noreply: "noreply@shiftswifthr.co.uk",

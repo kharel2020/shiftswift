@@ -26,7 +26,7 @@ bash scripts/start_local.sh
 | App / admin | https://app.shiftswifthr.co.uk |
 | API | https://api.shiftswifthr.co.uk |
 
-Contact: hello@shiftswifthr.co.uk · support@shiftswifthr.co.uk · legal@shiftswifthr.co.uk
+Contact: support@shiftswifthr.co.uk · legal@shiftswifthr.co.uk
 
 ## Production
 

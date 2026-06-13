@@ -52,7 +52,7 @@ def main() -> None:
                     f"billing@{DOMAIN}",
                     "HR Administrator",
                     "HR Director",
-                    f"hello@{DOMAIN}",
+                    f"support@{DOMAIN}",
                 ),
             )
         conn.commit()
