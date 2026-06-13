@@ -83,6 +83,7 @@
     if (isMobile()) {
       window.MobileShell?.resetPortalScroll?.();
     }
+    syncComplianceDrill();
   }
 
   function setTab(tab, options = {}) {
@@ -200,6 +201,27 @@
     });
   }
 
+  function syncComplianceDrill() {
+    if (!isMobile()) {
+      document.body.classList.remove("compliance-mobile-drill");
+      return;
+    }
+    const hash = window.location.hash.replace("#", "").split("/")[0];
+    const drill = hash.startsWith("compliance-") && hash !== "compliance";
+    const active = drill && currentTab === "compliance";
+    document.body.classList.toggle("compliance-mobile-drill", active);
+    const back = document.getElementById("mobile-back-btn");
+    const toggle = document.getElementById("sidebar-toggle");
+    if (active) {
+      if (back) back.hidden = false;
+      if (toggle) toggle.hidden = true;
+      window.setTimeout(() => window.MobileShell?.scrollToAnchor?.(hash), 80);
+    } else if (!document.body.classList.contains("admin-mobile-detail")) {
+      if (back) back.hidden = true;
+      if (toggle) toggle.hidden = false;
+    }
+  }
+
   function init() {
     const bar = document.getElementById("mobile-tab-bar");
     if (!bar) return;
@@ -217,6 +239,13 @@
 
     document.getElementById("mobile-back-btn")?.addEventListener("click", (event) => {
       event.preventDefault();
+      if (document.body.classList.contains("compliance-mobile-drill")) {
+        document.body.classList.remove("compliance-mobile-drill");
+        window.location.hash = "compliance";
+        syncComplianceDrill();
+        window.MobileShell?.resetPortalScroll?.();
+        return;
+      }
       exitDetailView();
     });
 
@@ -232,6 +261,7 @@
       const section = event.detail?.section;
       if (isDetailSection(section)) {
         enterDetailView(section);
+        syncComplianceDrill();
         return;
       }
       document.body.classList.remove("admin-mobile-detail");
@@ -244,6 +274,12 @@
         syncTabUi("compliance");
         currentTab = "compliance";
       }
+      syncComplianceDrill();
+    });
+
+    window.addEventListener("hashchange", () => {
+      if (!isMobile()) return;
+      syncComplianceDrill();
     });
 
     window.addEventListener("admin:overview-loaded", (event) => {
@@ -260,6 +296,7 @@
       } else {
         syncTabUi(currentTab);
       }
+      syncComplianceDrill();
     });
 
     refreshGreeting();
@@ -274,6 +311,7 @@
         }
         setTab(currentTab, { skipHash: true });
       }
+      syncComplianceDrill();
     } else {
       syncTabUi(currentTab);
     }

@@ -2359,8 +2359,179 @@ textarea:focus {
     pointer-events: auto;
   }
   .section-header { flex-direction: column; align-items: stretch; }
+  .section-actions {
+    flex-wrap: wrap;
+    width: 100%;
+    gap: 8px;
+  }
+  .section-actions .btn {
+    flex: 1 1 auto;
+    min-width: min(100%, 9rem);
+  }
   .edit-form--cols-2 { grid-template-columns: 1fr; }
-  .data-table { min-width: 520px; }
+  .edit-form-actions {
+    flex-wrap: wrap;
+  }
+  .link-row,
+  .employees-register-actions,
+  .table-actions {
+    flex-wrap: wrap;
+  }
+  body:has(#mobile-tab-bar) .admin-section,
+  body:has(#mobile-tab-bar) .card,
+  body:has(#mobile-tab-bar) .hr-workspace-layout,
+  body:has(#mobile-tab-bar) .rtw-workspace-layout,
+  body:has(#mobile-tab-bar) .absence-workspace-layout,
+  body:has(#mobile-tab-bar) .rota-builder-layout,
+  body:has(#mobile-tab-bar) .detail-grid,
+  body:has(#mobile-tab-bar) .hr-main-pane,
+  body:has(#mobile-tab-bar) .absence-main-pane {
+    min-width: 0;
+    max-width: 100%;
+  }
+  body:has(#mobile-tab-bar) .hr-main-pane,
+  body:has(#mobile-tab-bar) .absence-main-pane {
+    overflow: visible;
+    padding: 0;
+    min-height: 0;
+  }
+  body:has(#mobile-tab-bar) .hr-workspace-layout,
+  body:has(#mobile-tab-bar) .rtw-workspace-layout,
+  body:has(#mobile-tab-bar) .absence-workspace-layout,
+  body:has(#mobile-tab-bar) .rota-builder-layout {
+    min-height: 0;
+    flex-direction: column;
+  }
+  body:has(#mobile-tab-bar) .hr-surface-panel,
+  body:has(#mobile-tab-bar) .hr-log-panel,
+  body:has(#mobile-tab-bar) .hr-primary-banner,
+  body:has(#mobile-tab-bar) .absence-log-panel,
+  body:has(#mobile-tab-bar) .rtw-add-panel,
+  body:has(#mobile-tab-bar) .sponsor-enabled-banner {
+    margin-left: 0;
+    margin-right: 0;
+  }
+  body:has(#mobile-tab-bar) .hr-table-wrap,
+  body:has(#mobile-tab-bar) .table-wrap,
+  body:has(#mobile-tab-bar) .rtw-table-wrap,
+  body:has(#mobile-tab-bar) .absence-table-wrap,
+  body:has(#mobile-tab-bar) .settings-notify-table-wrap {
+    max-width: 100%;
+    min-width: 0;
+  }
+  body:has(#mobile-tab-bar) .hr-table-wrap:not(.mobile-table-cards),
+  body:has(#mobile-tab-bar) .table-wrap:not(.mobile-table-cards),
+  body:has(#mobile-tab-bar) .rtw-table-wrap:not(.mobile-table-cards),
+  body:has(#mobile-tab-bar) .absence-table-wrap:not(.mobile-table-cards),
+  body:has(#mobile-tab-bar) .settings-notify-table-wrap:not(.mobile-table-cards),
+  body:has(#mobile-tab-bar) .keep-table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  body:has(#mobile-tab-bar) .data-table {
+    min-width: 520px;
+  }
+  body:has(#mobile-tab-bar) .mobile-table-cards .data-table,
+  body:has(#mobile-tab-bar) .mobile-table-cards .hr-table {
+    min-width: 0;
+    width: 100%;
+  }
+  body:has(#mobile-tab-bar) .mobile-table-cards {
+    overflow: visible;
+    border: none;
+    background: transparent;
+    margin-bottom: 0;
+  }
+  body:has(#mobile-tab-bar) .mobile-table-cards .data-table,
+  body:has(#mobile-tab-bar) .mobile-table-cards .hr-table {
+    border-collapse: separate;
+    border-spacing: 0 10px;
+  }
+  body:has(#mobile-tab-bar) .mobile-table-cards .data-table thead,
+  body:has(#mobile-tab-bar) .mobile-table-cards .hr-table thead {
+    display: none;
+  }
+  body:has(#mobile-tab-bar) .mobile-table-cards .data-table tbody,
+  body:has(#mobile-tab-bar) .mobile-table-cards .hr-table tbody {
+    display: grid;
+    gap: 10px;
+  }
+  body:has(#mobile-tab-bar) .mobile-table-cards .data-table tr,
+  body:has(#mobile-tab-bar) .mobile-table-cards .hr-table tr {
+    display: grid;
+    gap: 8px;
+    padding: 14px 16px;
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-md);
+    background: var(--card);
+  }
+  body:has(#mobile-tab-bar) .mobile-table-cards .data-table td,
+  body:has(#mobile-tab-bar) .mobile-table-cards .hr-table td {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0;
+    border: none;
+    text-align: left;
+  }
+  body:has(#mobile-tab-bar) .mobile-table-cards .data-table td::before,
+  body:has(#mobile-tab-bar) .mobile-table-cards .hr-table td::before {
+    content: attr(data-label);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--ink-500);
+    flex: 0 0 38%;
+    max-width: 42%;
+  }
+  body:has(#mobile-tab-bar) .mobile-table-cards .data-table td[colspan]::before,
+  body:has(#mobile-tab-bar) .mobile-table-cards .hr-table td[colspan]::before {
+    content: none;
+  }
+  body:has(#mobile-tab-bar) .mobile-table-cards .data-table td[colspan],
+  body:has(#mobile-tab-bar) .mobile-table-cards .hr-table td[colspan] {
+    display: block;
+  }
+  body:has(#mobile-tab-bar) .mobile-table-cards .table-actions {
+    justify-content: flex-start;
+    width: 100%;
+  }
+  body:has(#mobile-tab-bar) .mobile-table-cards td:has(.table-actions) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  body:has(#mobile-tab-bar) .mobile-table-cards td:has(.table-actions)::before {
+    margin-bottom: 2px;
+  }
+  body:has(#mobile-tab-bar) .mobile-table-cards .table-actions .btn {
+    min-height: 40px;
+  }
+  body:has(#mobile-tab-bar) .settings-notify-select {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+  }
+  body[data-mobile-tab="compliance"]:not(.compliance-mobile-drill) #compliance > .section-header,
+  body[data-mobile-tab="compliance"]:not(.compliance-mobile-drill) #compliance > #sponsor-enabled-banner,
+  body[data-mobile-tab="compliance"]:not(.compliance-mobile-drill) #compliance > #sponsor-duties-section,
+  body[data-mobile-tab="compliance"]:not(.compliance-mobile-drill) #compliance > #sponsor-licence-ack-panel,
+  body[data-mobile-tab="compliance"]:not(.compliance-mobile-drill) #compliance > #compliance-tools-content {
+    display: none !important;
+  }
+  body[data-mobile-tab="compliance"]:not(.compliance-mobile-drill) #compliance > #sponsor-licence-ack-panel:not([hidden]) {
+    display: block !important;
+  }
+  body.compliance-mobile-drill .admin-mobile-compliance-only {
+    display: none !important;
+  }
+  body.compliance-mobile-drill #compliance > #compliance-tools-content {
+    display: block !important;
+  }
+  body.compliance-mobile-drill .mobile-tab-bar {
+    display: none;
+  }
   .hr-table-wrap,
   .rtw-table-wrap,
   .absence-table-wrap,
