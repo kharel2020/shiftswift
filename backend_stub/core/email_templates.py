@@ -303,7 +303,8 @@ def employee_portal_invite_email(
         f"{setup_url}\n\n"
         f"After that, sign in as an employee at:\n{login_url}\n"
         f"On the sign-in page, choose the Employee tab (not Business HR).\n"
-        f"Use the same work email address this invite was sent to.\n\n"
+        f"Use the same work email address this invite was sent to.\n"
+        f"If you do not see this email, check your junk or spam folder.\n\n"
         f"— {APP_NAME}\n"
     )
     html = render_email(
@@ -313,10 +314,48 @@ def employee_portal_invite_email(
         paragraphs=[
             f"This link expires in {reset_hours} hours. Choose a password, then sign in using your work email.",
             "On the sign-in page, open the Employee tab (not Business HR).",
+            "If you do not see this email, check your junk or spam folder.",
             f"Portal sign-in: {login_url}",
         ],
         cta_url=setup_url,
         cta_label="Choose your password",
+    )
+    return EmailContent(subject=subject, text=text, html=html)
+
+
+def portal_setup_pending_hr_email(
+    *,
+    tenant_name: str,
+    pending_employees: list[dict[str, str]],
+    admin_url: str,
+) -> EmailContent:
+    count = len(pending_employees)
+    names_preview = ", ".join(item["name"] for item in pending_employees[:5])
+    if count > 5:
+        names_preview = f"{names_preview}, and {count - 5} more"
+    subject = f"{APP_NAME} — {count} employee portal setup{'s' if count != 1 else ''} still pending"
+    text = (
+        f"Hello,\n\n"
+        f"The following employee{'s' if count != 1 else ''} at {tenant_name} "
+        f"{'have' if count != 1 else 'has'} not finished setting up their portal password yet:\n"
+        f"{names_preview}\n\n"
+        f"They may have missed the invite email — ask them to check junk or spam, "
+        f"or resend the portal link from Employees in ShiftSwift HR:\n"
+        f"{admin_url}\n\n"
+        f"— {APP_NAME}\n"
+    )
+    html = render_email(
+        preheader=f"{count} employee portal account{'s' if count != 1 else ''} still waiting for setup.",
+        title="Employee portal setup still pending",
+        intro=f"At {tenant_name}, {count} employee{'s' if count != 1 else ''} invited to the portal "
+        f"{'have' if count != 1 else 'has'} not chosen a password yet.",
+        paragraphs=[
+            f"Waiting: {names_preview}.",
+            "Ask them to check junk or spam for the invite email, or resend the setup link from Employees.",
+            f"Open admin: {admin_url}",
+        ],
+        cta_url=admin_url,
+        cta_label="Open Employees",
     )
     return EmailContent(subject=subject, text=text, html=html)
 

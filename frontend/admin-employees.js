@@ -220,7 +220,12 @@
   }
 
   function portalStatusCopy(employee) {
-    if (employee?.portal_has_account) return "Employee portal account active";
+    if (employee?.portal_setup_complete || employee?.portal_setup_status === "complete") {
+      return "Employee portal active";
+    }
+    if (employee?.portal_setup_pending || employee?.portal_setup_status === "pending") {
+      return "Invite sent — waiting for employee to set password (check junk mail)";
+    }
     if (!employee?.email) return "Add a work email to send a portal invite";
     if (employee?.status !== "active" && employee?.status !== "onboarding") {
       return "Portal invites are available for active or onboarding employees";
@@ -238,12 +243,16 @@
       host.className = "employee-portal-invite-row";
       copyHost.appendChild(host);
     }
-    const canInvite = Boolean(employee?.email) && (employee?.portal_invite_eligible || employee?.portal_has_account);
+    const canInvite = Boolean(employee?.email) && employee?.portal_setup_status !== "complete";
     host.innerHTML = `
       <p class="muted employee-portal-status">${escapeHtml(portalStatusCopy(employee))}</p>
       <div class="link-row">
         <button type="button" class="btn outline" id="employee-portal-invite-btn" ${canInvite ? "" : "disabled"}>
-          ${employee?.portal_has_account ? "Resend portal setup link" : "Send portal invite"}
+          ${
+            employee?.portal_setup_pending || employee?.portal_setup_status === "pending"
+              ? "Resend portal setup link"
+              : "Send portal invite"
+          }
         </button>
       </div>
       <p class="muted employee-portal-invite-message" id="employee-portal-invite-message" aria-live="polite"></p>`;
@@ -282,8 +291,11 @@
       if (activeEmployeeId === employeeId && workspaceCache) {
         workspaceCache.employee = {
           ...workspaceCache.employee,
-          portal_has_account: true,
-          portal_invite_eligible: false,
+          portal_setup_status: "pending",
+          portal_setup_pending: true,
+          portal_setup_complete: false,
+          portal_has_account: false,
+          portal_invite_eligible: true,
         };
         renderPortalInviteActions(workspaceCache.employee);
       }
@@ -870,8 +882,12 @@
       <div class="hr-detail-foot">
         <button type="button" class="btn" id="employees-side-open-btn">Open lifecycle</button>
         <button type="button" class="btn outline" id="employees-side-invite-btn" ${
-          row.email && (row.portal_invite_eligible || row.portal_has_account) ? "" : "disabled"
-        }>${row.portal_has_account ? "Resend portal link" : "Send portal invite"}</button>
+          row.email && row.portal_setup_status !== "complete" ? "" : "disabled"
+        }>${
+          row.portal_setup_pending || row.portal_setup_status === "pending"
+            ? "Resend portal link"
+            : "Send portal invite"
+        }</button>
         <button type="button" class="btn ghost" id="employees-side-delete-btn">Remove</button>
       </div>
       <p class="muted" id="employees-side-invite-status" aria-live="polite"></p>`;

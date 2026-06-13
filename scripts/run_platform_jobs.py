@@ -71,6 +71,7 @@ def main() -> int:
         "hr_templates": {"created": 0, "updated": 0, "unchanged": 0},
         "trial_reminders": {"checked": 0, "reminders_sent": 0, "expired": 0},
         "payment_failure": {"checked": 0, "reminders_sent": 0, "holds_applied": 0},
+        "portal_setup_reminders": {"tenants_checked": 0, "reminders_sent": 0, "pending_employees": 0},
     }
     try:
         for tenant_id in _tenant_ids(conn):
@@ -95,6 +96,13 @@ def main() -> int:
         summary["hr_templates"] = sync_all_templates(conn=conn)
         summary["trial_reminders"] = process_trial_reminders(conn=conn)
         summary["payment_failure"] = process_payment_failure_cycle(conn=conn)
+        from config import load_settings
+        from modules.employees.portal_invites import process_portal_setup_reminders
+
+        summary["portal_setup_reminders"] = process_portal_setup_reminders(
+            conn=conn,
+            settings=load_settings(),
+        )
         from core.notifications import process_queued_notifications
 
         summary["notifications"] = process_queued_notifications(conn=conn)

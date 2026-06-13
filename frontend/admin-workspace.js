@@ -232,8 +232,13 @@
             icon: "👥",
             title: "Employees",
             value: String(employees.active ?? 0),
-            sub: employees.onboarding ? `${employees.onboarding} onboarding` : "Active register",
+            sub: employees.portal_setup_pending
+              ? `${employees.portal_setup_pending} portal setup pending`
+              : employees.onboarding
+                ? `${employees.onboarding} onboarding`
+                : "Active register",
             href: "#employees",
+            tone: employees.portal_setup_pending ? "warn" : undefined,
           }),
           moduleCard({
             icon: "📋",

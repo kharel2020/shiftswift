@@ -841,6 +841,20 @@ def admin_overview(*, tenant_id: int, conn: Any) -> dict[str, Any]:
             }
         )
 
+    from modules.employees.portal_invites import count_pending_portal_setups
+
+    portal_setup_pending = count_pending_portal_setups(tenant_id=tenant_id, conn=conn)
+    if portal_setup_pending:
+        open_actions.append(
+            {
+                "severity": "warn",
+                "title": f"{portal_setup_pending} employee portal setup{'s' if portal_setup_pending != 1 else ''} pending",
+                "detail": "Invited employees have not set their portal password yet. Ask them to check junk mail or resend the link.",
+                "href": "#employees",
+                "section": "employees",
+            }
+        )
+
     severity_rank = {"critical": 0, "warn": 1, "info": 2}
     open_actions.sort(key=lambda item: severity_rank.get(item["severity"], 9))
 
@@ -864,6 +878,7 @@ def admin_overview(*, tenant_id: int, conn: Any) -> dict[str, Any]:
             "employees": {
                 "active": active_employees,
                 "onboarding": onboarding_employees,
+                "portal_setup_pending": portal_setup_pending,
                 "limit": profile["max_employees"],
             },
             "recruitment": {

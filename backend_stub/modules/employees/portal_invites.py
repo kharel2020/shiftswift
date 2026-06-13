@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import secrets
+import os
 from typing import Any
 
 from auth_password_reset import RESET_HOURS, send_account_setup_email
@@ -16,6 +17,8 @@ from modules.employees.repository import fetch_employee
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 INVITE_EMPLOYEE_STATUSES = frozenset({"active", "onboarding"})
+PORTAL_SETUP_COMPLETE_EVENTS = frozenset({"login_success", "password_reset_completed"})
+PORTAL_REMINDER_MIN_DAYS = int(os.getenv("PORTAL_SETUP_REMINDER_MIN_DAYS", "1"))
 
 
 def _normalize_email(value: str | None) -> str:
@@ -66,6 +69,55 @@ def fetch_portal_account_by_email(*, conn: Any, email: str) -> dict[str, Any] | 
     }
 
 
+def _fetch_portal_setup_complete_emails(*, conn: Any, emails: list[str]) -> set[str]:
+    if not emails:
+        return set()
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT DISTINCT lower(username)
+            FROM security_audit_events
+            WHERE lower(username) = ANY(%s)
+              AND success = TRUE
+              AND event_type = ANY(%s)
+            """,
+            (emails, list(PORTAL_SETUP_COMPLETE_EVENTS)),
+        )
+        return {row[0] for row in cur.fetchall()}
+
+
+def _fetch_last_portal_invite_at(
+    *,
+    conn: Any,
+    tenant_id: int,
+    employee_ids: list[int],
+) -> dict[int, Any]:
+    if not employee_ids:
+        return {}
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT entity_id, MAX(created_at)
+            FROM employee_data_audit_log
+            WHERE tenant_id = %s
+              AND action = 'invite'
+              AND entity_type = 'employee_portal'
+              AND entity_id = ANY(%s)
+            GROUP BY entity_id
+            """,
+            (tenant_id, employee_ids),
+        )
+        return {int(row[0]): row[1] for row in cur.fetchall()}
+
+
+def _resolve_portal_setup_status(*, has_account: bool, setup_complete: bool) -> str:
+    if not has_account:
+        return "none"
+    if setup_complete:
+        return "complete"
+    return "pending"
+
+
 def enrich_employees_portal_status(
     *,
     tenant_id: int,
@@ -91,29 +143,205 @@ def enrich_employees_portal_status(
                     "is_active": bool(is_active),
                 }
 
+    setup_complete_emails = _fetch_portal_setup_complete_emails(conn=conn, emails=emails)
+    employee_ids = [int(item["id"]) for item in employees if item.get("id") is not None]
+    invite_sent_at_by_id = _fetch_last_portal_invite_at(
+        conn=conn,
+        tenant_id=tenant_id,
+        employee_ids=employee_ids,
+    )
+
     enriched: list[dict[str, Any]] = []
     for item in employees:
         email = _normalize_email(item.get("email"))
         account = portal_by_email.get(email) if email else None
-        has_portal = bool(
+        provisioned = bool(
             account
             and account["role"] == "employee"
             and str(account["tenant_id"]) == str(tenant_id)
             and account["is_active"]
         )
+        setup_complete = bool(email and email in setup_complete_emails)
+        setup_status = _resolve_portal_setup_status(
+            has_account=provisioned,
+            setup_complete=setup_complete,
+        )
+        employee_id = int(item["id"]) if item.get("id") is not None else None
+        invite_sent_at = invite_sent_at_by_id.get(employee_id) if employee_id is not None else None
         eligible = (
             _looks_like_email(email)
             and item.get("status") in INVITE_EMPLOYEE_STATUSES
-            and not has_portal
+            and setup_status != "complete"
         )
         enriched.append(
             {
                 **item,
-                "portal_has_account": has_portal,
+                "portal_setup_status": setup_status,
+                "portal_setup_pending": setup_status == "pending",
+                "portal_setup_complete": setup_status == "complete",
+                "portal_has_account": setup_status == "complete",
                 "portal_invite_eligible": eligible,
+                "portal_invite_sent_at": invite_sent_at.isoformat() if invite_sent_at else None,
             }
         )
     return enriched
+
+
+def list_pending_portal_setups(
+    *,
+    tenant_id: int,
+    conn: Any,
+    min_days_since_invite: int = 0,
+) -> list[dict[str, Any]]:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT id, first_name, last_name, email, status
+            FROM employees
+            WHERE tenant_id = %s AND status = ANY(%s)
+            ORDER BY last_name, first_name
+            """,
+            (tenant_id, list(INVITE_EMPLOYEE_STATUSES)),
+        )
+        rows = cur.fetchall()
+
+    employees = [
+        {
+            "id": row[0],
+            "first_name": row[1],
+            "last_name": row[2],
+            "email": row[3],
+            "status": row[4],
+        }
+        for row in rows
+    ]
+    enriched = enrich_employees_portal_status(tenant_id=tenant_id, employees=employees, conn=conn)
+    pending = [item for item in enriched if item.get("portal_setup_status") == "pending"]
+    if min_days_since_invite <= 0:
+        return pending
+
+    from datetime import datetime, timedelta, timezone
+
+    cutoff = datetime.now(timezone.utc) - timedelta(days=min_days_since_invite)
+    filtered: list[dict[str, Any]] = []
+    for item in pending:
+        sent_raw = item.get("portal_invite_sent_at")
+        if not sent_raw:
+            continue
+        sent_at = datetime.fromisoformat(str(sent_raw).replace("Z", "+00:00"))
+        if sent_at.tzinfo is None:
+            sent_at = sent_at.replace(tzinfo=timezone.utc)
+        if sent_at <= cutoff:
+            filtered.append(item)
+    return filtered
+
+
+def count_pending_portal_setups(*, tenant_id: int, conn: Any) -> int:
+    return len(list_pending_portal_setups(tenant_id=tenant_id, conn=conn))
+
+
+def process_portal_setup_reminders(
+    *,
+    conn: Any,
+    settings: Settings,
+    as_of: Any | None = None,
+) -> dict[str, int]:
+    """Email HR when invited employees have not finished portal setup."""
+    from datetime import date, datetime, timezone
+
+    from admin_service import get_tenant_profile
+    from core.email_templates import portal_setup_pending_hr_email
+    from core.notifications import send_email_content
+
+    today = as_of.date() if isinstance(as_of, datetime) else (as_of or date.today())
+    summary = {"tenants_checked": 0, "reminders_sent": 0, "pending_employees": 0}
+
+    with conn.cursor() as cur:
+        cur.execute("SELECT id FROM tenants ORDER BY id")
+        tenant_ids = [int(row[0]) for row in cur.fetchall()]
+
+    import os
+
+    app_url = os.getenv("APP_URL", "https://app.shiftswifthr.co.uk").rstrip("/")
+    admin_url = f"{app_url}/admin.html#employees"
+
+    for tenant_id in tenant_ids:
+        summary["tenants_checked"] += 1
+        pending = list_pending_portal_setups(
+            tenant_id=tenant_id,
+            conn=conn,
+            min_days_since_invite=PORTAL_REMINDER_MIN_DAYS,
+        )
+        if not pending:
+            continue
+
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT 1 FROM portal_setup_reminder_log
+                WHERE tenant_id = %s AND reminder_date = %s
+                LIMIT 1
+                """,
+                (tenant_id, today),
+            )
+            if cur.fetchone():
+                continue
+
+        profile = get_tenant_profile(tenant_id=tenant_id, conn=conn)
+        tenant_name = profile.get("trading_name") or profile.get("name") or "Your business"
+        to_email = profile.get("billing_email") or profile.get("signatory_email")
+        if not to_email:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT username FROM app_users
+                    WHERE tenant_id = %s AND role = 'hr' AND is_active = TRUE
+                    ORDER BY username
+                    LIMIT 1
+                    """,
+                    (tenant_id,),
+                )
+                hr_row = cur.fetchone()
+                to_email = hr_row[0] if hr_row else None
+        if not to_email:
+            continue
+
+        pending_rows = [
+            {
+                "name": f"{item.get('first_name', '')} {item.get('last_name', '')}".strip() or "Employee",
+                "email": item.get("email") or "",
+            }
+            for item in pending
+        ]
+        content = portal_setup_pending_hr_email(
+            tenant_name=tenant_name,
+            pending_employees=pending_rows,
+            admin_url=admin_url,
+        )
+        send_email_content(
+            conn=conn,
+            tenant_id=tenant_id,
+            content=content,
+            purpose="general",
+            to=str(to_email),
+            audience="hr",
+            deliver_now=True,
+            commit=False,
+        )
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO portal_setup_reminder_log (tenant_id, reminder_date, pending_count)
+                VALUES (%s, %s, %s)
+                ON CONFLICT (tenant_id, reminder_date) DO NOTHING
+                """,
+                (tenant_id, today, len(pending)),
+            )
+        conn.commit()
+        summary["reminders_sent"] += 1
+        summary["pending_employees"] += len(pending)
+
+    return summary
 
 
 def _ensure_employee_app_user(
@@ -183,15 +411,13 @@ def invite_employee_to_portal(
     if employee.get("status") not in INVITE_EMPLOYEE_STATUSES:
         raise ValueError("Portal invites are only available for active or onboarding employees")
 
-    existing = fetch_portal_account_by_email(conn=conn, email=email)
-    has_portal = bool(
-        existing
-        and existing["role"] == "employee"
-        and str(existing["tenant_id"]) == str(tenant_id)
-        and existing["is_active"]
-    )
-    if has_portal and not resend_if_exists:
-        raise ValueError("This employee already has a portal account")
+    portal_meta = enrich_employees_portal_status(
+        tenant_id=tenant_id,
+        employees=[{**employee, "id": employee_id}],
+        conn=conn,
+    )[0]
+    if portal_meta.get("portal_setup_complete") and not resend_if_exists:
+        raise ValueError("This employee has already completed portal setup")
 
     user, created = _ensure_employee_app_user(
         tenant_id=tenant_id,
@@ -250,7 +476,10 @@ def invite_employee_to_portal(
         "employee_id": employee_id,
         "email": email,
         "created_account": created,
-        "portal_has_account": True,
+        "portal_setup_status": "pending",
+        "portal_setup_pending": True,
+        "portal_setup_complete": False,
+        "portal_has_account": False,
         "message": message,
     }
 
@@ -278,6 +507,25 @@ def invite_missing_portal_accounts(
         )
         rows = cur.fetchall()
 
+    employee_rows = [
+        {
+            "id": row[0],
+            "first_name": row[1],
+            "last_name": row[2],
+            "email": row[3],
+            "status": row[4],
+        }
+        for row in rows
+    ]
+    portal_meta_by_id = {
+        int(item["id"]): item
+        for item in enrich_employees_portal_status(
+            tenant_id=tenant_id,
+            employees=employee_rows,
+            conn=conn,
+        )
+    }
+
     invited: list[dict[str, Any]] = []
     skipped: list[dict[str, Any]] = []
     failed: list[dict[str, Any]] = []
@@ -288,15 +536,19 @@ def invite_missing_portal_accounts(
             skipped.append({"employee_id": employee_id, "name": label, "reason": "no work email"})
             continue
 
-        existing = fetch_portal_account_by_email(conn=conn, email=_normalize_email(email))
-        has_portal = bool(
-            existing
-            and existing["role"] == "employee"
-            and str(existing["tenant_id"]) == str(tenant_id)
-            and existing["is_active"]
-        )
-        if has_portal and not resend_existing:
-            skipped.append({"employee_id": employee_id, "name": label, "reason": "already has portal account"})
+        portal_meta = portal_meta_by_id.get(int(employee_id), {})
+        setup_status = portal_meta.get("portal_setup_status", "none")
+        if setup_status == "complete" and not resend_existing:
+            skipped.append({"employee_id": employee_id, "name": label, "reason": "portal setup complete"})
+            continue
+        if setup_status == "pending" and not resend_existing:
+            skipped.append(
+                {
+                    "employee_id": employee_id,
+                    "name": label,
+                    "reason": "invite sent — waiting for employee to set password",
+                }
+            )
             continue
 
         try:
