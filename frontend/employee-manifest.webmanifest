@@ -1,0 +1,61 @@
+{
+  "id": "/employee.html",
+  "name": "ShiftSwift Employee Portal",
+  "short_name": "Employee",
+  "description": "View payslips, documents, shifts, and clock in from your phone.",
+  "start_url": "./employee.html?source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#04342c",
+  "theme_color": "#0f6e56",
+  "categories": ["business", "productivity"],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "./assets/shiftswift-hr-icon.png?v=brandkit-v1",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./assets/shiftswift-hr-icon.png?v=brandkit-v1",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./assets/shiftswift-hr-icon.png?v=brandkit-v1",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "My payslips",
+      "short_name": "Payslips",
+      "url": "./employee.html?source=shortcut#payslips",
+      "icons": [
+        {
+          "src": "./assets/shiftswift-hr-icon.png?v=brandkit-v1",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Time clock",
+      "short_name": "Clock",
+      "url": "./punch.html?source=shortcut",
+      "icons": [
+        {
+          "src": "./assets/shiftswift-hr-icon.png?v=brandkit-v1",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}

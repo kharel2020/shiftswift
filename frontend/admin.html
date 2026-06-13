@@ -2,12 +2,19 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f6e56" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="HR Admin" />
+    <meta name="description" content="Manage employees, compliance, rotas, and HR for your business." />
     <title>ShiftSwift HR | Admin Console</title>
+    <link rel="manifest" href="./admin-manifest.webmanifest?v=1" />
     <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon.png?v=brandkit-v1" />
     <link rel="icon" type="image/svg+xml" href="./assets/shiftswift-hr-icon.svg?v=brandkit-v1" />
     <link rel="apple-touch-icon" href="./assets/shiftswift-hr-icon.png?v=brandkit-v1" />
-    <link rel="stylesheet" href="./styles.css?v=admin-v26" />
+    <link rel="stylesheet" href="./styles.css?v=admin-v27" />
   </head>
   <body>
     <div id="sidebar-overlay" class="sidebar-overlay" aria-hidden="true"></div>
@@ -38,6 +45,17 @@
         <div class="badge pill">shiftswifthr.co.uk</div>
       </aside>
       <main class="content">
+        <div id="portal-pwa-install-banner" class="portal-pwa-install-banner" hidden role="region" aria-label="Install app">
+          <div class="portal-pwa-install-banner__copy">
+            <strong id="portal-pwa-install-title">Download app</strong>
+            <p id="portal-pwa-install-copy">Install ShiftSwift HR Admin on this device for quick access.</p>
+          </div>
+          <div class="portal-pwa-install-banner__actions">
+            <button type="button" class="btn primary" id="portal-pwa-install-btn">Install app</button>
+            <button type="button" class="btn ghost portal-pwa-install-dismiss" id="portal-pwa-install-dismiss">Not now</button>
+          </div>
+        </div>
+
         <div class="topbar">
           <div class="topbar-main">
             <button type="button" class="sidebar-toggle" id="sidebar-toggle" aria-label="Open menu">Menu</button>
@@ -1669,6 +1687,13 @@
     </div>
     <script src="./auth-guard.js?v=security-v1"></script>
     <script src="./brand-config.js?v=brand-v4"></script>
+    <script
+      src="./portal-pwa-install.js?v=1"
+      data-portal="admin"
+      data-app-name="ShiftSwift HR Admin"
+      data-manifest="./admin-manifest.webmanifest?v=1"
+      data-sw="./app-sw.js?v=1"
+    ></script>
     <script src="./admin-shared.js?v=admin-v8"></script>
     <script src="./admin-workspace.js?v=admin-v10"></script>
     <script src="./admin-settings.js?v=3"></script>

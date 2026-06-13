@@ -497,7 +497,7 @@
 
     window.addEventListener("load", () => {
       navigator.serviceWorker
-        .register("./punch-sw.js?v=2", { scope: "./" })
+        .register("./app-sw.js?v=1", { scope: "./" })
         .then((registration) => {
           if (registration.waiting) {
             showUpdateBanner(registration.waiting);

@@ -103,8 +103,14 @@ PWA_FILES=(
   punch.html
   punch.js
   punch.css
+  app-sw.js
   punch-sw.js
   punch-manifest.webmanifest
+  admin-manifest.webmanifest
+  employee-manifest.webmanifest
+  portal-pwa-install.js
+  admin.html
+  employee.html
 )
 for page in "${PWA_FILES[@]}"; do
   if [ ! -f "${APP_ROOT}/${page}" ]; then
