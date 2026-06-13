@@ -141,6 +141,36 @@ def _send_signup_welcome_email(
         conn.close()
 
 
+def _send_signup_platform_guide_email(
+    *,
+    tenant_id: int,
+    business_name: str,
+    billing_email: str,
+) -> None:
+    from core.email_templates import signup_platform_guide_email
+    from core.notifications import send_email_content
+
+    content = signup_platform_guide_email(
+        business_name=business_name,
+        billing_email=billing_email,
+    )
+    conn = _db_conn()
+    try:
+        send_email_content(
+            conn=conn,
+            tenant_id=tenant_id,
+            content=content,
+            purpose="general",
+            to=billing_email,
+            audience="hr",
+            deliver_now=True,
+        )
+    except Exception:
+        logger.exception("Platform guide email failed for tenant %s", tenant_id)
+    finally:
+        conn.close()
+
+
 def _send_signup_contract_email(
     *,
     tenant_id: int,
@@ -323,6 +353,12 @@ def signup_start(payload: SignupStartRequest, request: Request) -> dict[str, obj
         trial_days=int(billing_info.get("trial_days") or 14),
     )
 
+    _send_signup_platform_guide_email(
+        tenant_id=tenant_id,
+        business_name=payload.business_name.strip(),
+        billing_email=str(payload.billing_email).strip().lower(),
+    )
+
     msa_contract = next((item for item in contracts_created if item.get("template_id") == "msa"), None)
     contract_email_sent = False
     if msa_contract:
@@ -380,6 +416,8 @@ def signup_start(payload: SignupStartRequest, request: Request) -> dict[str, obj
         "tenant_id_token": tokens.tenant_id,
         "contracts_generated": contracts_count,
         "contract_signing_email_sent": contract_email_sent,
+        "platform_guide_email_sent": True,
         "message": "Workspace, billing, and legal contract drafts created automatically."
+        + " Welcome and getting-started emails sent."
         + (" Signing email sent for your Master Services Agreement." if contract_email_sent else ""),
     }

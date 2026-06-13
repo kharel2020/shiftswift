@@ -12,6 +12,8 @@ APP_DOMAIN = os.getenv("APP_DOMAIN", "shiftswifthr.co.uk")
 APP_URL = os.getenv("APP_URL", f"https://app.{APP_DOMAIN}").rstrip("/")
 MARKETING_URL = os.getenv("MARKETING_URL", f"https://www.{APP_DOMAIN}").rstrip("/")
 SUPPORT_EMAIL = os.getenv("EMAIL_SUPPORT", f"support@{APP_DOMAIN}")
+LEGAL_EMAIL = os.getenv("EMAIL_LEGAL", f"legal@{APP_DOMAIN}")
+COMPLIANCE_EMAIL = os.getenv("EMAIL_COMPLIANCE", f"compliance@{APP_DOMAIN}")
 LOGO_URL = os.getenv(
     "EMAIL_LOGO_URL",
     f"{APP_URL}/assets/shiftswift-hr-logo.png",
@@ -177,7 +179,8 @@ def welcome_trial_email(
         f"Plan: {plan_name}\n"
         f"Trial: {trial_days} days\n\n"
         f"Open your admin dashboard: {dashboard_url}\n\n"
-        f"We also email your Master Services Agreement for electronic signature. "
+        f"We will send a separate getting-started guide for the HR admin portal, employee portal, "
+        f"and time clock app, plus your Master Services Agreement for electronic signature. "
         f"ShiftSwift HR is software only — your organisation remains responsible for HR, "
         f"payroll, immigration, and sponsor licence compliance decisions.\n\n"
         f"Need help? {SUPPORT_EMAIL}\n\n"
@@ -189,7 +192,7 @@ def welcome_trial_email(
         intro=f"Your {APP_NAME} workspace for {business_name} is ready. Sign in to set up HR, compliance, and your team.",
         paragraphs=[
             "You can now use employee records, documents, rota tools, employee portal invites, compliance alerts, and the time clock (by plan).",
-            "We will send your Master Services Agreement separately for electronic signature. ShiftSwift HR provides software tools and alerts only — your organisation remains responsible for HR, payroll, immigration, and sponsor licence compliance.",
+            "We will send a separate getting-started guide and your Master Services Agreement for electronic signature. ShiftSwift HR provides software tools and alerts only — your organisation remains responsible for HR, payroll, immigration, and sponsor licence compliance.",
         ],
         details=[
             ("Username", billing_email),
@@ -198,6 +201,80 @@ def welcome_trial_email(
         ],
         cta_url=dashboard_url,
         cta_label="Open HR dashboard",
+    )
+    return EmailContent(subject=subject, text=text, html=html)
+
+
+def signup_platform_guide_email(
+    *,
+    business_name: str,
+    billing_email: str,
+) -> EmailContent:
+    login_url = f"{APP_URL}/business-login.html"
+    admin_url = f"{APP_URL}/admin.html"
+    employee_portal_url = f"{APP_URL}/employee.html"
+    time_clock_url = f"{APP_URL}/punch.html"
+    subject = f"{APP_NAME} — how to use your HR platform, employee portal & time clock"
+    text = (
+        f"Hello,\n\n"
+        f"Your {APP_NAME} workspace for {business_name} is a software platform to help you "
+        f"manage employee details, documents, rotas, and compliance records.\n\n"
+        f"IMPORTANT — WHAT SHIFT SWIFT HR IS NOT\n"
+        f"{APP_NAME} is not an outsourced HR advisory or HR outsourcing service. We do not "
+        f"provide HR consultants, perform Right to Work checks for you, or act as your HR department. "
+        f"If you need a full HR service from ShiftSwift HR, that is not available yet and would "
+        f"require different sign-up procedures when offered.\n\n"
+        f"HR ADMIN PORTAL (YOU)\n"
+        f"1. Sign in at {login_url}\n"
+        f"2. Choose the Business HR tab\n"
+        f"3. Username: {billing_email}\n"
+        f"4. Open your dashboard: {admin_url}\n"
+        f"5. Add employees under Employees, then send portal invites from the employee side panel\n\n"
+        f"EMPLOYEE PORTAL (YOUR STAFF)\n"
+        f"1. You send a portal invite from Employees in the HR admin dashboard\n"
+        f"2. The employee opens the email link and sets a password\n"
+        f"3. They sign in at {login_url} using the Employee tab (not Business HR)\n"
+        f"4. Portal home: {employee_portal_url}\n"
+        f"5. Staff can view payslips, documents, and published rotas\n"
+        f"6. Ask staff to check junk/spam if the invite email is missing\n\n"
+        f"TIME CLOCK APP (CLOCK IN / OUT)\n"
+        f"1. Open {time_clock_url} on the employee's phone\n"
+        f"2. Install to the home screen when prompted (Add to Home Screen on iPhone)\n"
+        f"3. Sign in with the employee portal username and password\n"
+        f"4. Allow location access — clock in/out works at assigned work sites only\n\n"
+        f"SUPPORT\n"
+        f"General help & onboarding: {SUPPORT_EMAIL}\n"
+        f"Legal & contracts: {LEGAL_EMAIL}\n"
+        f"Sponsor compliance software questions: {COMPLIANCE_EMAIL}\n\n"
+        f"Website: {MARKETING_URL}\n\n"
+        f"{APP_NAME}\n"
+        f"{APP_NAME} is a trading name of Datasoftware Analytics Ltd.\n"
+    )
+    html = render_email(
+        preheader="How to use HR admin, the employee portal, and the time clock app.",
+        title="Getting started with your platform",
+        intro=(
+            f"Your {APP_NAME} workspace for {business_name} is a software platform to manage "
+            f"employee details, documents, rotas, and compliance records — not an outsourced HR service."
+        ),
+        paragraphs=[
+            (
+                f"{APP_NAME} does not provide HR consultants, outsourced HR, or immigration advice. "
+                f"Your organisation remains responsible for HR decisions and compliance. "
+                f"A separate full HR service from ShiftSwift HR is not offered yet and would use "
+                f"different sign-up procedures when available."
+            ),
+            f"HR admin sign-in: {login_url} → Business HR tab → username {billing_email} → dashboard {admin_url}. Add employees, then send portal invites from Employees.",
+            f"Employee portal: invite staff from Employees → they set a password from the email → sign in at {login_url} on the Employee tab → {employee_portal_url} for payslips and documents.",
+            f"Time clock app: open {time_clock_url} on a phone, install to the home screen, sign in as the employee, and allow location at the work site.",
+        ],
+        details=[
+            ("Support", SUPPORT_EMAIL),
+            ("Legal & contracts", LEGAL_EMAIL),
+            ("Compliance software", COMPLIANCE_EMAIL),
+        ],
+        cta_url=admin_url,
+        cta_label="Open HR admin dashboard",
     )
     return EmailContent(subject=subject, text=text, html=html)
 

@@ -4,6 +4,7 @@ from core.email_templates import (
     EmailContent,
     password_reset_email,
     render_email,
+    signup_platform_guide_email,
     welcome_trial_email,
 )
 
@@ -21,6 +22,18 @@ def test_welcome_trial_email_has_html_and_text() -> None:
     assert "Open HR dashboard" in content.html
     assert "Acme Ltd" in content.html
     assert "<html" in content.html
+
+
+def test_signup_platform_guide_email_covers_disclaimer_and_support() -> None:
+    content = signup_platform_guide_email(
+        business_name="Acme Ltd",
+        billing_email="hr@acme.co.uk",
+    )
+    assert "not an outsourced HR" in content.text
+    assert "hr@acme.co.uk" in content.text
+    assert "punch.html" in content.text
+    assert "support@" in content.text
+    assert "Getting started" in content.html
 
 
 def test_password_reset_escapes_html_in_url() -> None:
