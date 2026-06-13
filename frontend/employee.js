@@ -71,6 +71,8 @@
 
   async function loadProfile() {
     const welcome = document.getElementById("employee-welcome");
+    const employerHeader = document.getElementById("topbar-employer-name");
+    const employerSubtitle = document.getElementById("mobile-employer-subtitle");
     try {
       const response = await fetch(`${API_BASE}/auth/verify`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -85,9 +87,21 @@
         window.location.replace("./admin.html");
         return;
       }
-      if (welcome) {
-        welcome.textContent = `Signed in as ${user.username} · business ${user.tenant_id}`;
+      if (user.username) {
+        localStorage.setItem("employeeUsername", user.username);
+        const local = user.username.split("@")[0] || user.username;
+        localStorage.setItem(
+          "employeeDisplayName",
+          local.charAt(0).toUpperCase() + local.slice(1),
+        );
       }
+      const employerLabel = user.employer_name || "Your employer";
+      if (employerHeader) employerHeader.textContent = employerLabel;
+      if (employerSubtitle) employerSubtitle.textContent = employerLabel;
+      if (welcome) {
+        welcome.textContent = `Signed in as ${user.username}`;
+      }
+      window.EmployeeMobile?.refreshGreeting?.();
       if (user.gdpr_consent_required) {
         showGdprModal(user.employer_name);
       }
@@ -113,11 +127,14 @@
 
   if (window.MobileShell) {
     const sidebar = window.MobileShell.initSidebar();
+    window.EmployeeMobile?.init?.();
     window.MobileShell.initHashSections({
       defaultSection: "overview",
       sectionEvent: "employee:section",
       sidebar,
     });
+  } else {
+    window.EmployeeMobile?.init?.();
   }
 
   loadProfile();

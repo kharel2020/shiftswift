@@ -73,6 +73,11 @@
       el.hidden = false;
     });
 
+    const modulesBlock = document.querySelector("#overview .overview-main");
+    if (modulesBlock) {
+      modulesBlock.hidden = tab !== "modules";
+    }
+
     document.body.classList.toggle("admin-mobile-more-open", tab === "more");
   }
 
@@ -244,6 +249,9 @@
       if (!isMobile()) {
         document.body.classList.remove("admin-mobile-detail", "admin-mobile-more-open");
         delete document.body.dataset.mobileTab;
+        document.querySelector("#overview .overview-main")?.removeAttribute("hidden");
+        const morePanel = document.getElementById("mobile-more-panel");
+        if (morePanel) morePanel.hidden = true;
       } else {
         syncTabUi(currentTab);
       }

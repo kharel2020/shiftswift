@@ -609,9 +609,67 @@
     });
   }
 
+  function renderShiftCards() {
+    const host = document.getElementById("rota-shifts-cards");
+    const tableWrap = document.querySelector(".rota-shifts-table-wrap");
+    const useCards = window.matchMedia("(max-width: 860px)").matches;
+    if (!host) return;
+    if (tableWrap) tableWrap.hidden = useCards;
+    host.hidden = !useCards;
+    if (!useCards) return;
+
+    if (!hasActiveEmployees()) {
+      host.innerHTML = '<p class="muted">No active employees — open the Employees section to add team members.</p>';
+      return;
+    }
+    if (!shifts.length) {
+      host.innerHTML = '<p class="muted">No shifts this week — tap Add shift to create one.</p>';
+      return;
+    }
+
+    host.innerHTML = shifts
+      .map((shift, index) => {
+        const day = new Date(`${shift.shift_date}T12:00:00`).toLocaleDateString("en-GB", {
+          weekday: "short",
+          day: "numeric",
+          month: "short",
+        });
+        const name = escapeHtml(shift.employee_name || employeeName(shift.employee_id));
+        const role = escapeHtml(shift.role_label || "General");
+        return `
+          <article class="rota-shift-card">
+            <div class="rota-shift-card__main">
+              <span class="rota-shift-card__day">${escapeHtml(day)}</span>
+              <span class="rota-shift-card__name">${name}</span>
+              <span class="rota-shift-card__time">${escapeHtml(shift.start_time)} – ${escapeHtml(shift.end_time)}</span>
+              <span class="rota-shift-card__role muted">${role}</span>
+            </div>
+            <div class="rota-shift-card__actions">
+              <button type="button" class="btn ghost btn-sm" data-rota-edit="${index}">Edit</button>
+              <button type="button" class="btn ghost btn-sm" data-rota-remove="${index}">Remove</button>
+            </div>
+          </article>`;
+      })
+      .join("");
+
+    host.querySelectorAll("[data-rota-remove]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        shifts.splice(Number(btn.getAttribute("data-rota-remove")), 1);
+        markDirty();
+        renderAll();
+      });
+    });
+    host.querySelectorAll("[data-rota-edit]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        openShiftPanel({ shiftIndex: Number(btn.getAttribute("data-rota-edit")) });
+      });
+    });
+  }
+
   function renderShiftTable() {
+    renderShiftCards();
     const tbody = document.getElementById("rota-shifts-body");
-    if (!tbody) return;
+    if (!tbody || window.matchMedia("(max-width: 860px)").matches) return;
     renderTableBody(tbody, {
       emptyMessage: hasActiveEmployees()
         ? "No shifts this week — click + in the grid to add one."
@@ -1059,16 +1117,19 @@
   }
 
   function clearRota() {
-    if (!shifts.length) {
-      setMessage("No shifts to clear.");
+    if (!shifts.length) return;
+    if (
+      !window.confirm(
+        "Are you sure? This will remove all shifts from the current week. You will still need to save the rota to persist the change.",
+      )
+    ) {
       return;
     }
-    if (!window.confirm("Remove all shifts from this week? You still need to Save rota to persist.")) return;
     shifts = [];
     markDirty();
     closeShiftPanel();
     renderAll();
-    setMessage("Rota cleared — click Save rota to persist.");
+    setMessage("Rota cleared — click Save draft to persist.");
   }
 
   async function saveRota() {

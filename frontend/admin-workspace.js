@@ -238,6 +238,15 @@
       window.AdminMobile?.refreshGreeting?.();
       updateTopbarMeta(data);
 
+      const openActions = data.open_actions || [];
+      const actionPreview =
+        openActions.length > 0
+          ? openActions
+              .slice(0, 3)
+              .map((item) => item.title)
+              .join(" · ")
+          : "";
+
       if (trialNote) {
         if (data.trial_active) {
           trialNote.hidden = false;
@@ -253,7 +262,7 @@
       const employees = m.employees || {};
       const punch = m.time_punch || {};
       const actions = data.open_actions_count || 0;
-      const critical = (data.open_actions || []).filter((a) => a.severity === "critical").length;
+      const critical = openActions.filter((a) => a.severity === "critical").length;
 
       grid.innerHTML = `
         ${statCard({
@@ -278,7 +287,7 @@
           sub: critical
             ? `${critical} need immediate attention`
             : actions
-              ? "Tap to review"
+              ? actionPreview || "Tap to review"
               : "All clear",
           href: "#overview-actions",
           tone: critical || actions ? "warn" : "",

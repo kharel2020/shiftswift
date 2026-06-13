@@ -51,15 +51,24 @@
     });
   }
 
+  function setSummaryText(sourceId, text) {
+    const source = document.getElementById(sourceId);
+    if (source) source.textContent = text;
+    document.querySelectorAll(`[data-mirror="${sourceId}"]`).forEach((el) => {
+      el.textContent = text;
+    });
+  }
+
   async function loadBalance() {
     if (!balanceHost) return;
     try {
       const res = await apiFetch("/employee/me/leave/balance");
       if (!res.ok) throw new Error("Load failed");
       const data = await res.json();
-      balanceHost.textContent = `${data.remaining_days} of ${data.allowance_days} working days remaining (${data.used_days} used, ${data.pending_days} pending).`;
+      const text = `${data.remaining_days} of ${data.allowance_days} working days remaining (${data.used_days} used, ${data.pending_days} pending).`;
+      setSummaryText("employee-leave-balance", text);
     } catch {
-      balanceHost.textContent = "Leave balance unavailable.";
+      setSummaryText("employee-leave-balance", "Leave balance unavailable.");
     }
   }
 

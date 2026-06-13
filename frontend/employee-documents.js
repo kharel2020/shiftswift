@@ -8,11 +8,20 @@
   if (!localStorage.getItem("token") || !tenantId) return;
 
   const tbody = document.getElementById("employee-documents-body");
+  const cardsHost = document.getElementById("employee-documents-cards");
   const messageEl = document.getElementById("employee-documents-message");
   const summaryEl = document.getElementById("employee-docs-summary");
   const payslipsHost = document.getElementById("employee-payslips-list");
 
   let allItems = [];
+
+  function setSummaryText(sourceId, text) {
+    const source = document.getElementById(sourceId);
+    if (source) source.textContent = text;
+    document.querySelectorAll(`[data-mirror="${sourceId}"]`).forEach((el) => {
+      el.textContent = text;
+    });
+  }
 
   function token() {
     return localStorage.getItem("token");
@@ -100,8 +109,31 @@
     return actions.join(" ");
   }
 
+  function renderDocumentCards(items) {
+    if (!cardsHost) return;
+    const generalDocs = items.filter((row) => row.category !== "payslip");
+    if (!generalDocs.length) {
+      cardsHost.innerHTML =
+        '<p class="muted">No general documents shared yet. Signed employment contracts appear here after you sign, or when HR uploads a file to your profile.</p>';
+      return;
+    }
+    cardsHost.innerHTML = generalDocs
+      .map(
+        (row) => `<article class="employee-doc-card">
+          <div class="employee-doc-card__main">
+            <strong class="employee-doc-card__title">${escapeHtml(row.title)}</strong>
+            <p class="muted employee-doc-card__meta">${escapeHtml(row.category_label || row.category)} · ${escapeHtml(formatDate(row.created_at))}</p>
+          </div>
+          <div class="employee-doc-card__actions table-actions">${documentActions(row)}</div>
+        </article>`,
+      )
+      .join("");
+    bindDownloadButtons(cardsHost, generalDocs);
+  }
+
   function renderDocuments(items) {
     const generalDocs = items.filter((row) => row.category !== "payslip");
+    renderDocumentCards(items);
     if (!tbody) return;
     if (!generalDocs.length) {
       tbody.innerHTML =
@@ -179,17 +211,24 @@
       allItems = data.items || [];
       renderDocuments(allItems);
       renderPayslips(allItems);
-      if (summaryEl) {
-        const payslipCount = allItems.filter((row) => row.category === "payslip").length;
-        const otherCount = allItems.length - payslipCount;
-        if (allItems.length === 0) {
-          summaryEl.textContent = "Nothing shared yet.";
-        } else {
-          const parts = [];
-          if (otherCount) parts.push(`${otherCount} document${otherCount === 1 ? "" : "s"}`);
-          if (payslipCount) parts.push(`${payslipCount} payslip${payslipCount === 1 ? "" : "s"}`);
-          summaryEl.textContent = `${parts.join(" · ")} available.`;
-        }
+      const payslipCount = allItems.filter((row) => row.category === "payslip").length;
+      const otherCount = allItems.length - payslipCount;
+      if (allItems.length === 0) {
+        setSummaryText("employee-docs-summary", "Nothing shared yet.");
+        setSummaryText("employee-payslips-summary", "None shared yet.");
+      } else {
+        setSummaryText(
+          "employee-docs-summary",
+          otherCount
+            ? `${otherCount} document${otherCount === 1 ? "" : "s"} available.`
+            : "No general documents yet.",
+        );
+        setSummaryText(
+          "employee-payslips-summary",
+          payslipCount
+            ? `${payslipCount} payslip${payslipCount === 1 ? "" : "s"} available.`
+            : "No payslips shared yet.",
+        );
       }
     } catch (error) {
       if (tbody) {
@@ -198,7 +237,8 @@
       if (payslipsHost) {
         payslipsHost.innerHTML = `<p class="muted">${escapeHtml(error.message || "Could not load payslips.")}</p>`;
       }
-      if (summaryEl) summaryEl.textContent = "Could not load documents.";
+      if (summaryEl) setSummaryText("employee-docs-summary", "Could not load documents.");
+      setSummaryText("employee-payslips-summary", "Could not load payslips.");
     }
   }
 

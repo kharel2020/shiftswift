@@ -60,6 +60,14 @@
       .join("");
   }
 
+  function setSummaryText(sourceId, text) {
+    const source = document.getElementById(sourceId);
+    if (source) source.textContent = text;
+    document.querySelectorAll(`[data-mirror="${sourceId}"]`).forEach((el) => {
+      el.textContent = text;
+    });
+  }
+
   async function loadNotes() {
     try {
       const res = await fetch(`${API_BASE}/employee/me/notes`, { headers: authHeaders() });
@@ -68,15 +76,18 @@
       const items = data.items || [];
       renderNotes(items);
       if (summaryEl) {
-        summaryEl.textContent = items.length
-          ? `${items.length} message${items.length === 1 ? "" : "s"} from HR.`
-          : "No messages yet.";
+        setSummaryText(
+          "employee-notes-summary",
+          items.length
+            ? `${items.length} message${items.length === 1 ? "" : "s"} from HR.`
+            : "No messages yet.",
+        );
       }
     } catch (error) {
       if (listEl) {
         listEl.innerHTML = `<p class="muted">${escapeHtml(error.message || "Could not load notes.")}</p>`;
       }
-      if (summaryEl) summaryEl.textContent = "Could not load notes.";
+      if (summaryEl) setSummaryText("employee-notes-summary", "Could not load notes.");
     }
   }
 

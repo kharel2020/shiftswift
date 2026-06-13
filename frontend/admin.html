@@ -14,7 +14,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon.png?v=brandkit-v1" />
     <link rel="icon" type="image/svg+xml" href="./assets/shiftswift-hr-icon.svg?v=brandkit-v1" />
     <link rel="apple-touch-icon" href="./assets/shiftswift-hr-icon.png?v=brandkit-v1" />
-    <link rel="stylesheet" href="./styles.css?v=admin-v30" />
+    <link rel="stylesheet" href="./styles.css?v=admin-v31" />
   </head>
   <body>
     <div id="sidebar-overlay" class="sidebar-overlay" aria-hidden="true"></div>
@@ -107,6 +107,19 @@
         </div>
 
         <div id="trial-upgrade-banner" class="promo-result" hidden></div>
+
+        <div id="mobile-more-panel" class="mobile-more-panel" hidden>
+          <h2 class="mobile-panel-title">More</h2>
+          <nav class="mobile-more-menu" aria-label="More options">
+            <a class="mobile-more-link" href="#settings">Settings</a>
+            <a class="mobile-more-link" href="#settings">Billing &amp; plan</a>
+            <a class="mobile-more-link" href="#settings">Notifications</a>
+            <a class="mobile-more-link" href="#employees">Users &amp; employees</a>
+            <a class="mobile-more-link" href="mailto:support@shiftswifthr.co.uk">Help &amp; support</a>
+            <a class="mobile-more-link" href="./privacy-policy.html" target="_blank" rel="noopener">Legal &amp; privacy</a>
+            <a class="mobile-more-link mobile-more-link--signout" href="./business-login.html" data-sign-out>Sign out</a>
+          </nav>
+        </div>
 
         <section id="overview" class="admin-section">
           <div class="mobile-home-header admin-mobile-home-only" id="mobile-home-header">
@@ -1526,7 +1539,8 @@
           </div>
           <article class="card" id="rota-list-panel" hidden>
             <h3>Shifts</h3>
-            <div class="table-wrap">
+            <div id="rota-shifts-cards" class="rota-shift-cards" hidden aria-label="Shifts this week"></div>
+            <div class="table-wrap rota-shifts-table-wrap">
               <table class="data-table">
                 <thead>
                   <tr>
@@ -1587,10 +1601,6 @@
           <article class="card edit-panel" id="rota-add-shift-card" hidden aria-hidden="true"></article>
           <div class="rota-builder-footer">
             <button type="button" class="btn ghost" id="rota-clear-btn">Clear rota</button>
-            <label class="rota-notify-option muted">
-              <input type="checkbox" id="rota-notify-staff" disabled />
-              Notify staff on publish <span class="rota-notify-soon">(coming soon)</span>
-            </label>
           </div>
           </article>
         </section>
@@ -1850,19 +1860,6 @@
       </main>
     </div>
 
-    <div id="mobile-more-panel" class="mobile-more-panel" hidden>
-      <h2 class="mobile-panel-title">More</h2>
-      <nav class="mobile-more-menu" aria-label="More options">
-        <a class="mobile-more-link" href="#settings">Settings</a>
-        <a class="mobile-more-link" href="#settings">Billing &amp; plan</a>
-        <a class="mobile-more-link" href="#settings">Notifications</a>
-        <a class="mobile-more-link" href="#employees">Users &amp; employees</a>
-        <a class="mobile-more-link" href="mailto:support@shiftswifthr.co.uk">Help &amp; support</a>
-        <a class="mobile-more-link" href="./privacy-policy.html" target="_blank" rel="noopener">Legal &amp; privacy</a>
-        <a class="mobile-more-link mobile-more-link--signout" href="./business-login.html" data-sign-out>Sign out</a>
-      </nav>
-    </div>
-
     <nav class="mobile-tab-bar" id="mobile-tab-bar" aria-label="Main navigation">
       <button type="button" class="mobile-tab mobile-tab--active" data-mobile-tab="home">
         <svg class="mobile-tab__icon admin-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M4 10.5L12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1z"/></svg>
@@ -1893,19 +1890,19 @@
       data-portal="admin"
       data-app-name="ShiftSwift HR Admin"
       data-manifest="./admin-manifest.webmanifest?v=2"
-      data-sw="./app-sw.js?v=4"
+      data-sw="./app-sw.js?v=5"
     ></script>
     <script src="./mobile-shell.js?v=3"></script>
     <script src="./admin-icons.js?v=1"></script>
-    <script src="./admin-mobile.js?v=1"></script>
+    <script src="./admin-mobile.js?v=2"></script>
     <script src="./admin-shared.js?v=admin-v11"></script>
-    <script src="./admin-workspace.js?v=admin-v12"></script>
+    <script src="./admin-workspace.js?v=admin-v13"></script>
     <script src="./admin-settings.js?v=3"></script>
     <script src="./admin-documents.js?v=4"></script>
     <script src="./admin-employees.js?v=13"></script>
     <script src="./admin-recruitment.js?v=6"></script>
     <script src="./admin-promotions.js?v=admin-v5"></script>
-    <script src="./admin-compliance.js?v=admin-v8"></script>
+    <script src="./admin-compliance.js?v=admin-v9"></script>
     <script src="./admin-absence.js?v=1"></script>
     <script src="./admin-rtw.js?v=1"></script>
     <script src="./admin-grievance.js?v=5"></script>
@@ -1913,7 +1910,7 @@
     <script src="./admin-offboarding.js?v=admin-v5"></script>
     <script src="./admin-templates.js?v=admin-v8"></script>
     <script src="./admin-time-punch.js?v=6"></script>
-    <script src="./admin-rota.js?v=6"></script>
+    <script src="./admin-rota.js?v=7"></script>
     <script src="./admin-leave.js?v=1"></script>
     <script src="./app.js?v=admin-v6"></script>
     <script src="./contracts.js?v=5"></script>

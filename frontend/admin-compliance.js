@@ -191,10 +191,10 @@
     const panel = document.getElementById("sponsor-licence-ack-panel");
     const content = document.getElementById("compliance-tools-content");
     if (acknowledged) {
-      panel?.setAttribute("hidden", "");
+      if (panel) panel.hidden = true;
       content?.removeAttribute("hidden");
     } else {
-      panel?.removeAttribute("hidden");
+      if (panel) panel.hidden = false;
       content?.setAttribute("hidden", "");
     }
   }
