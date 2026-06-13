@@ -91,6 +91,7 @@
     induction: "Phone, home address, and emergency contact are required. NI number is validated when provided.",
     job_performance: "Salary and job details are stored on the employee HR record.",
     compliance_reporting: "Visa type plus a GOV.UK share code <em>or</em> CoS reference required.",
+    support: "Add HR-only internal notes or messages the employee will see in their portal.",
     offboarding: "Set employee status to <strong>Terminated</strong> in on-boarding (or off-boarding workflow) to unlock this step.",
   };
 
@@ -683,6 +684,99 @@
     });
   }
 
+  function formatNoteWhen(iso) {
+    if (!iso) return "—";
+    try {
+      return new Date(iso).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" });
+    } catch {
+      return iso;
+    }
+  }
+
+  function noteVisibilityLabel(visibility) {
+    return visibility === "employee_visible" ? "Shared with employee" : "HR only";
+  }
+
+  async function loadEmployeeNotesList(container) {
+    const list = container.querySelector("#employee-notes-list");
+    if (!list || !activeEmployeeId) return;
+    list.innerHTML = `<p class="muted">Loading notes…</p>`;
+    try {
+      const res = await apiFetch(`/admin/employees/${activeEmployeeId}/notes`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Could not load notes");
+      const items = data.items || [];
+      if (!items.length) {
+        list.innerHTML = `<p class="muted">No notes yet.</p>`;
+        return;
+      }
+      list.innerHTML = items
+        .map(
+          (note) => `
+          <article class="employee-note-card employee-note-card--${escapeHtml(note.visibility)}">
+            <header class="employee-note-card__head">
+              <span class="employee-note-badge">${escapeHtml(noteVisibilityLabel(note.visibility))}</span>
+              <span class="muted">${escapeHtml(formatNoteWhen(note.created_at))}</span>
+            </header>
+            <p class="employee-note-card__body">${escapeHtml(note.body || "")}</p>
+            <footer class="employee-note-card__foot muted">Added by ${escapeHtml(note.created_by || "HR")}</footer>
+          </article>`,
+        )
+        .join("");
+    } catch (error) {
+      list.innerHTML = `<p class="form-error-message">${escapeHtml(error.message || "Could not load notes")}</p>`;
+    }
+  }
+
+  function renderNotesPanel(workspace, section, container) {
+    container.innerHTML = `
+      <div class="employee-section-intro">${buildSectionIntro(section, workspace)}</div>
+      <form id="employee-note-form" class="edit-form edit-form--cols-2 employee-note-form">
+        <label class="edit-field" data-span="2">
+          <span class="edit-label">Note</span>
+          <textarea name="body" rows="4" maxlength="4000" required placeholder="Record an HR-only note or a message for the employee portal…"></textarea>
+        </label>
+        <label class="edit-field">
+          <span class="edit-label">Visibility</span>
+          <select name="visibility">
+            <option value="hr_internal">HR only (encrypted)</option>
+            <option value="employee_visible">Shared with employee</option>
+          </select>
+        </label>
+        <div class="edit-form-actions" data-span="2">
+          <button class="btn secondary" type="submit">Save note</button>
+          <p class="edit-form-status muted" data-note-status></p>
+        </div>
+      </form>
+      <div id="employee-notes-list" class="employee-notes-list"><p class="muted">Loading notes…</p></div>`;
+
+    const form = container.querySelector("#employee-note-form");
+    form?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const status = container.querySelector("[data-note-status]");
+      const payload = Object.fromEntries(new FormData(form).entries());
+      if (status) status.textContent = "Saving…";
+      try {
+        const res = await apiFetch(`/admin/employees/${activeEmployeeId}/notes`, {
+          method: "POST",
+          body: JSON.stringify({
+            body: payload.body,
+            visibility: payload.visibility || "hr_internal",
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(typeof data.detail === "string" ? data.detail : "Save failed");
+        form.reset();
+        if (status) status.textContent = "Note saved.";
+        await loadEmployeeNotesList(container);
+      } catch (error) {
+        if (status) status.textContent = error.message || "Save failed";
+      }
+    });
+
+    loadEmployeeNotesList(container);
+  }
+
   function renderLinkPanel(section, container) {
     const meta = LINK_SECTIONS[section.key] || {};
     container.innerHTML = `
@@ -724,6 +818,11 @@
 
     if (section.kind === "documents") {
       renderDocumentStorePanel(workspace, container);
+      return;
+    }
+
+    if (section.kind === "notes") {
+      renderNotesPanel(workspace, section, container);
       return;
     }
 

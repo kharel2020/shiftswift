@@ -29,6 +29,7 @@
           <a class="nav-link" href="#time-clock">Time clock</a>
           <a class="nav-link" href="#my-shifts">My shifts</a>
           <a class="nav-link" href="#documents">My documents</a>
+          <a class="nav-link" href="#notes">Notes from HR</a>
           <a class="nav-link" href="#payslips">Payslips</a>
         </nav>
         <div class="badge pill">Employee portal</div>
@@ -70,6 +71,12 @@
               <p class="muted">Signed contracts, policies, and HR letters shared with you.</p>
               <p class="muted" id="employee-docs-summary">Loading…</p>
               <a class="btn ghost" href="#documents">View my documents</a>
+            </article>
+            <article class="card">
+              <h3>Notes from HR</h3>
+              <p class="muted">Messages your employer has shared with you in the portal.</p>
+              <p class="muted" id="employee-notes-summary">Loading…</p>
+              <a class="btn ghost" href="#notes">View notes</a>
             </article>
             <article class="card">
               <h3>Payslips</h3>
@@ -177,6 +184,20 @@
           </article>
         </section>
 
+        <section id="notes" class="admin-section">
+          <header class="section-header">
+            <div>
+              <h2>Notes from HR</h2>
+              <p class="muted">Messages your employer has shared with you. HR-only records are not shown here.</p>
+            </div>
+          </header>
+          <article class="card">
+            <div id="employee-notes-list" class="employee-notes-list">
+              <p class="muted">Loading notes…</p>
+            </div>
+          </article>
+        </section>
+
         <section id="payslips" class="admin-section">
           <header class="section-header">
             <div>
@@ -232,7 +253,8 @@
     <script src="./employee.js?v=3"></script>
     <script src="./employee-time-punch.js?v=3"></script>
     <script src="./employee-rota.js?v=1"></script>
-    <script src="./employee-documents.js?v=2"></script>
+    <script src="./employee-documents.js?v=3"></script>
+    <script src="./employee-notes.js?v=1"></script>
       <script src="./cookie-consent.js?v=1"></script>
   </body>
 </html>

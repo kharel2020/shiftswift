@@ -97,6 +97,11 @@ class BulkPortalInviteRequest(BaseModel):
     resend_existing: bool = Field(default=False)
 
 
+class EmployeeNoteCreate(BaseModel):
+    body: str = Field(min_length=1, max_length=4000)
+    visibility: str = Field(default="hr_internal", pattern="^(hr_internal|employee_visible)$")
+
+
 @router.post("/invite-portal")
 def bulk_invite_employees_to_portal(
     payload: BulkPortalInviteRequest,
@@ -466,3 +471,63 @@ def remove_employee_document(
     finally:
         conn.close()
     return {"status": "deleted"}
+
+
+@router.get("/{employee_id}/notes")
+def list_employee_notes(
+    employee_id: int,
+    request: Request,
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, object]:
+    from modules.employee_notes.service import list_notes_for_hr
+
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = get_connection()
+    try:
+        items = list_notes_for_hr(
+            tenant_id=tenant_id,
+            employee_id=employee_id,
+            actor_username=current_user.username,
+            actor_role=current_user.role,
+            ip_address=client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+            conn=conn,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    finally:
+        conn.close()
+    return {"items": items, "count": len(items)}
+
+
+@router.post("/{employee_id}/notes")
+def create_employee_note(
+    employee_id: int,
+    payload: EmployeeNoteCreate,
+    request: Request,
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, object]:
+    from modules.employee_notes.service import create_note
+
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = get_connection()
+    try:
+        return create_note(
+            tenant_id=tenant_id,
+            employee_id=employee_id,
+            body=payload.body,
+            visibility=payload.visibility,
+            actor_username=current_user.username,
+            actor_role=current_user.role,
+            ip_address=client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+            conn=conn,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    finally:
+        conn.close()

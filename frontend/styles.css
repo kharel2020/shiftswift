@@ -359,6 +359,68 @@ body.employee-gdpr-locked .sidebar {
   user-select: none;
 }
 
+.employee-notes-list {
+  display: grid;
+  gap: 12px;
+}
+
+.employee-note-form {
+  margin-bottom: 1rem;
+}
+
+.employee-note-card {
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--gray-200, #e5e7eb);
+  background: #fff;
+}
+
+.employee-note-card--hr_internal {
+  border-color: rgba(15, 110, 86, 0.18);
+  background: #f8fcfa;
+}
+
+.employee-note-card--employee_visible,
+.employee-note-card--employee_visible.employee-note-card {
+  border-color: rgba(37, 99, 235, 0.16);
+  background: #f8fbff;
+}
+
+.employee-note-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.employee-note-card__body {
+  margin: 0 0 8px;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.employee-note-card__foot {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.employee-note-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: rgba(15, 110, 86, 0.12);
+  color: #0f6e56;
+}
+
+.employee-note-card--employee_visible .employee-note-badge {
+  background: rgba(37, 99, 235, 0.12);
+  color: #1d4ed8;
+}
+
 .form-error-message {
   margin: 0;
   padding: 12px 14px;

@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import FileResponse
 
 from auth_service import AuthUser
 from config import load_settings
 from core.database import get_connection
-from deps import get_employee_user, resolve_tenant_id
+from deps import client_ip, get_employee_user, resolve_tenant_id
 from modules.documents.constants import EMPLOYEE_DOCUMENT_CATEGORY_LABELS, EMPLOYEE_SELF_SERVICE_CATEGORIES
 from modules.documents.service import get_employee_document, list_employee_documents
 from modules.documents.storage import download_filename, resolve_stored_file
@@ -112,3 +112,30 @@ def download_my_document(
         media_type=doc.get("content_type") or "application/octet-stream",
         filename=filename,
     )
+
+
+@router.get("/notes")
+def list_my_notes(
+    request: Request,
+    current_user: Annotated[AuthUser, Depends(get_employee_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, object]:
+    from modules.employee_notes.service import list_notes_for_employee
+
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = get_connection()
+    try:
+        employee = _employee_for_user(tenant_id=tenant_id, user=current_user, conn=conn)
+        items = list_notes_for_employee(
+            tenant_id=tenant_id,
+            employee_id=int(employee["id"]),
+            actor_username=current_user.username,
+            actor_role=current_user.role,
+            ip_address=client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+            conn=conn,
+        )
+    finally:
+        conn.close()
+    return {"items": items, "count": len(items)}
+
