@@ -301,7 +301,8 @@ def employee_portal_invite_email(
         f"{intro}\n\n"
         f"Choose a password using this secure link (expires in {reset_hours} hours):\n"
         f"{setup_url}\n\n"
-        f"After that, sign in as an employee at:\n{login_url}\n\n"
+        f"After that, sign in as an employee at:\n{login_url}\n"
+        f"On the sign-in page, choose the Employee tab (not Business HR).\n"
         f"Use the same work email address this invite was sent to.\n\n"
         f"— {APP_NAME}\n"
     )
@@ -311,6 +312,7 @@ def employee_portal_invite_email(
         intro=f"Hello {employee_name}, {intro}",
         paragraphs=[
             f"This link expires in {reset_hours} hours. Choose a password, then sign in using your work email.",
+            "On the sign-in page, open the Employee tab (not Business HR).",
             f"Portal sign-in: {login_url}",
         ],
         cta_url=setup_url,

@@ -201,6 +201,36 @@ def authenticate_user(
     return user
 
 
+def login_portal_mismatch_message(
+    settings: Settings,
+    username: str,
+    password: str,
+    *,
+    require_role: str | None = None,
+    portal: Portal | None = None,
+) -> str | None:
+    """When password is valid but role/portal does not match, return a clearer sign-in hint."""
+    row = fetch_user_from_db(settings, username)
+    if not row or not row.get("is_active"):
+        return None
+    locked_until = row.get("locked_until")
+    if locked_until and locked_until > datetime.now(timezone.utc):
+        return None
+    if not verify_password(password, row["password_hash"]):
+        return None
+
+    role = row["role"]
+    if require_role == "hr" and role == "employee":
+        return "This is an employee account. Switch to the Employee tab, then sign in."
+    if require_role == "employee" and role == "hr":
+        return "This is an HR admin account. Switch to the Business HR tab, then sign in."
+    if portal == "master" and role != "admin":
+        return "Platform master admin uses a separate sign-in page."
+    if portal == "business" and role == "admin":
+        return "Platform master admin uses a separate sign-in page."
+    return None
+
+
 def log_security_event(
     settings: Settings,
     *,

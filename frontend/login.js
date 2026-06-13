@@ -66,7 +66,7 @@ function friendlyLoginError(message, endpoint, username) {
     if (endpoint.includes("employee")) {
       return "Use your employee account here. HR admins should choose the Business HR tab.";
     }
-    return "Use Business sign in for HR/employee accounts. Platform master admin has a separate sign-in page.";
+    return "Check your username and password. HR admins use the Business HR tab; employees use the Employee tab.";
   }
   if (message === "Invalid username or password" || message === "Login failed") {
     return message;

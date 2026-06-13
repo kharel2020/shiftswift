@@ -7,7 +7,9 @@ import secrets
 from typing import Any
 
 from auth_password_reset import RESET_HOURS, send_account_setup_email
-from auth_service import fetch_user_from_db, hash_password
+import psycopg2.extras
+
+from auth_service import hash_password
 from config import Settings
 from employee_audit import log_employee_data_event
 from modules.employees.repository import fetch_employee
@@ -22,6 +24,23 @@ def _normalize_email(value: str | None) -> str:
 
 def _looks_like_email(value: str | None) -> bool:
     return bool(value and EMAIL_RE.match(value))
+
+
+def _fetch_app_user_row(*, conn: Any, email: str) -> dict[str, Any] | None:
+    """Load app_users row on the active connection (includes uncommitted inserts)."""
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute(
+            """
+            SELECT username, password_hash, role, tenant_id::text AS tenant_id, is_active,
+                   locked_until, login_portal, mfa_enabled
+            FROM app_users
+            WHERE lower(username) = lower(%s)
+            LIMIT 1
+            """,
+            (email,),
+        )
+        row = cur.fetchone()
+    return dict(row) if row else None
 
 
 def fetch_portal_account_by_email(*, conn: Any, email: str) -> dict[str, Any] | None:
@@ -102,7 +121,6 @@ def _ensure_employee_app_user(
     tenant_id: int,
     email: str,
     conn: Any,
-    settings: Settings,
 ) -> tuple[dict[str, Any], bool]:
     existing = fetch_portal_account_by_email(conn=conn, email=email)
     if existing:
@@ -123,7 +141,7 @@ def _ensure_employee_app_user(
                     (email,),
                 )
             existing["is_active"] = True
-        user = fetch_user_from_db(settings, email)
+        user = _fetch_app_user_row(conn=conn, email=email)
         if not user:
             raise ValueError("Could not load employee login account")
         return user, False
@@ -137,7 +155,7 @@ def _ensure_employee_app_user(
             """,
             (email, password_hash, tenant_id),
         )
-    user = fetch_user_from_db(settings, email)
+    user = _fetch_app_user_row(conn=conn, email=email)
     if not user:
         raise ValueError("Could not create employee login account")
     return user, True
@@ -179,7 +197,6 @@ def invite_employee_to_portal(
         tenant_id=tenant_id,
         email=email,
         conn=conn,
-        settings=settings,
     )
 
     from admin_service import get_tenant_profile

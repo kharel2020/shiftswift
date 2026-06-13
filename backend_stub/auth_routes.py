@@ -26,6 +26,7 @@ from auth_service import (
     decode_token,
     is_login_rate_limited,
     log_security_event,
+    login_portal_mismatch_message,
     record_login_attempt,
 )
 from config import load_settings
@@ -115,6 +116,13 @@ def _login_response(
     )
     if not user:
         record_login_attempt(settings, ip, payload.username)
+        mismatch = login_portal_mismatch_message(
+            settings,
+            payload.username,
+            payload.password,
+            require_role=require_role,
+            portal=portal,
+        )
         log_security_event(
             settings,
             event_type="login_failed",
@@ -127,7 +135,7 @@ def _login_response(
         )
         raise HTTPException(
             status_code=401,
-            detail="Invalid credentials for this login type",
+            detail=mismatch or "Invalid credentials for this login type",
         )
 
     if portal == "business":
