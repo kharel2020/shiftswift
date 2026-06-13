@@ -1,5 +1,5 @@
 /* ShiftSwift HR — shared PWA service worker (admin, employee, time clock shells). */
-const CACHE_NAME = "shiftswift-app-v10";
+const CACHE_NAME = "shiftswift-app-v11";
 const SHELL = [
   "./admin.html",
   "./employee.html",
@@ -14,7 +14,8 @@ const SHELL = [
   "./admin-manifest.webmanifest",
   "./employee-manifest.webmanifest",
   "./punch-manifest.webmanifest",
-  "./assets/shiftswift-hr-icon.png",
+  "./assets/shiftswift-hr-app-icon-192.png",
+  "./assets/shiftswift-hr-app-icon.png",
   "./assets/shiftswift-hr-logo-nav.svg",
   "./assets/favicon.png",
 ];
@@ -136,8 +137,8 @@ self.addEventListener("push", (event) => {
       const data = parsePushPayload(event);
       await self.registration.showNotification(data.title, {
         body: data.body,
-        icon: "./assets/shiftswift-hr-icon.png",
-        badge: "./assets/shiftswift-hr-icon.png",
+        icon: "./assets/shiftswift-hr-app-icon-192.png",
+        badge: "./assets/shiftswift-hr-app-icon-192.png",
         tag: data.tag || "shiftswift",
         renotify: true,
         data: { url: data.url || "./punch.html" },

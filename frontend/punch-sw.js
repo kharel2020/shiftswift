@@ -1,5 +1,5 @@
 /* ShiftSwift Time Clock — PWA service worker (offline shell + safe caching). */
-const CACHE_NAME = "shiftswift-punch-v4";
+const CACHE_NAME = "shiftswift-punch-v5";
 const SHELL = [
   "./punch.html",
   "./punch.css",
@@ -10,7 +10,8 @@ const SHELL = [
   "./push-notifications.js",
   "./brand-config.js",
   "./punch-manifest.webmanifest",
-  "./assets/shiftswift-hr-icon.png",
+  "./assets/shiftswift-clock-app-icon-192.png",
+  "./assets/shiftswift-clock-app-icon.png",
   "./assets/shiftswift-hr-logo-nav.svg",
   "./assets/favicon.png",
 ];
@@ -125,8 +126,8 @@ self.addEventListener("push", (event) => {
       const data = parsePushPayload(event);
       await self.registration.showNotification(data.title, {
         body: data.body,
-        icon: "./assets/shiftswift-hr-icon.png",
-        badge: "./assets/shiftswift-hr-icon.png",
+        icon: "./assets/shiftswift-clock-app-icon-192.png",
+        badge: "./assets/shiftswift-clock-app-icon-192.png",
         tag: data.tag || "shiftswift",
         renotify: true,
         data: { url: data.url || "./punch.html" },
