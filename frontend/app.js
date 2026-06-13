@@ -249,6 +249,7 @@ async function mountAdvertForm() {
 }
 
 initNavigation();
+window.AdminMobile?.init?.();
 
 let complianceReady = false;
 

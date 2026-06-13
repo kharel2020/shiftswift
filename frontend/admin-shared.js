@@ -201,12 +201,14 @@ window.Admin = (() => {
   }
 
   function parseHashBaseSection(rawHash) {
-    return parseHashPath(rawHash).baseSection;
+    return resolveSectionFromHash(rawHash);
   }
 
   function resolveSectionFromHash(rawHash) {
     const { baseSection } = parseHashPath(rawHash);
     if (baseSection === "payroll" || baseSection === "export") return "overview";
+    if (baseSection === "overview-actions") return "overview";
+    if (baseSection.startsWith("compliance")) return "compliance";
     return baseSection || "overview";
   }
 
@@ -398,6 +400,15 @@ window.Admin = (() => {
     const sidebarCtl =
       typeof window.MobileShell?.initSidebar === "function" ? window.MobileShell.initSidebar() : null;
 
+    function scrollToHashAnchor() {
+      const anchor = window.location.hash.replace("#", "");
+      if (!anchor || anchor === "overview") return;
+      const el = document.getElementById(anchor);
+      if (el && !el.closest(".admin-section[hidden]")) {
+        window.MobileShell?.scrollToAnchor?.(anchor);
+      }
+    }
+
     function showSection(sectionId) {
       sections.forEach((section) => {
         const active = section.id === sectionId;
@@ -410,6 +421,7 @@ window.Admin = (() => {
       if (sidebarCtl?.isOpen?.()) {
         sidebarCtl.closeSidebar();
       }
+      scrollToHashAnchor();
     }
 
     function routeFromHash() {
@@ -429,8 +441,10 @@ window.Admin = (() => {
           return;
         }
       } else if (!isDeepLink && path !== targetSection) {
-        window.location.hash = targetSection;
-        return;
+        if (!document.getElementById(path)) {
+          window.location.hash = targetSection;
+          return;
+        }
       }
 
       showSection(targetSection);

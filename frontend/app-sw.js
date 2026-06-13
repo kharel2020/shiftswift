@@ -1,5 +1,5 @@
 /* ShiftSwift HR — shared PWA service worker (admin, employee, time clock shells). */
-const CACHE_NAME = "shiftswift-app-v2";
+const CACHE_NAME = "shiftswift-app-v4";
 const SHELL = [
   "./admin.html",
   "./employee.html",

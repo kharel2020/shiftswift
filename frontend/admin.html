@@ -14,7 +14,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon.png?v=brandkit-v1" />
     <link rel="icon" type="image/svg+xml" href="./assets/shiftswift-hr-icon.svg?v=brandkit-v1" />
     <link rel="apple-touch-icon" href="./assets/shiftswift-hr-icon.png?v=brandkit-v1" />
-    <link rel="stylesheet" href="./styles.css?v=admin-v28" />
+    <link rel="stylesheet" href="./styles.css?v=admin-v30" />
   </head>
   <body>
     <div id="sidebar-overlay" class="sidebar-overlay" aria-hidden="true"></div>
@@ -58,8 +58,9 @@
           </div>
         </div>
 
-        <div class="topbar">
+        <div class="topbar app-mobile-header">
           <div class="topbar-main">
+            <button type="button" class="mobile-back-btn" id="mobile-back-btn" aria-label="Go back" hidden>← Back</button>
             <button
               type="button"
               class="sidebar-toggle sidebar-toggle--menu"
@@ -72,12 +73,35 @@
               <span class="sidebar-toggle__bar" aria-hidden="true"></span>
               <span class="sidebar-toggle__bar" aria-hidden="true"></span>
             </button>
-            <div>
-              <h1>ShiftSwift HR Admin</h1>
-              <p class="muted topbar-tagline">Sponsor licence compliance, workforce records, and billing for your organisation.</p>
-            </div>
+            <a class="topbar-brand" href="#overview">
+              <img
+                class="topbar-brand__logo"
+                src="./assets/shiftswift-hr-logo-nav.svg?v=brandkit-v4"
+                alt=""
+              />
+              <span class="topbar-brand__text">
+                <span class="topbar-brand__name" id="topbar-business-name">ShiftSwift HR</span>
+                <span class="topbar-brand__app muted">Admin</span>
+              </span>
+            </a>
           </div>
-          <div class="stack topbar-actions">
+          <div class="topbar-tools">
+            <button type="button" class="topbar-icon-btn" id="topbar-alerts-btn" aria-label="Open actions">
+              <svg class="admin-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 3 6v3l2 2H5l2-2v-3a7 7 0 0 1 3-6"/><path d="M10 19a2 2 0 0 0 4 0"/></svg>
+              <span class="topbar-icon-btn__badge" id="topbar-alerts-badge" hidden>0</span>
+            </button>
+            <details class="topbar-user-menu topbar-user-menu--desktop">
+              <summary class="topbar-user-menu__trigger" aria-label="Account menu">
+                <span class="topbar-user-menu__avatar" aria-hidden="true">HR</span>
+              </summary>
+              <div class="topbar-user-menu__panel">
+                <p class="topbar-user-menu__label muted" id="topbar-user-label">Admin account</p>
+                <a class="topbar-user-menu__link" href="#settings">Settings</a>
+                <a class="topbar-user-menu__link topbar-user-menu__link--signout" href="./business-login.html" data-sign-out>Sign out</a>
+              </div>
+            </details>
+          </div>
+          <div class="stack topbar-actions topbar-actions--desktop">
             <a class="btn ghost" href="./business-login.html" data-sign-out>Sign out</a>
           </div>
         </div>
@@ -85,26 +109,32 @@
         <div id="trial-upgrade-banner" class="promo-result" hidden></div>
 
         <section id="overview" class="admin-section">
-          <header class="section-header">
+          <div class="mobile-home-header admin-mobile-home-only" id="mobile-home-header">
+            <p class="mobile-greeting" id="mobile-greeting">Good afternoon</p>
+            <p class="mobile-business-name" id="mobile-business-name"></p>
+          </div>
+          <header class="section-header section-header--desktop">
             <div>
               <h2>Overview</h2>
               <p class="muted" id="overview-subtitle">Your HR workspace at a glance.</p>
             </div>
           </header>
-          <div id="overview-trial-note" hidden></div>
-          <div class="hr-stats-grid overview-stats-grid" id="overview-metrics" aria-label="Workspace summary"></div>
+          <div id="overview-trial-note" class="admin-mobile-home-only" hidden></div>
+          <div class="hr-stats-grid overview-stats-grid admin-mobile-home-only" id="overview-metrics" aria-label="Workspace summary"></div>
+          <article class="mobile-subscription-card admin-mobile-home-only" id="mobile-subscription-card" hidden aria-label="Subscription"></article>
           <div class="overview-dashboard-layout">
-            <div class="overview-main">
-              <h3 class="overview-section-title">Modules</h3>
-              <div class="overview-module-grid" id="overview-modules" aria-label="HR modules"></div>
-            </div>
-            <aside class="overview-actions-panel">
+            <aside class="overview-actions-panel admin-mobile-home-only" id="overview-actions-panel">
               <div class="overview-actions-head">
-                <h3 class="overview-section-title">Action required</h3>
+                <h3 class="overview-section-title">Open actions</h3>
                 <span class="overview-actions-count" id="overview-actions-count">0</span>
               </div>
               <div id="overview-actions" class="overview-actions-list" aria-label="Open actions"></div>
             </aside>
+            <div class="overview-main">
+              <h3 class="overview-section-title overview-section-title--desktop">Modules</h3>
+              <h2 class="mobile-panel-title mobile-panel-title--modules">Modules</h2>
+              <div class="overview-module-grid" id="overview-modules" aria-label="HR modules"></div>
+            </div>
           </div>
         </section>
 
@@ -622,6 +652,7 @@
         </section>
 
         <section id="compliance" class="admin-section" hidden data-feature="sponsor-compliance">
+          <div id="mobile-compliance-dashboard" class="mobile-compliance-dashboard admin-mobile-compliance-only"></div>
           <header class="section-header">
             <div>
               <h2>Sponsor Licence Safeguards</h2>
@@ -1818,6 +1849,43 @@
         </section>
       </main>
     </div>
+
+    <div id="mobile-more-panel" class="mobile-more-panel" hidden>
+      <h2 class="mobile-panel-title">More</h2>
+      <nav class="mobile-more-menu" aria-label="More options">
+        <a class="mobile-more-link" href="#settings">Settings</a>
+        <a class="mobile-more-link" href="#settings">Billing &amp; plan</a>
+        <a class="mobile-more-link" href="#settings">Notifications</a>
+        <a class="mobile-more-link" href="#employees">Users &amp; employees</a>
+        <a class="mobile-more-link" href="mailto:support@shiftswifthr.co.uk">Help &amp; support</a>
+        <a class="mobile-more-link" href="./privacy-policy.html" target="_blank" rel="noopener">Legal &amp; privacy</a>
+        <a class="mobile-more-link mobile-more-link--signout" href="./business-login.html" data-sign-out>Sign out</a>
+      </nav>
+    </div>
+
+    <nav class="mobile-tab-bar" id="mobile-tab-bar" aria-label="Main navigation">
+      <button type="button" class="mobile-tab mobile-tab--active" data-mobile-tab="home">
+        <svg class="mobile-tab__icon admin-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M4 10.5L12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1z"/></svg>
+        <span class="mobile-tab__label">Home</span>
+      </button>
+      <button type="button" class="mobile-tab" data-mobile-tab="modules">
+        <svg class="mobile-tab__icon admin-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M4 4h7v7H4z"/><path d="M13 4h7v7h-7z"/><path d="M4 13h7v7H4z"/><path d="M13 13h7v7h-7z"/></svg>
+        <span class="mobile-tab__label">Modules</span>
+      </button>
+      <button type="button" class="mobile-tab" data-mobile-tab="rota">
+        <svg class="mobile-tab__icon admin-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M8 2v4"/><path d="M16 2v4"/><path d="M3 8h18"/><path d="M5 6h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2"/></svg>
+        <span class="mobile-tab__label">Rota</span>
+      </button>
+      <button type="button" class="mobile-tab" data-mobile-tab="compliance" data-feature="sponsor-compliance">
+        <svg class="mobile-tab__icon admin-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M12 3l8 4v5c0 5-3.5 8.5-8 9c-4.5-.5-8-4-8-9V7z"/><path d="M9 12l2 2l4-4"/></svg>
+        <span class="mobile-tab__label">Compliance</span>
+      </button>
+      <button type="button" class="mobile-tab" data-mobile-tab="more">
+        <svg class="mobile-tab__icon admin-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M5 12h.01"/><path d="M12 12h.01"/><path d="M19 12h.01"/></svg>
+        <span class="mobile-tab__label">More</span>
+      </button>
+    </nav>
+
     <script src="./auth-guard.js?v=security-v1"></script>
     <script src="./brand-config.js?v=brand-v4"></script>
     <script
@@ -1825,11 +1893,13 @@
       data-portal="admin"
       data-app-name="ShiftSwift HR Admin"
       data-manifest="./admin-manifest.webmanifest?v=2"
-      data-sw="./app-sw.js?v=2"
+      data-sw="./app-sw.js?v=4"
     ></script>
-    <script src="./mobile-shell.js?v=1"></script>
-    <script src="./admin-shared.js?v=admin-v9"></script>
-    <script src="./admin-workspace.js?v=admin-v10"></script>
+    <script src="./mobile-shell.js?v=3"></script>
+    <script src="./admin-icons.js?v=1"></script>
+    <script src="./admin-mobile.js?v=1"></script>
+    <script src="./admin-shared.js?v=admin-v11"></script>
+    <script src="./admin-workspace.js?v=admin-v12"></script>
     <script src="./admin-settings.js?v=3"></script>
     <script src="./admin-documents.js?v=4"></script>
     <script src="./admin-employees.js?v=13"></script>
@@ -1845,7 +1915,7 @@
     <script src="./admin-time-punch.js?v=6"></script>
     <script src="./admin-rota.js?v=6"></script>
     <script src="./admin-leave.js?v=1"></script>
-    <script src="./app.js?v=admin-v4"></script>
+    <script src="./app.js?v=admin-v6"></script>
     <script src="./contracts.js?v=5"></script>
     <script src="./employment-contracts.js?v=2"></script>
       <script src="./cookie-consent.js?v=1"></script>

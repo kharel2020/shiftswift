@@ -131,13 +131,49 @@
 
   function moduleCard({ icon, title, value, sub, href, tone }) {
     const toneClass = tone ? ` overview-module-card--${tone}` : "";
+    const iconSvg = window.AdminIcons?.svg?.(icon) || "";
     return `
       <a class="overview-module-card${toneClass}" href="${escapeHtml(href)}">
-        <span class="overview-module-card__icon" aria-hidden="true">${icon}</span>
+        <span class="overview-module-card__head">
+          <span class="overview-module-card__icon" aria-hidden="true">${iconSvg}</span>
+          <span class="overview-module-card__chevron" aria-hidden="true">${window.AdminIcons?.svg?.("chevron") || "›"}</span>
+        </span>
         <span class="overview-module-card__title">${escapeHtml(title)}</span>
         <span class="overview-module-card__value">${escapeHtml(value)}</span>
         <span class="overview-module-card__sub">${escapeHtml(sub)}</span>
       </a>`;
+  }
+
+  function statCard({ icon, label, value, sub, href, tone, valueText, extraClass }) {
+    const toneClass = tone ? ` hr-stat-card--${tone}` : "";
+    const valueClass = valueText ? " hr-stat-card__value--text" : "";
+    const iconSvg = window.AdminIcons?.svg?.(icon) || "";
+    return `
+      <a class="hr-stat-card hr-stat-card--link${toneClass}${extraClass ? ` ${extraClass}` : ""}" href="${escapeHtml(href)}">
+        <span class="hr-stat-card__icon" aria-hidden="true">${iconSvg}</span>
+        <span class="hr-stat-card__label">${escapeHtml(label)}</span>
+        <span class="hr-stat-card__value${valueClass}">${escapeHtml(value)}</span>
+        <span class="hr-stat-card__sub">${escapeHtml(sub)}</span>
+      </a>`;
+  }
+
+  function updateTopbarMeta(data) {
+    const businessName = data.trading_name || data.tenant_name || "ShiftSwift HR";
+    const topbarName = document.getElementById("topbar-business-name");
+    const userLabel = document.getElementById("topbar-user-label");
+    if (topbarName) topbarName.textContent = businessName;
+    if (userLabel) userLabel.textContent = businessName;
+    const badge = document.getElementById("topbar-alerts-badge");
+    const count = Number(data.open_actions_count) || 0;
+    if (badge) {
+      if (count > 0) {
+        badge.hidden = false;
+        badge.textContent = String(count);
+      } else {
+        badge.hidden = true;
+        badge.textContent = "0";
+      }
+    }
   }
 
   function applyNavBadges(badges) {
@@ -168,8 +204,12 @@
   function actionItem(item) {
     return `
       <a class="overview-action overview-action--${escapeHtml(item.severity)}" href="${escapeHtml(item.href)}">
-        <span class="overview-action__title">${escapeHtml(item.title)}</span>
-        <span class="overview-action__detail muted">${escapeHtml(item.detail)}</span>
+        <span class="overview-action__dot overview-action__dot--${escapeHtml(item.severity)}" aria-hidden="true"></span>
+        <span class="overview-action__copy">
+          <span class="overview-action__title">${escapeHtml(item.title)}</span>
+          <span class="overview-action__detail muted">${escapeHtml(item.detail)}</span>
+        </span>
+        <span class="overview-action__chevron" aria-hidden="true">›</span>
       </a>`;
   }
 
@@ -193,6 +233,10 @@
       if (subtitle) {
         subtitle.textContent = `Welcome back — ${businessName} at a glance.`;
       }
+      const mobileBusiness = document.getElementById("mobile-business-name");
+      if (mobileBusiness) mobileBusiness.textContent = businessName;
+      window.AdminMobile?.refreshGreeting?.();
+      updateTopbarMeta(data);
 
       if (trialNote) {
         if (data.trial_active) {
@@ -212,30 +256,55 @@
       const critical = (data.open_actions || []).filter((a) => a.severity === "critical").length;
 
       grid.innerHTML = `
-        <article class="hr-stat-card">
-          <span class="hr-stat-card__icon" aria-hidden="true">👥</span>
-          <span class="hr-stat-card__label">Active employees</span>
-          <span class="hr-stat-card__value">${escapeHtml(employees.active ?? 0)}</span>
-          <span class="hr-stat-card__sub">Limit ${escapeHtml(employees.limit ?? data.max_employees ?? "—")} on ${escapeHtml(data.plan_display_name || "current")} plan</span>
-        </article>
-        <article class="hr-stat-card hr-stat-card--ok">
-          <span class="hr-stat-card__icon" aria-hidden="true">🕐</span>
-          <span class="hr-stat-card__label">Today's punches</span>
-          <span class="hr-stat-card__value">${escapeHtml(punch.today_punches ?? 0)}</span>
-          <span class="hr-stat-card__sub">${punch.last_punch_at ? `Last punch ${formatOverviewTime(punch.last_punch_at)}` : "No punches yet"}</span>
-        </article>
-        <article class="hr-stat-card${critical ? " hr-stat-card--warn" : actions ? " hr-stat-card--warn" : ""}">
-          <span class="hr-stat-card__icon" aria-hidden="true">${critical ? "⚠️" : "✓"}</span>
-          <span class="hr-stat-card__label">Open actions</span>
-          <span class="hr-stat-card__value">${escapeHtml(actions)}</span>
-          <span class="hr-stat-card__sub">${critical ? `${critical} need immediate attention` : actions ? "Review items in the panel" : "All clear"}</span>
-        </article>
-        <article class="hr-stat-card">
-          <span class="hr-stat-card__icon" aria-hidden="true">💳</span>
-          <span class="hr-stat-card__label">Subscription</span>
-          <span class="hr-stat-card__value">${escapeHtml(data.subscription_status || "Not set")}</span>
-          <span class="hr-stat-card__sub">${escapeHtml(data.plan_display_name || data.subscription_plan || "No plan")} plan</span>
-        </article>`;
+        ${statCard({
+          icon: "users",
+          label: "Active employees",
+          value: String(employees.active ?? 0),
+          sub: `Limit ${employees.limit ?? data.max_employees ?? "—"} on ${data.plan_display_name || "current"} plan`,
+          href: "#employees",
+        })}
+        ${statCard({
+          icon: "clock",
+          label: "Today's punches",
+          value: String(punch.today_punches ?? 0),
+          sub: punch.last_punch_at ? `Last punch ${formatOverviewTime(punch.last_punch_at)}` : "No punches yet",
+          href: "#time-punch",
+          tone: "ok",
+        })}
+        ${statCard({
+          icon: critical ? "alert" : "check",
+          label: "Open actions",
+          value: String(actions),
+          sub: critical
+            ? `${critical} need immediate attention`
+            : actions
+              ? "Tap to review"
+              : "All clear",
+          href: "#overview-actions",
+          tone: critical || actions ? "warn" : "",
+        })}
+        ${statCard({
+          icon: "card",
+          label: "Subscription",
+          value: data.subscription_status || "Not set",
+          sub: `${data.plan_display_name || data.subscription_plan || "No plan"} plan`,
+          href: "#settings",
+          valueText: true,
+          extraClass: "hr-stat-card--subscription",
+        })}`;
+
+      const subscriptionCard = document.getElementById("mobile-subscription-card");
+      if (subscriptionCard) {
+        subscriptionCard.hidden = false;
+        subscriptionCard.innerHTML = `
+          <div class="mobile-subscription-card__head">
+            ${window.AdminIcons?.svg?.("card") || ""}
+            <span class="mobile-subscription-card__label">Subscription</span>
+          </div>
+          <p class="mobile-subscription-card__value">${escapeHtml(data.subscription_status || "Not set")}</p>
+          <p class="mobile-subscription-card__sub muted">${escapeHtml(data.plan_display_name || data.subscription_plan || "No plan")} plan</p>
+          <a class="mobile-subscription-card__link" href="#settings">Manage plan ›</a>`;
+      }
 
       if (modulesHost) {
         const rtw = m.rtw || {};
@@ -258,7 +327,7 @@
 
         modulesHost.innerHTML = [
           moduleCard({
-            icon: "👥",
+            icon: "users",
             title: "Employees",
             value: String(employees.active ?? 0),
             sub: employees.portal_setup_pending
@@ -279,7 +348,7 @@
                   : undefined,
           }),
           moduleCard({
-            icon: "📋",
+            icon: "clipboard",
             title: "Recruitment",
             value: String(recruitment.open_vacancies ?? 0),
             sub: recruitment.pending_applicants
@@ -288,7 +357,7 @@
             href: "#recruitment",
           }),
           moduleCard({
-            icon: "🛂",
+            icon: "passport",
             title: "Right to work",
             value: String(rtw.verified ?? 0),
             sub: `${rtw.expiring_soon ?? 0} expiring · ${rtw.needs_review ?? 0} need review`,
@@ -296,7 +365,7 @@
             tone: (rtw.needs_review ?? 0) > 0 ? "danger" : (rtw.expiring_soon ?? 0) > 0 ? "warn" : "",
           }),
           moduleCard({
-            icon: "🏥",
+            icon: "medical",
             title: "Absence monitoring",
             value: String(absence.day9_alerts ?? 0),
             sub:
@@ -307,7 +376,7 @@
             tone: (absence.day9_alerts ?? 0) > 0 ? "danger" : "",
           }),
           moduleCard({
-            icon: "📍",
+            icon: "map-pin",
             title: "Time punch",
             value: String(punch.sites ?? 0),
             sub: punch.today_punches
@@ -319,7 +388,7 @@
             tone: !punch.sites ? "warn" : "",
           }),
           moduleCard({
-            icon: "📅",
+            icon: "calendar",
             title: "Rota",
             value: String(rota.shift_count ?? 0),
             sub: rotaLabel,
@@ -327,7 +396,7 @@
             tone: rota.status !== "published" && rota.shift_count ? "warn" : "",
           }),
           moduleCard({
-            icon: "⚖️",
+            icon: "scale",
             title: "Grievance",
             value: String(grievance.open_cases ?? 0),
             sub: grievance.open_cases ? "Open cases" : "No open cases",
@@ -335,7 +404,7 @@
             tone: (grievance.open_cases ?? 0) > 0 ? "warn" : "",
           }),
           moduleCard({
-            icon: "📋",
+            icon: "clipboard",
             title: "Disciplinary",
             value: String(disciplinary.open_cases ?? 0),
             sub: disciplinary.open_cases ? "Open cases" : "No open cases",
@@ -343,7 +412,7 @@
             tone: (disciplinary.open_cases ?? 0) > 0 ? "warn" : "",
           }),
           moduleCard({
-            icon: "📄",
+            icon: "file",
             title: "Employment contracts",
             value: String(contracts.pending_signature ?? 0),
             sub: contracts.pending_signature ? "Awaiting signature" : "Up to date",
@@ -351,14 +420,14 @@
             tone: (contracts.pending_signature ?? 0) > 0 ? "warn" : "",
           }),
           moduleCard({
-            icon: "🚪",
+            icon: "door",
             title: "Offboarding",
             value: String(offboarding.in_progress ?? 0),
             sub: offboarding.in_progress ? "In progress" : "No active leavers",
             href: "#offboarding",
           }),
           moduleCard({
-            icon: "🏖️",
+            icon: "beach",
             title: "Leave",
             value: String(leave.pending_requests ?? 0),
             sub: leave.pending_requests ? "Awaiting HR approval" : "No pending requests",
@@ -366,7 +435,7 @@
             tone: (leave.pending_requests ?? 0) > 0 ? "warn" : "",
           }),
           moduleCard({
-            icon: "🗂️",
+            icon: "folder",
             title: "Documents",
             value: String(docs.count ?? data.document_count ?? 0),
             sub: "In tenant document store",
@@ -382,6 +451,9 @@
           ? items.map(actionItem).join("")
           : `<p class="overview-actions-empty muted">No open actions — your workspace looks good.</p>`;
       }
+
+      window.dispatchEvent(new CustomEvent("admin:overview-loaded", { detail: { data } }));
+      window.AdminMobile?.renderMobileCompliance?.(data);
     } catch (error) {
       grid.innerHTML = `<p class="muted">${escapeHtml(error.message || "Could not load overview.")}</p>`;
       if (modulesHost) modulesHost.innerHTML = "";

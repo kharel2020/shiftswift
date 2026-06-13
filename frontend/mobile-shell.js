@@ -6,7 +6,11 @@
     return section || defaultSection;
   }
 
-  function initSidebar(options) {
+  let sidebarCtl = null;
+
+  function initSidebar(options = {}) {
+    if (sidebarCtl) return sidebarCtl;
+
     const toggle = document.getElementById(options.toggleId || "sidebar-toggle");
     const closeBtn = document.getElementById(options.closeId || "sidebar-close");
     const sidebar = document.querySelector(options.sidebarSelector || ".sidebar");
@@ -41,11 +45,66 @@
       if (event.key === "Escape") closeSidebar();
     });
 
-    return {
+    sidebarCtl = {
       openSidebar,
       closeSidebar,
       isOpen: () => Boolean(sidebar?.classList.contains("sidebar--open")),
     };
+    return sidebarCtl;
+  }
+
+  function scrollToAnchor(anchorId) {
+    if (!anchorId) return;
+    const el = document.getElementById(anchorId);
+    if (!el) return;
+    requestAnimationFrame(() => {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
+  function initBottomTabs(options = {}) {
+    const bar = document.getElementById(options.barId || "mobile-tab-bar");
+    if (!bar) return;
+
+    const resolveSection =
+      options.resolveSection ||
+      ((rawHash) => {
+        const section = parseHashSection(rawHash, "overview");
+        if (section.startsWith("compliance")) return "compliance";
+        if (section === "overview-actions") return "overview";
+        return section;
+      });
+
+    function syncActive() {
+      const section = resolveSection(window.location.hash);
+      bar.querySelectorAll("[data-section]").forEach((tab) => {
+        tab.classList.toggle("mobile-tab--active", tab.dataset.section === section);
+      });
+    }
+
+    bar.querySelectorAll("[data-section]").forEach((tab) => {
+      tab.addEventListener("click", (event) => {
+        event.preventDefault();
+        window.location.hash = tab.dataset.section;
+      });
+    });
+
+    document.getElementById("mobile-tab-more")?.addEventListener("click", () => {
+      sidebarCtl?.openSidebar?.();
+    });
+
+    document.getElementById("topbar-alerts-btn")?.addEventListener("click", () => {
+      if (resolveSection(window.location.hash) !== "overview") {
+        window.location.hash = "overview";
+        window.setTimeout(() => scrollToAnchor("overview-actions"), 120);
+      } else {
+        scrollToAnchor("overview-actions");
+      }
+    });
+
+    window.addEventListener("admin:section", syncActive);
+    window.addEventListener("hashchange", syncActive);
+    syncActive();
   }
 
   function linkSectionId(link, defaultSection) {
@@ -120,7 +179,9 @@
 
   window.MobileShell = {
     initSidebar,
+    initBottomTabs,
     initHashSections,
     parseHashSection,
+    scrollToAnchor,
   };
 })();
