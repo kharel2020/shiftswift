@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from datetime import date, datetime
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from auth_service import AuthUser
@@ -31,8 +33,52 @@ class PunchRequest(BaseModel):
 
 
 class PunchSiteUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=200)
     radius_meters: int | None = Field(default=None, ge=25, le=2000)
     is_active: bool | None = None
+    permitted_roles: str | None = Field(default=None, max_length=200)
+
+
+class PunchSiteCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    address: str = Field(min_length=3, max_length=500)
+    radius_meters: int = Field(default=150, ge=25, le=2000)
+    is_primary: bool = False
+    permitted_roles: str = Field(default="all", max_length=200)
+
+
+class AdminPunchRequest(BaseModel):
+    employee_id: int
+    punch_site_id: int
+    punch_type: Literal["in", "out"]
+    punched_at: str | None = None
+    admin_note: str | None = Field(default=None, max_length=500)
+
+
+def _parse_optional_date(value: str | None, field_name: str) -> date | None:
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid {field_name} — use YYYY-MM-DD") from exc
+
+
+def _punch_filters(
+    *,
+    employee_id: int | None = None,
+    site_id: int | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    punch_type: Literal["in", "out"] | None = None,
+) -> dict[str, Any]:
+    return {
+        "employee_id": employee_id,
+        "punch_site_id": site_id,
+        "date_from": _parse_optional_date(date_from, "date_from"),
+        "date_to": _parse_optional_date(date_to, "date_to"),
+        "punch_type": punch_type,
+    }
 
 
 def _employee_for_user(*, tenant_id: int, user: AuthUser, conn: Any) -> dict[str, Any]:
@@ -129,6 +175,32 @@ def sync_site_from_address(
     return site
 
 
+@admin_router.post("/sites")
+def create_site(
+    payload: PunchSiteCreate,
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, object]:
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = get_connection()
+    try:
+        return punch_service.create_punch_site(
+            tenant_id=tenant_id,
+            name=payload.name,
+            address=payload.address,
+            radius_meters=payload.radius_meters,
+            is_primary=payload.is_primary,
+            permitted_roles=payload.permitted_roles,
+            conn=conn,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    finally:
+        conn.close()
+
+
 @admin_router.patch("/sites/{site_id}")
 def patch_site(
     site_id: int,
@@ -149,7 +221,8 @@ def patch_site(
                 f"""
                 UPDATE punch_sites SET {sets}, updated_at = NOW()
                 WHERE id = %s AND tenant_id = %s
-                RETURNING id, tenant_id, name, address, latitude, longitude, radius_meters, is_primary, is_active
+                RETURNING id, tenant_id, name, address, latitude, longitude, radius_meters, is_primary, is_active, updated_at,
+                          COALESCE(permitted_roles, 'all')
                 """,
                 values,
             )
@@ -167,11 +240,94 @@ def list_punches(
     current_user: Annotated[AuthUser, Depends(get_hr_user)],
     x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
     limit: int = 100,
+    employee_id: int | None = None,
+    site_id: int | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    punch_type: Literal["in", "out"] | None = None,
 ) -> dict[str, object]:
     tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    filters = _punch_filters(
+        employee_id=employee_id,
+        site_id=site_id,
+        date_from=date_from,
+        date_to=date_to,
+        punch_type=punch_type,
+    )
     conn = get_connection()
     try:
-        items = punch_service.list_recent_punches(tenant_id=tenant_id, conn=conn, limit=min(limit, 500))
+        items = punch_service.list_recent_punches(
+            tenant_id=tenant_id,
+            conn=conn,
+            limit=min(limit, 500),
+            **filters,
+        )
     finally:
         conn.close()
     return {"items": items, "count": len(items)}
+
+
+@admin_router.get("/punches/export.csv")
+def export_punches_csv(
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+    employee_id: int | None = None,
+    site_id: int | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    punch_type: Literal["in", "out"] | None = None,
+) -> Response:
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    filters = _punch_filters(
+        employee_id=employee_id,
+        site_id=site_id,
+        date_from=date_from,
+        date_to=date_to,
+        punch_type=punch_type,
+    )
+    conn = get_connection()
+    try:
+        csv_data = punch_service.export_punches_csv(tenant_id=tenant_id, conn=conn, **filters)
+    finally:
+        conn.close()
+    filename = f"time-punches-{date.today().isoformat()}.csv"
+    return Response(
+        content=csv_data,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@admin_router.post("/punches/admin")
+def admin_punch(
+    payload: AdminPunchRequest,
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, object]:
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    punched_at = None
+    if payload.punched_at:
+        try:
+            punched_at = datetime.fromisoformat(payload.punched_at.replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail="Invalid punched_at timestamp") from exc
+    conn = get_connection()
+    try:
+        return punch_service.record_admin_punch(
+            tenant_id=tenant_id,
+            employee_id=payload.employee_id,
+            punch_site_id=payload.punch_site_id,
+            punch_type=payload.punch_type,
+            punched_at=punched_at,
+            admin_note=payload.admin_note,
+            recorded_by=current_user.username,
+            conn=conn,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    finally:
+        conn.close()

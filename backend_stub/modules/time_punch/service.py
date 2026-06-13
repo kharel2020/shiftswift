@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import csv
+import io
 import math
 import os
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Any, Literal
 
 from modules.time_punch.geocode import geocode_address
@@ -46,6 +48,8 @@ def resolve_employee(*, tenant_id: int, username: str, conn: Any) -> dict[str, A
 
 
 def _site_row(row: tuple[Any, ...]) -> dict[str, Any]:
+    updated_at = row[9] if len(row) > 9 else None
+    permitted_roles = row[10] if len(row) > 10 else "all"
     return {
         "id": row[0],
         "tenant_id": row[1],
@@ -56,14 +60,23 @@ def _site_row(row: tuple[Any, ...]) -> dict[str, Any]:
         "radius_meters": row[6],
         "is_primary": bool(row[7]),
         "is_active": bool(row[8]),
+        "updated_at": updated_at.isoformat() if hasattr(updated_at, "isoformat") else updated_at,
+        "permitted_roles": permitted_roles or "all",
     }
+
+
+def format_permitted_roles(value: str | None) -> str:
+    if not value or value == "all":
+        return "All staff"
+    return value.replace(",", ", ")
 
 
 def list_punch_sites(*, tenant_id: int, conn: Any) -> list[dict[str, Any]]:
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT id, tenant_id, name, address, latitude, longitude, radius_meters, is_primary, is_active
+            SELECT id, tenant_id, name, address, latitude, longitude, radius_meters, is_primary, is_active, updated_at,
+                   COALESCE(permitted_roles, 'all')
             FROM punch_sites
             WHERE tenant_id = %s
             ORDER BY is_primary DESC, name
@@ -105,7 +118,8 @@ def upsert_primary_punch_site(
                   is_active = TRUE,
                   updated_at = NOW()
                 WHERE id = %s
-                RETURNING id, tenant_id, name, address, latitude, longitude, radius_meters, is_primary, is_active
+                RETURNING id, tenant_id, name, address, latitude, longitude, radius_meters, is_primary, is_active, updated_at,
+                          COALESCE(permitted_roles, 'all')
                 """,
                 (name, address, latitude, longitude, radius_meters, existing[0]),
             )
@@ -116,7 +130,8 @@ def upsert_primary_punch_site(
                   tenant_id, name, address, latitude, longitude, radius_meters, is_primary, is_active
                 )
                 VALUES (%s, %s, %s, %s, %s, %s, TRUE, TRUE)
-                RETURNING id, tenant_id, name, address, latitude, longitude, radius_meters, is_primary, is_active
+                RETURNING id, tenant_id, name, address, latitude, longitude, radius_meters, is_primary, is_active, updated_at,
+                          COALESCE(permitted_roles, 'all')
                 """,
                 (tenant_id, name, address, latitude, longitude, radius_meters),
             )
@@ -148,6 +163,47 @@ def sync_primary_site_from_tenant_address(*, tenant_id: int, conn: Any) -> dict[
         longitude=lng,
         conn=conn,
     )
+
+
+def create_punch_site(
+    *,
+    tenant_id: int,
+    name: str,
+    address: str,
+    radius_meters: int = DEFAULT_RADIUS_M,
+    is_primary: bool = False,
+    permitted_roles: str = "all",
+    conn: Any,
+) -> dict[str, Any]:
+    clean_name = name.strip()
+    clean_address = address.strip()
+    if not clean_name or not clean_address:
+        raise ValueError("Name and address are required")
+    coords = geocode_address(clean_address)
+    if not coords:
+        raise LookupError("Could not geocode address — check the address or try a fuller postcode")
+    lat, lng = coords
+    roles = (permitted_roles or "all").strip() or "all"
+    with conn.cursor() as cur:
+        if is_primary:
+            cur.execute(
+                "UPDATE punch_sites SET is_primary = FALSE WHERE tenant_id = %s AND is_primary = TRUE",
+                (tenant_id,),
+            )
+        cur.execute(
+            """
+            INSERT INTO punch_sites (
+              tenant_id, name, address, latitude, longitude, radius_meters, is_primary, is_active, permitted_roles
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE, %s)
+            RETURNING id, tenant_id, name, address, latitude, longitude, radius_meters, is_primary, is_active, updated_at,
+                      COALESCE(permitted_roles, 'all')
+            """,
+            (tenant_id, clean_name, clean_address, lat, lng, radius_meters, is_primary, roles),
+        )
+        row = cur.fetchone()
+    conn.commit()
+    return _site_row(row)
 
 
 def assign_employee_to_site(
@@ -186,7 +242,7 @@ def eligible_sites_for_employee(*, tenant_id: int, employee_id: int, conn: Any) 
             return assigned
         cur.execute(
             """
-            SELECT id, tenant_id, name, address, latitude, longitude, radius_meters, is_primary, is_active
+            SELECT id, tenant_id, name, address, latitude, longitude, radius_meters, is_primary, is_active, updated_at
             FROM punch_sites
             WHERE tenant_id = %s AND is_active = TRUE
             ORDER BY is_primary DESC, id
@@ -346,34 +402,203 @@ def record_punch(
     }
 
 
-def list_recent_punches(*, tenant_id: int, conn: Any, limit: int = 100) -> list[dict[str, Any]]:
+def record_admin_punch(
+    *,
+    tenant_id: int,
+    employee_id: int,
+    punch_site_id: int,
+    punch_type: PunchType,
+    punched_at: datetime | None,
+    admin_note: str | None,
+    recorded_by: str,
+    conn: Any,
+) -> dict[str, Any]:
     with conn.cursor() as cur:
         cur.execute(
             """
+            SELECT id, first_name, last_name, status FROM employees
+            WHERE id = %s AND tenant_id = %s
+            """,
+            (employee_id, tenant_id),
+        )
+        employee = cur.fetchone()
+        if not employee:
+            raise LookupError("Employee not found")
+        if employee[3] not in {"active", "onboarding"}:
+            raise PermissionError("Employee is not active")
+
+        cur.execute(
+            """
+            SELECT id, tenant_id, name, address, latitude, longitude, radius_meters, is_primary, is_active, updated_at
+            FROM punch_sites
+            WHERE id = %s AND tenant_id = %s AND is_active = TRUE
+            """,
+            (punch_site_id, tenant_id),
+        )
+        site_row = cur.fetchone()
+        if not site_row:
+            raise LookupError("Punch site not found")
+        site = _site_row(site_row)
+
+        ts = punched_at or datetime.now(timezone.utc)
+        if punched_at and punched_at.tzinfo is None:
+            ts = punched_at.replace(tzinfo=timezone.utc)
+
+        cur.execute(
+            """
+            INSERT INTO time_punches (
+              tenant_id, employee_id, punch_site_id, punch_type, punched_at,
+              latitude, longitude, accuracy_meters, distance_meters, within_geofence,
+              app_username, admin_override, admin_note, recorded_by
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, NULL, 0, TRUE, %s, TRUE, %s, %s)
+            RETURNING id, punched_at
+            """,
+            (
+                tenant_id,
+                employee_id,
+                punch_site_id,
+                punch_type,
+                ts,
+                site["latitude"],
+                site["longitude"],
+                recorded_by,
+                admin_note,
+                recorded_by,
+            ),
+        )
+        row = cur.fetchone()
+    conn.commit()
+    punched_at_out = row[1]
+    return {
+        "id": row[0],
+        "punch_type": punch_type,
+        "punched_at": punched_at_out.isoformat() if isinstance(punched_at_out, datetime) else punched_at_out,
+        "site_name": site["name"],
+        "employee_name": f"{employee[1]} {employee[2]}".strip(),
+        "admin_override": True,
+    }
+
+
+def _punch_row(row: tuple[Any, ...]) -> dict[str, Any]:
+    punched_at = row[2]
+    radius_meters = int(row[11]) if len(row) > 11 and row[11] is not None else None
+    within_geofence = bool(row[12]) if len(row) > 12 else True
+    distance = float(row[3]) if row[3] is not None else None
+    if distance is not None and radius_meters is not None and not bool(row[8] if len(row) > 8 else False):
+        within_geofence = distance <= radius_meters
+    return {
+        "id": row[0],
+        "punch_type": row[1],
+        "punched_at": punched_at.isoformat() if isinstance(punched_at, datetime) else punched_at,
+        "distance_meters": distance,
+        "employee_name": f"{row[4]} {row[5]}".strip(),
+        "employee_email": row[6],
+        "site_name": row[7],
+        "admin_override": bool(row[8]) if len(row) > 8 else False,
+        "admin_note": row[9] if len(row) > 9 else None,
+        "punch_site_id": row[10] if len(row) > 10 else None,
+        "radius_meters": radius_meters,
+        "within_geofence": within_geofence,
+    }
+
+
+def list_recent_punches(
+    *,
+    tenant_id: int,
+    conn: Any,
+    limit: int = 100,
+    employee_id: int | None = None,
+    punch_site_id: int | None = None,
+    punch_type: PunchType | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+) -> list[dict[str, Any]]:
+    clauses = ["tp.tenant_id = %s"]
+    params: list[Any] = [tenant_id]
+    if employee_id is not None:
+        clauses.append("tp.employee_id = %s")
+        params.append(employee_id)
+    if punch_site_id is not None:
+        clauses.append("tp.punch_site_id = %s")
+        params.append(punch_site_id)
+    if punch_type is not None:
+        clauses.append("tp.punch_type = %s")
+        params.append(punch_type)
+    if date_from is not None:
+        clauses.append("tp.punched_at >= %s::date")
+        params.append(date_from.isoformat())
+    if date_to is not None:
+        clauses.append("tp.punched_at < (%s::date + INTERVAL '1 day')")
+        params.append(date_to.isoformat())
+    where = " AND ".join(clauses)
+    params.append(limit)
+    with conn.cursor() as cur:
+        cur.execute(
+            f"""
             SELECT tp.id, tp.punch_type, tp.punched_at, tp.distance_meters,
-                   e.first_name, e.last_name, e.email, ps.name
+                   e.first_name, e.last_name, e.email, ps.name,
+                   COALESCE(tp.admin_override, FALSE), tp.admin_note,
+                   tp.punch_site_id, ps.radius_meters, tp.within_geofence
             FROM time_punches tp
             JOIN employees e ON e.id = tp.employee_id
             JOIN punch_sites ps ON ps.id = tp.punch_site_id
-            WHERE tp.tenant_id = %s
+            WHERE {where}
             ORDER BY tp.punched_at DESC
             LIMIT %s
             """,
-            (tenant_id, limit),
+            params,
         )
         rows = cur.fetchall()
-    items = []
-    for row in rows:
-        punched_at = row[2]
-        items.append(
-            {
-                "id": row[0],
-                "punch_type": row[1],
-                "punched_at": punched_at.isoformat() if isinstance(punched_at, datetime) else punched_at,
-                "distance_meters": float(row[3]) if row[3] is not None else None,
-                "employee_name": f"{row[4]} {row[5]}".strip(),
-                "employee_email": row[6],
-                "site_name": row[7],
-            }
+    return [_punch_row(row) for row in rows]
+
+
+def export_punches_csv(
+    *,
+    tenant_id: int,
+    conn: Any,
+    limit: int = 5000,
+    employee_id: int | None = None,
+    punch_site_id: int | None = None,
+    punch_type: PunchType | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+) -> str:
+    items = list_recent_punches(
+        tenant_id=tenant_id,
+        conn=conn,
+        limit=limit,
+        employee_id=employee_id,
+        punch_site_id=punch_site_id,
+        punch_type=punch_type,
+        date_from=date_from,
+        date_to=date_to,
+    )
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(
+        [
+            "Punched at",
+            "Employee",
+            "Email",
+            "Type",
+            "Site",
+            "Distance (m)",
+            "Admin override",
+            "Admin note",
+        ]
+    )
+    for item in items:
+        writer.writerow(
+            [
+                item.get("punched_at") or "",
+                item.get("employee_name") or "",
+                item.get("employee_email") or "",
+                "Clock in" if item.get("punch_type") == "in" else "Clock out",
+                item.get("site_name") or "",
+                item.get("distance_meters") if item.get("distance_meters") is not None else "",
+                "Yes" if item.get("admin_override") else "No",
+                item.get("admin_note") or "",
+            ]
         )
-    return items
+    return buffer.getvalue()

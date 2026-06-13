@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon.png?v=brandkit-v1" />
     <link rel="icon" type="image/svg+xml" href="./assets/shiftswift-hr-icon.svg?v=brandkit-v1" />
     <link rel="apple-touch-icon" href="./assets/shiftswift-hr-icon.png?v=brandkit-v1" />
-    <link rel="stylesheet" href="./styles.css?v=admin-v20" />
+    <link rel="stylesheet" href="./styles.css?v=admin-v24" />
   </head>
   <body>
     <div id="sidebar-overlay" class="sidebar-overlay" aria-hidden="true"></div>
@@ -57,10 +57,24 @@
           <header class="section-header">
             <div>
               <h2>Overview</h2>
-              <p class="muted">Workspace snapshot for your business.</p>
+              <p class="muted" id="overview-subtitle">Your HR workspace at a glance.</p>
             </div>
           </header>
-          <div class="metric-grid hr-stats-grid" id="overview-metrics"></div>
+          <div id="overview-trial-note" hidden></div>
+          <div class="hr-stats-grid overview-stats-grid" id="overview-metrics" aria-label="Workspace summary"></div>
+          <div class="overview-dashboard-layout">
+            <div class="overview-main">
+              <h3 class="overview-section-title">Modules</h3>
+              <div class="overview-module-grid" id="overview-modules" aria-label="HR modules"></div>
+            </div>
+            <aside class="overview-actions-panel">
+              <div class="overview-actions-head">
+                <h3 class="overview-section-title">Action required</h3>
+                <span class="overview-actions-count" id="overview-actions-count">0</span>
+              </div>
+              <div id="overview-actions" class="overview-actions-list" aria-label="Open actions"></div>
+            </aside>
+          </div>
         </section>
 
         <section id="employees" class="admin-section" hidden>
@@ -1058,86 +1072,214 @@
           <header class="section-header">
             <div>
               <h2>Time punch</h2>
-              <p class="muted">Geofenced clock in/out sites and recent punch activity.</p>
+              <p class="muted">Geofenced clock in/out — staff punch via the Time Clock app when on site.</p>
             </div>
             <div class="section-actions">
-              <button type="button" class="btn" id="sync-punch-site-btn">Sync site from address</button>
+              <button type="button" class="btn outline" id="punch-header-export-btn"><span aria-hidden="true">⬇</span> Export punches</button>
+              <button type="button" class="btn primary" id="punch-header-admin-btn"><span aria-hidden="true">👤</span> Admin punch</button>
             </div>
           </header>
-          <p id="punch-admin-message" class="muted" aria-live="polite"></p>
 
-          <div class="hr-stats-grid" aria-label="Time punch summary">
+          <div id="punch-address-warning" class="alert-card alert-card-warning punch-alert" hidden>
+            <div class="alert-card-head">
+              <span class="alert-label">Business address required</span>
+            </div>
+            <p class="alert-copy">Set a registered business address before syncing your first punch site. Geocoding uses this address to place the geofence.</p>
+            <div class="punch-alert-actions">
+              <a href="#settings" class="btn outline">Set business address in Settings →</a>
+            </div>
+          </div>
+
+          <p id="punch-admin-message" class="muted punch-admin-message" aria-live="polite" hidden></p>
+
+          <div class="hr-stats-grid punch-stats-grid" aria-label="Time punch summary">
             <div class="hr-stat-card">
+              <span class="hr-stat-card__icon" aria-hidden="true">📍</span>
               <span class="hr-stat-card__label">Punch sites</span>
               <span class="hr-stat-card__value" id="punch-stat-sites">0</span>
               <span class="hr-stat-card__sub">Configured locations</span>
             </div>
             <div class="hr-stat-card hr-stat-card--ok">
-              <span class="hr-stat-card__label">Recent punches</span>
-              <span class="hr-stat-card__value" id="punch-stat-punches">0</span>
-              <span class="hr-stat-card__sub">Last 50 loaded</span>
+              <span class="hr-stat-card__icon" aria-hidden="true">🕐</span>
+              <span class="hr-stat-card__label">Today's punches</span>
+              <span class="hr-stat-card__value" id="punch-stat-today">0</span>
+              <span class="hr-stat-card__sub" id="punch-stat-today-sub">No punches yet</span>
             </div>
             <div class="hr-stat-card">
+              <span class="hr-stat-card__icon" aria-hidden="true">🏢</span>
               <span class="hr-stat-card__label">Primary site</span>
-              <span class="hr-stat-card__value" id="punch-stat-primary">—</span>
-              <span class="hr-stat-card__sub" id="punch-stat-primary-sub">Sync from business address</span>
+              <span class="hr-stat-card__value punch-stat-primary-name" id="punch-stat-primary">None</span>
+              <span class="hr-stat-card__sub" id="punch-stat-primary-sub">Not configured</span>
             </div>
             <div class="hr-stat-card">
-              <span class="hr-stat-card__label">Geofence</span>
-              <span class="hr-stat-card__value">Active</span>
-              <span class="hr-stat-card__sub">Staff must be on site to punch</span>
+              <span class="hr-stat-card__icon" aria-hidden="true">⭕</span>
+              <span class="hr-stat-card__label">Geofence radius</span>
+              <span class="hr-stat-card__value" id="punch-stat-radius">—</span>
+              <span class="hr-stat-card__sub" id="punch-stat-radius-sub">Staff must be on site to punch</span>
             </div>
           </div>
 
-          <div class="hr-status-workflow" aria-label="Time punch workflow">
-            <span class="hr-workflow-step">Configure sites</span>
-            <span class="hr-workflow-arrow" aria-hidden="true">→</span>
-            <span class="hr-workflow-step">Clock in / out</span>
-            <span class="hr-workflow-arrow" aria-hidden="true">→</span>
-            <span class="hr-workflow-step">Review activity</span>
+          <div class="punch-view-tabs" role="tablist" aria-label="Time punch views">
+            <button type="button" class="punch-view-tab is-active" data-punch-tab="sites" role="tab" aria-selected="true"><span aria-hidden="true">📍</span> Configure sites</button>
+            <button type="button" class="punch-view-tab" data-punch-tab="log" role="tab" aria-selected="false"><span aria-hidden="true">🕐</span> Punch log</button>
+            <button type="button" class="punch-view-tab" data-punch-tab="summary" role="tab" aria-selected="false"><span aria-hidden="true">📊</span> Activity summary</button>
           </div>
 
           <div class="hr-workspace-layout">
             <div class="hr-main-pane">
-              <h4 class="hr-section-title">Punch sites</h4>
-              <div class="hr-table-wrap">
-                <table class="data-table">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Address</th>
-                      <th>Coordinates</th>
-                      <th>Radius</th>
-                      <th>Role</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody id="punch-sites-body">
-                    <tr><td colspan="6" class="muted">Open this section to load sites…</td></tr>
-                  </tbody>
-                </table>
+              <div id="punch-tab-sites" class="punch-tab-panel" data-punch-panel="sites">
+                <div class="punch-action-row">
+                  <button type="button" class="btn punch-sync-btn" id="sync-punch-site-btn">
+                    <span class="punch-sync-btn__label">Sync from address</span>
+                    <span class="punch-sync-btn__meta" id="punch-sync-meta">Last: never</span>
+                  </button>
+                  <button type="button" class="btn outline" id="punch-add-site-btn"><span aria-hidden="true">＋</span> Add site manually</button>
+                </div>
+
+                <div id="punch-manual-form" class="punch-manual-form" hidden>
+                  <h4 class="hr-section-title">Add site manually</h4>
+                  <form id="punch-manual-form-el" class="punch-inline-form">
+                    <label class="edit-field"><span class="edit-label">Site name</span><input type="text" name="name" required placeholder="e.g. Main office" /></label>
+                    <label class="edit-field" data-span="2"><span class="edit-label">Address</span><textarea name="address" rows="2" required placeholder="Full address including postcode"></textarea></label>
+                    <label class="edit-field"><span class="edit-label">Geofence radius</span>
+                      <select name="radius_preset" id="punch-radius-preset">
+                        <option value="50">50m</option>
+                        <option value="100">100m</option>
+                        <option value="200">200m</option>
+                        <option value="500">500m</option>
+                        <option value="custom">Custom</option>
+                      </select>
+                    </label>
+                    <label class="edit-field punch-radius-custom" id="punch-radius-custom-wrap" hidden><span class="edit-label">Custom radius (metres)</span><input type="number" name="radius_custom" min="25" max="2000" value="150" /></label>
+                    <label class="edit-field"><span class="edit-label">Permitted roles</span>
+                      <select name="permitted_roles" id="punch-permitted-roles">
+                        <option value="all">All staff</option>
+                        <option value="kitchen">Kitchen</option>
+                        <option value="front_of_house">Front of house</option>
+                        <option value="bar">Bar</option>
+                        <option value="management">Management</option>
+                        <option value="custom">Custom…</option>
+                      </select>
+                    </label>
+                    <label class="edit-field punch-roles-custom" id="punch-roles-custom-wrap" hidden><span class="edit-label">Custom roles</span><input type="text" name="permitted_roles_custom" placeholder="e.g. Kitchen, Bar" /></label>
+                    <div class="punch-inline-form__actions">
+                      <button type="submit" class="btn primary">Add punch site</button>
+                      <button type="button" class="btn ghost" id="punch-hide-manual-btn">Cancel</button>
+                    </div>
+                  </form>
+                </div>
+
+                <h4 class="hr-section-title">Punch sites</h4>
+                <div class="hr-table-wrap">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Address</th>
+                        <th>Radius</th>
+                        <th>Permitted roles</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody id="punch-sites-body">
+                      <tr><td colspan="5" class="muted">Open this section to load sites…</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="punch-today-preview">
+                  <div class="punch-table-head">
+                    <h4 class="hr-section-title">Recent punches — today</h4>
+                    <button type="button" class="btn ghost punch-table-head__btn" id="punch-preview-export-btn">Export CSV</button>
+                  </div>
+                  <div class="hr-table-wrap">
+                    <table class="data-table">
+                      <thead>
+                        <tr>
+                          <th>When</th>
+                          <th>Employee</th>
+                          <th>Type</th>
+                          <th>Distance</th>
+                        </tr>
+                      </thead>
+                      <tbody id="punch-today-preview-body">
+                        <tr><td colspan="4" class="muted">No punches today.</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
-              <h4 class="hr-section-title hr-section-title--muted">Recent punches</h4>
-              <div class="hr-table-wrap">
-                <table class="data-table">
-                  <thead>
-                    <tr>
-                      <th>When</th>
-                      <th>Employee</th>
-                      <th>Type</th>
-                      <th>Site</th>
-                      <th>Distance</th>
-                    </tr>
-                  </thead>
-                  <tbody id="recent-punches-body">
-                    <tr><td colspan="5" class="muted">Open this section to load punches…</td></tr>
-                  </tbody>
-                </table>
+
+              <div id="punch-tab-log" class="punch-tab-panel" data-punch-panel="log" hidden>
+                <div id="punch-admin-panel" class="punch-admin-panel">
+                  <h4 class="hr-section-title">Admin punch</h4>
+                  <p class="muted punch-tab-intro">Manually clock in or out a staff member — for forgotten punches, lateness, or corrections.</p>
+                  <form id="punch-admin-form" class="punch-admin-form">
+                    <label class="edit-field"><span class="edit-label">Employee</span><select name="employee_id" id="punch-admin-employee" required><option value="">Select employee…</option></select></label>
+                    <label class="edit-field"><span class="edit-label">Punch site</span><select name="punch_site_id" id="punch-admin-site" required><option value="">Select site…</option></select></label>
+                    <label class="edit-field"><span class="edit-label">Type</span>
+                      <select name="punch_type">
+                        <option value="in">Clock in</option>
+                        <option value="out">Clock out</option>
+                      </select>
+                    </label>
+                    <label class="edit-field"><span class="edit-label">Timestamp</span><input type="datetime-local" name="punched_at" id="punch-admin-when" /></label>
+                    <label class="edit-field" data-span="2"><span class="edit-label">Reason</span><textarea name="admin_note" rows="2" placeholder="e.g. Forgot to punch — confirmed on CCTV"></textarea></label>
+                    <div class="punch-inline-form__actions">
+                      <button type="submit" class="btn primary">Record admin punch</button>
+                    </div>
+                  </form>
+                </div>
+
+                <div class="punch-table-head">
+                  <h4 class="hr-section-title">Punch log</h4>
+                  <button type="button" class="btn outline punch-table-head__btn" id="punch-export-csv-btn">Export CSV</button>
+                </div>
+                <div class="punch-filters">
+                  <label class="edit-field"><span class="edit-label">Employee</span><select id="punch-filter-employee"><option value="">All employees</option></select></label>
+                  <label class="edit-field"><span class="edit-label">Site</span><select id="punch-filter-site"><option value="">All sites</option></select></label>
+                  <label class="edit-field"><span class="edit-label">From</span><input type="date" id="punch-filter-from" /></label>
+                  <label class="edit-field"><span class="edit-label">To</span><input type="date" id="punch-filter-to" /></label>
+                  <label class="edit-field"><span class="edit-label">Type</span><select id="punch-filter-type"><option value="">All types</option><option value="in">Clock in</option><option value="out">Clock out</option></select></label>
+                  <button type="button" class="btn ghost" id="punch-filter-apply">Apply</button>
+                  <button type="button" class="btn ghost" id="punch-filter-clear">Clear</button>
+                </div>
+                <div class="hr-table-wrap">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>When</th>
+                        <th>Employee</th>
+                        <th>Type</th>
+                        <th>Site</th>
+                        <th>Distance</th>
+                      </tr>
+                    </thead>
+                    <tbody id="recent-punches-body">
+                      <tr><td colspan="5" class="muted">Open this section to load punches…</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div id="punch-tab-summary" class="punch-tab-panel" data-punch-panel="summary" hidden>
+                <h4 class="hr-section-title">Activity summary</h4>
+                <p class="muted punch-tab-intro">Punches by day this week — low-coverage days are highlighted.</p>
+                <div id="punch-activity-chart" class="punch-activity-chart" aria-label="Punches by day this week"></div>
               </div>
             </div>
             <aside class="hr-detail-panel" id="punch-detail-panel">
               <div id="punch-detail-empty" class="hr-detail-empty muted">
-                <p>Select a punch site or recent punch to view geofence details.</p>
+                <div id="punch-setup-guide">
+                  <h3>Get started</h3>
+                  <ol class="punch-setup-steps">
+                    <li><strong>Step 1</strong> — Sync your business address to create your first punch site.</li>
+                    <li><strong>Step 2</strong> — Staff clock in/out from the Time Clock app within the geofence.</li>
+                    <li><strong>Step 3</strong> — Review punch activity and export for payroll.</li>
+                  </ol>
+                  <button type="button" class="btn primary" id="punch-setup-sync-btn">Sync from address</button>
+                </div>
+                <p id="punch-detail-select-hint" hidden>Select a punch site to view geofence details.</p>
               </div>
               <div id="punch-detail-content" hidden></div>
             </aside>
@@ -1166,7 +1308,7 @@
               <button type="button" class="btn primary" id="rota-publish-btn">Publish rota</button>
             </div>
           </header>
-          <p id="rota-admin-message" class="muted rota-admin-message" aria-live="polite"></p>
+          <div id="rota-admin-message" class="rota-admin-message" aria-live="polite" hidden></div>
           <article class="card hr-workspace">
           <div class="rota-builder-subbar">
             <div class="rota-builder-subbar__left">
@@ -1176,7 +1318,7 @@
               </div>
               <p id="rota-week-summary" class="rota-week-summary"></p>
             </div>
-            <p class="rota-builder-hint muted">Click any cell to add or edit a shift</p>
+            <p class="rota-builder-hint muted">Drag to move · Alt+drag to copy · Right-click for options · Click empty cell to add</p>
           </div>
 
           <div class="rota-builder-layout" id="rota-grid-view">
@@ -1491,7 +1633,7 @@
     <script src="./auth-guard.js?v=security-v1"></script>
     <script src="./brand-config.js?v=brand-v4"></script>
     <script src="./admin-shared.js?v=admin-v8"></script>
-    <script src="./admin-workspace.js?v=admin-v8"></script>
+    <script src="./admin-workspace.js?v=admin-v9"></script>
     <script src="./admin-settings.js?v=1"></script>
     <script src="./admin-documents.js?v=3"></script>
     <script src="./admin-employees.js?v=9"></script>
@@ -1503,8 +1645,8 @@
     <script src="./admin-grievance.js?v=5"></script>
     <script src="./admin-offboarding.js?v=admin-v5"></script>
     <script src="./admin-templates.js?v=admin-v8"></script>
-    <script src="./admin-time-punch.js?v=3"></script>
-    <script src="./admin-rota.js?v=4"></script>
+    <script src="./admin-time-punch.js?v=5"></script>
+    <script src="./admin-rota.js?v=5"></script>
     <script src="./app.js?v=admin-v4"></script>
     <script src="./contracts.js?v=5"></script>
     <script src="./employment-contracts.js?v=2"></script>

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Any
 
 from employee_audit import log_employee_data_event
@@ -466,17 +466,29 @@ def delete_document(
 
 
 def admin_overview(*, tenant_id: int, conn: Any) -> dict[str, Any]:
-    from plan_features import effective_features_for_tenant
+    from datetime import date
+
+    from modules.rota.service import monday_on_or_before
+    from plan_features import effective_features_for_tenant, plan_display_name
+    from sponsor_licence_compliance import RTW_EXPIRING_SOON_DAYS
     from trial_service import trial_snapshot
 
     profile = get_tenant_profile(tenant_id=tenant_id, conn=conn)
     trial = trial_snapshot(tenant_id=tenant_id, conn=conn)
+    today = date.today()
+    week_start = monday_on_or_before(today)
+
     with conn.cursor() as cur:
         cur.execute(
             "SELECT COUNT(*) FROM employees WHERE tenant_id = %s AND status = 'active'",
             (tenant_id,),
         )
         active_employees = int(cur.fetchone()[0])
+        cur.execute(
+            "SELECT COUNT(*) FROM employees WHERE tenant_id = %s AND status = 'onboarding'",
+            (tenant_id,),
+        )
+        onboarding_employees = int(cur.fetchone()[0])
         cur.execute("SELECT COUNT(*) FROM tenant_documents WHERE tenant_id = %s", (tenant_id,))
         document_count = int(cur.fetchone()[0])
         cur.execute(
@@ -485,6 +497,133 @@ def admin_overview(*, tenant_id: int, conn: Any) -> dict[str, Any]:
         )
         sponsored_employees = int(cur.fetchone()[0])
 
+        cur.execute(
+            """
+            SELECT COUNT(*) FROM recruitment_vacancies
+            WHERE tenant_id = %s AND status NOT IN ('closed', 'rejected', 'offer_accepted', 'onboarding_started')
+            """,
+            (tenant_id,),
+        )
+        open_vacancies = int(cur.fetchone()[0])
+        cur.execute(
+            """
+            SELECT COUNT(*) FROM recruitment_applications ra
+            JOIN recruitment_vacancies rv ON rv.id = ra.vacancy_id
+            WHERE ra.tenant_id = %s AND ra.screening_status = 'pending'
+              AND rv.status NOT IN ('closed', 'rejected')
+            """,
+            (tenant_id,),
+        )
+        pending_applicants = int(cur.fetchone()[0])
+
+        cur.execute(
+            """
+            SELECT COUNT(*) FROM right_to_work_checks
+            WHERE tenant_id = %s
+            """,
+            (tenant_id,),
+        )
+        rtw_total = int(cur.fetchone()[0])
+        cur.execute(
+            """
+            SELECT COUNT(*) FROM right_to_work_checks
+            WHERE tenant_id = %s AND expiry_date IS NOT NULL AND expiry_date < %s
+            """,
+            (tenant_id, today),
+        )
+        rtw_expired = int(cur.fetchone()[0])
+        cur.execute(
+            """
+            SELECT COUNT(*) FROM right_to_work_checks
+            WHERE tenant_id = %s
+              AND expiry_date IS NOT NULL
+              AND expiry_date >= %s
+              AND expiry_date <= %s
+            """,
+            (tenant_id, today, today + timedelta(days=RTW_EXPIRING_SOON_DAYS)),
+        )
+        rtw_expiring_soon = int(cur.fetchone()[0])
+
+        cur.execute(
+            """
+            SELECT COUNT(*) FROM sponsor_absence_alerts
+            WHERE tenant_id = %s AND alert_status IN ('pending', 'sent')
+            """,
+            (tenant_id,),
+        )
+        day9_alerts = int(cur.fetchone()[0])
+        cur.execute(
+            """
+            SELECT COUNT(*) FROM sponsored_absence_days
+            WHERE tenant_id = %s AND absence_date >= %s
+            """,
+            (tenant_id, today.replace(day=1)),
+        )
+        active_absences = int(cur.fetchone()[0])
+
+        cur.execute(
+            "SELECT COUNT(*) FROM punch_sites WHERE tenant_id = %s AND is_active = TRUE",
+            (tenant_id,),
+        )
+        punch_sites = int(cur.fetchone()[0])
+        cur.execute(
+            """
+            SELECT COUNT(*), MAX(punched_at)
+            FROM time_punches
+            WHERE tenant_id = %s AND punched_at >= %s::date
+            """,
+            (tenant_id, today.isoformat()),
+        )
+        punch_row = cur.fetchone()
+        today_punches = int(punch_row[0])
+        last_punch_at = punch_row[1].isoformat() if punch_row[1] else None
+
+        cur.execute(
+            """
+            SELECT status, version
+            FROM rota_weeks
+            WHERE tenant_id = %s AND week_start = %s
+            LIMIT 1
+            """,
+            (tenant_id, week_start),
+        )
+        rota_row = cur.fetchone()
+        rota_status = rota_row[0] if rota_row else None
+        cur.execute(
+            """
+            SELECT COUNT(*) FROM rota_shifts s
+            JOIN rota_weeks w ON w.id = s.rota_week_id
+            WHERE s.tenant_id = %s AND w.week_start = %s
+            """,
+            (tenant_id, week_start),
+        )
+        rota_shifts = int(cur.fetchone()[0])
+
+        cur.execute(
+            """
+            SELECT COUNT(*) FROM grievance_cases
+            WHERE tenant_id = %s AND status <> 'closed'
+            """,
+            (tenant_id,),
+        )
+        open_grievances = int(cur.fetchone()[0])
+        cur.execute(
+            """
+            SELECT COUNT(*) FROM offboarding_workflows
+            WHERE tenant_id = %s AND status = 'in_progress'
+            """,
+            (tenant_id,),
+        )
+        offboarding_in_progress = int(cur.fetchone()[0])
+        cur.execute(
+            """
+            SELECT COUNT(*) FROM employee_contracts
+            WHERE tenant_id = %s AND status IN ('generated', 'sent')
+            """,
+            (tenant_id,),
+        )
+        contracts_pending = int(cur.fetchone()[0])
+
     plan_flags = effective_features_for_tenant(
         plan_id=profile["subscription_plan"],
         payroll_enabled=bool(profile["payroll_enabled"]),
@@ -492,9 +631,122 @@ def admin_overview(*, tenant_id: int, conn: Any) -> dict[str, Any]:
         subscription_status=profile.get("subscription_status"),
         trial_access_allowed=bool(trial.get("access_allowed")),
     )
+
+    rtw_needs_review = rtw_expired
+    rtw_verified = max(rtw_total - rtw_expired - rtw_expiring_soon, 0)
+    open_actions: list[dict[str, Any]] = []
+
+    if day9_alerts:
+        open_actions.append(
+            {
+                "severity": "critical",
+                "title": f"{day9_alerts} day-9 absence alert{'s' if day9_alerts != 1 else ''}",
+                "detail": "Sponsored worker absence requires Home Office reporting.",
+                "href": "#compliance",
+                "section": "compliance",
+            }
+        )
+    if rtw_needs_review:
+        open_actions.append(
+            {
+                "severity": "critical",
+                "title": f"{rtw_needs_review} RTW check{'s' if rtw_needs_review != 1 else ''} need review",
+                "detail": "Expired right to work documentation.",
+                "href": "#compliance",
+                "section": "compliance",
+            }
+        )
+    if rtw_expiring_soon:
+        open_actions.append(
+            {
+                "severity": "warn",
+                "title": f"{rtw_expiring_soon} RTW expiring within 30 days",
+                "detail": "Schedule reverification before expiry.",
+                "href": "#compliance",
+                "section": "compliance",
+            }
+        )
+    if not punch_sites:
+        open_actions.append(
+            {
+                "severity": "warn",
+                "title": "No punch sites configured",
+                "detail": "Sync your business address to enable geofenced clock in/out.",
+                "href": "#time-punch",
+                "section": "time-punch",
+            }
+        )
+    if rota_status != "published":
+        open_actions.append(
+            {
+                "severity": "warn" if rota_shifts else "info",
+                "title": "This week's rota not published" if rota_shifts else "No rota shifts this week",
+                "detail": "Staff see shifts only after you publish the rota.",
+                "href": "#rota",
+                "section": "rota",
+            }
+        )
+    if contracts_pending:
+        open_actions.append(
+            {
+                "severity": "warn",
+                "title": f"{contracts_pending} employment contract{'s' if contracts_pending != 1 else ''} awaiting signature",
+                "detail": "Send or chase contract signatures from the employment contracts workspace.",
+                "href": "#employment-contracts",
+                "section": "employment-contracts",
+            }
+        )
+    if open_grievances:
+        open_actions.append(
+            {
+                "severity": "warn",
+                "title": f"{open_grievances} open grievance case{'s' if open_grievances != 1 else ''}",
+                "detail": "Review investigation progress and ACAS deadlines.",
+                "href": "#grievance",
+                "section": "grievance",
+            }
+        )
+    if offboarding_in_progress:
+        open_actions.append(
+            {
+                "severity": "info",
+                "title": f"{offboarding_in_progress} offboarding in progress",
+                "detail": "Complete ACAS appeal window and sponsor cessation steps.",
+                "href": "#offboarding",
+                "section": "offboarding",
+            }
+        )
+    if open_vacancies:
+        open_actions.append(
+            {
+                "severity": "info",
+                "title": f"{open_vacancies} open vacanc{'ies' if open_vacancies != 1 else 'y'}",
+                "detail": f"{pending_applicants} applicant{'s' if pending_applicants != 1 else ''} awaiting screening."
+                if pending_applicants
+                else "No pending applicants.",
+                "href": "#recruitment",
+                "section": "recruitment",
+            }
+        )
+    if onboarding_employees:
+        open_actions.append(
+            {
+                "severity": "info",
+                "title": f"{onboarding_employees} employee{'s' if onboarding_employees != 1 else ''} onboarding",
+                "detail": "Complete lifecycle steps before marking active.",
+                "href": "#employees",
+                "section": "employees",
+            }
+        )
+
+    severity_rank = {"critical": 0, "warn": 1, "info": 2}
+    open_actions.sort(key=lambda item: severity_rank.get(item["severity"], 9))
+
     return {
         "tenant_name": profile["name"],
+        "trading_name": profile.get("trading_name"),
         "subscription_plan": profile["subscription_plan"],
+        "plan_display_name": plan_display_name(profile["subscription_plan"]),
         "subscription_status": profile["subscription_status"],
         "max_employees": profile["max_employees"],
         "active_employees": active_employees,
@@ -504,5 +756,42 @@ def admin_overview(*, tenant_id: int, conn: Any) -> dict[str, Any]:
         "days_remaining": trial.get("days_remaining"),
         "holds_sponsor_licence": bool(profile.get("holds_sponsor_licence")),
         "sponsor_licence_acknowledged": bool(profile.get("sponsor_licence_acknowledged")),
+        "open_actions_count": len(open_actions),
+        "open_actions": open_actions[:8],
+        "modules": {
+            "employees": {
+                "active": active_employees,
+                "onboarding": onboarding_employees,
+                "limit": profile["max_employees"],
+            },
+            "recruitment": {
+                "open_vacancies": open_vacancies,
+                "pending_applicants": pending_applicants,
+            },
+            "rtw": {
+                "total": rtw_total,
+                "verified": rtw_verified,
+                "expiring_soon": rtw_expiring_soon,
+                "needs_review": rtw_needs_review,
+            },
+            "absence": {
+                "day9_alerts": day9_alerts,
+                "active_this_month": active_absences,
+            },
+            "time_punch": {
+                "sites": punch_sites,
+                "today_punches": today_punches,
+                "last_punch_at": last_punch_at,
+            },
+            "rota": {
+                "week_start": week_start.isoformat(),
+                "status": rota_status or "none",
+                "shift_count": rota_shifts,
+            },
+            "grievance": {"open_cases": open_grievances},
+            "offboarding": {"in_progress": offboarding_in_progress},
+            "contracts": {"pending_signature": contracts_pending},
+            "documents": {"count": document_count},
+        },
         **plan_flags,
     }

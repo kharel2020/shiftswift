@@ -11,7 +11,10 @@
   let dirty = false;
   let activeView = "grid";
   let dragShiftIndex = null;
+  let dragCopyMode = false;
   let editingShiftIndex = null;
+  let contextMenuEl = null;
+  let copyModalEl = null;
 
   const ATTENDANCE_LABELS = {
     scheduled: "Scheduled",
@@ -256,8 +259,229 @@
   function setMessage(text, type = "info") {
     const el = document.getElementById("rota-admin-message");
     if (!el) return;
-    el.textContent = text || "";
+    if (!text) {
+      el.hidden = true;
+      el.textContent = "";
+      el.className = "rota-admin-message";
+      el.dataset.type = "info";
+      return;
+    }
+    el.hidden = false;
+    el.textContent = text;
     el.dataset.type = type;
+    el.className = `rota-admin-message rota-admin-message--${type}`;
+  }
+
+  function cloneShift(shift) {
+    const copy = { ...shift };
+    delete copy.id;
+    return copy;
+  }
+
+  function shiftWouldOverlap(candidate, excludeIndex = null) {
+    for (let i = 0; i < shifts.length; i += 1) {
+      if (i === excludeIndex) continue;
+      if (shiftsTimeOverlap(candidate, shifts[i])) return shifts[i];
+    }
+    return null;
+  }
+
+  function weekDayIsos() {
+    return Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
+  }
+
+  function moveShift(index, employeeId, shiftDate) {
+    const shift = shifts[index];
+    if (!shift) return false;
+    const next = { ...shift, employee_id: employeeId, shift_date: shiftDate, employee_name: employeeName(employeeId) };
+    const clash = shiftWouldOverlap(next, index);
+    if (clash) {
+      setMessage(`Cannot move — overlaps ${employeeName(clash.employee_id)} ${clash.start_time}–${clash.end_time}`, "error");
+      return false;
+    }
+    shifts[index] = next;
+    markDirty();
+    setMessage("Shift moved — click Save draft.", "success");
+    renderAll();
+    return true;
+  }
+
+  function copyShift(index, employeeId, shiftDate) {
+    const source = shifts[index];
+    if (!source) return false;
+    const copy = cloneShift(source);
+    copy.employee_id = employeeId;
+    copy.shift_date = shiftDate;
+    copy.employee_name = employeeName(employeeId);
+    const clash = shiftWouldOverlap(copy);
+    if (clash) {
+      setMessage(`Cannot copy — overlaps ${employeeName(clash.employee_id)} ${clash.start_time}–${clash.end_time}`, "error");
+      return false;
+    }
+    shifts.push(copy);
+    shifts.sort((a, b) => `${a.shift_date}${a.start_time}`.localeCompare(`${b.shift_date}${b.start_time}`));
+    markDirty();
+    setMessage("Shift copied — click Save draft.", "success");
+    renderAll();
+    return true;
+  }
+
+  function deleteShift(index) {
+    if (!shifts[index]) return;
+    shifts.splice(index, 1);
+    markDirty();
+    setMessage("Shift removed — click Save draft.", "success");
+    renderAll();
+  }
+
+  function copyShiftToDays(index, dayIsos) {
+    const source = shifts[index];
+    if (!source) return;
+    let added = 0;
+    dayIsos.forEach((iso) => {
+      if (iso === source.shift_date) return;
+      const copy = cloneShift(source);
+      copy.shift_date = iso;
+      copy.employee_name = employeeName(copy.employee_id);
+      if (shiftWouldOverlap(copy)) return;
+      shifts.push(copy);
+      added += 1;
+    });
+    if (!added) {
+      setMessage("No shifts copied — all selected days overlap existing shifts.", "error");
+      return;
+    }
+    shifts.sort((a, b) => `${a.shift_date}${a.start_time}`.localeCompare(`${b.shift_date}${b.start_time}`));
+    markDirty();
+    setMessage(`${added} shift${added === 1 ? "" : "s"} copied — click Save draft.`, "success");
+    renderAll();
+  }
+
+  function copyShiftToRestOfWeek(index) {
+    const source = shifts[index];
+    if (!source) return;
+    const targets = weekDayIsos().filter((iso) => iso !== source.shift_date);
+    copyShiftToDays(index, targets);
+  }
+
+  function quickAddShift(employeeId, shiftDate) {
+    const emp = employeeById(employeeId);
+    const roleLabel = emp?.job_title || emp?.department || "";
+    const candidate = {
+      employee_id: employeeId,
+      shift_date: shiftDate,
+      start_time: "09:00",
+      end_time: "17:00",
+      role_label: roleLabel,
+      notes: "",
+      employee_name: employeeName(employeeId),
+    };
+    const clash = shiftWouldOverlap(candidate);
+    if (clash) {
+      setMessage(`Cannot add — overlaps ${clash.start_time}–${clash.end_time}`, "error");
+      openShiftPanel({ employeeId, shiftDate });
+      return;
+    }
+    shifts.push(candidate);
+    shifts.sort((a, b) => `${a.shift_date}${a.start_time}`.localeCompare(`${b.shift_date}${b.start_time}`));
+    markDirty();
+    setMessage("Shift added — click Save draft.", "success");
+    renderAll();
+  }
+
+  function hideContextMenu() {
+    if (contextMenuEl) contextMenuEl.hidden = true;
+  }
+
+  function ensureContextMenu() {
+    if (contextMenuEl) return contextMenuEl;
+    contextMenuEl = document.createElement("div");
+    contextMenuEl.id = "rota-context-menu";
+    contextMenuEl.className = "rota-context-menu";
+    contextMenuEl.hidden = true;
+    document.body.appendChild(contextMenuEl);
+    document.addEventListener("click", hideContextMenu);
+    document.addEventListener("scroll", hideContextMenu, true);
+    return contextMenuEl;
+  }
+
+  function showContextMenu(event, shiftIndex) {
+    event.preventDefault();
+    const menu = ensureContextMenu();
+    menu.innerHTML = `
+      <button type="button" data-rota-ctx="copy-days">Copy to days…</button>
+      <button type="button" data-rota-ctx="copy-week">Copy to rest of week</button>
+      <button type="button" data-rota-ctx="edit">Edit shift</button>
+      <button type="button" data-rota-ctx="delete" class="rota-context-menu__danger">Delete shift</button>`;
+    menu.hidden = false;
+    menu.style.left = `${event.clientX}px`;
+    menu.style.top = `${event.clientY}px`;
+    menu.querySelectorAll("button").forEach((btn) => {
+      btn.addEventListener("click", (clickEvent) => {
+        clickEvent.stopPropagation();
+        hideContextMenu();
+        const action = btn.getAttribute("data-rota-ctx");
+        if (action === "copy-days") showCopyDaysModal(shiftIndex);
+        else if (action === "copy-week") copyShiftToRestOfWeek(shiftIndex);
+        else if (action === "edit") openShiftPanel({ shiftIndex });
+        else if (action === "delete") deleteShift(shiftIndex);
+      });
+    });
+  }
+
+  function ensureCopyModal() {
+    if (copyModalEl) return copyModalEl;
+    copyModalEl = document.createElement("div");
+    copyModalEl.id = "rota-copy-modal";
+    copyModalEl.className = "rota-copy-modal";
+    copyModalEl.hidden = true;
+    copyModalEl.innerHTML = `
+      <div class="rota-copy-modal__backdrop" data-close-copy-modal></div>
+      <div class="rota-copy-modal__panel" role="dialog" aria-labelledby="rota-copy-modal-title">
+        <h3 id="rota-copy-modal-title">Copy to days</h3>
+        <p class="muted rota-copy-modal__lead">Select which days to copy this shift to.</p>
+        <div id="rota-copy-modal-days" class="rota-copy-modal__days"></div>
+        <div class="rota-copy-modal__foot">
+          <button type="button" class="btn ghost" data-close-copy-modal>Cancel</button>
+          <button type="button" class="btn primary" id="rota-copy-modal-confirm">Copy shifts</button>
+        </div>
+      </div>`;
+    document.body.appendChild(copyModalEl);
+    copyModalEl.querySelectorAll("[data-close-copy-modal]").forEach((el) => {
+      el.addEventListener("click", () => {
+        copyModalEl.hidden = true;
+      });
+    });
+    return copyModalEl;
+  }
+
+  function showCopyDaysModal(shiftIndex) {
+    const modal = ensureCopyModal();
+    const daysHost = modal.querySelector("#rota-copy-modal-days");
+    const shift = shifts[shiftIndex];
+    if (!daysHost || !shift) return;
+    daysHost.innerHTML = weekDayIsos()
+      .map((iso) => {
+        const label = new Date(`${iso}T12:00:00`).toLocaleDateString("en-GB", {
+          weekday: "long",
+          day: "numeric",
+          month: "short",
+        });
+        const checked = iso === shift.shift_date ? " checked" : "";
+        return `<label class="rota-copy-day"><input type="checkbox" value="${iso}"${checked} /> ${escapeHtml(label)}</label>`;
+      })
+      .join("");
+    modal.hidden = false;
+    const confirm = modal.querySelector("#rota-copy-modal-confirm");
+    confirm.onclick = () => {
+      const selected = [...daysHost.querySelectorAll("input:checked")].map((input) => input.value);
+      modal.hidden = true;
+      if (!selected.length) {
+        setMessage("Select at least one day.", "error");
+        return;
+      }
+      copyShiftToDays(shiftIndex, selected.filter((iso) => iso !== shift.shift_date));
+    };
   }
 
   function markDirty() {
@@ -328,8 +552,14 @@
     const empty = document.getElementById("rota-empty-state");
     const grid = document.getElementById("rota-grid");
     const hasStaff = hasActiveEmployees();
-    if (empty) empty.hidden = hasStaff;
-    if (grid) grid.hidden = !hasStaff;
+    if (empty) {
+      empty.hidden = hasStaff;
+      empty.toggleAttribute("hidden", hasStaff);
+    }
+    if (grid) {
+      grid.hidden = !hasStaff;
+      grid.toggleAttribute("hidden", !hasStaff);
+    }
     if (!hasStaff) {
       panelOpen = false;
       syncPanelVisibility();
@@ -482,7 +712,13 @@
           const blockBody = isDayOffShift(s)
             ? "Day off"
             : `${escapeHtml(s.start_time)}–${escapeHtml(s.end_time)}<span class="rota-shift-block-role">${roleText}</span>`;
-          html += `<button type="button" class="rota-shift-block ${blockClass}${attendClass}" draggable="true" data-shift-index="${index}" title="Edit shift">${blockBody}</button>`;
+          html += `<div class="rota-shift-wrap">
+            <button type="button" class="rota-shift-block ${blockClass}${attendClass}" draggable="true" data-shift-index="${index}" title="Drag to move · Alt+drag to copy">${blockBody}</button>
+            <div class="rota-shift-actions">
+              <button type="button" class="rota-shift-action" data-copy-shift="${index}" title="Copy to days" aria-label="Copy to days">⧉</button>
+              <button type="button" class="rota-shift-action rota-shift-action--danger" data-delete-shift="${index}" title="Delete shift" aria-label="Delete shift">×</button>
+            </div>
+          </div>`;
         });
         html += `<span class="rota-add-cell-hint">+ add</span></div>`;
       });
@@ -494,36 +730,74 @@
     grid.querySelectorAll(".rota-shift-block").forEach((chip) => {
       chip.addEventListener("dragstart", (event) => {
         dragShiftIndex = Number(chip.getAttribute("data-shift-index"));
+        dragCopyMode = Boolean(event.altKey);
         event.dataTransfer?.setData("text/plain", String(dragShiftIndex));
+        event.dataTransfer?.setData("application/x-rota-copy", dragCopyMode ? "1" : "0");
+        if (dragCopyMode) {
+          chip.classList.add("rota-shift-block--drag-copy");
+        }
+      });
+      chip.addEventListener("dragend", () => {
+        dragCopyMode = false;
+        chip.classList.remove("rota-shift-block--drag-copy");
+        grid.querySelectorAll(".rota-grid-drop").forEach((cell) => {
+          cell.classList.remove("is-drag-over", "is-drag-over-copy");
+        });
       });
       chip.addEventListener("click", (event) => {
         event.stopPropagation();
         openShiftPanel({ shiftIndex: Number(chip.getAttribute("data-shift-index")) });
+      });
+      chip.addEventListener("contextmenu", (event) => {
+        showContextMenu(event, Number(chip.getAttribute("data-shift-index")));
+      });
+    });
+
+    grid.querySelectorAll("[data-copy-shift]").forEach((btn) => {
+      btn.addEventListener("click", (event) => {
+        event.stopPropagation();
+        showCopyDaysModal(Number(btn.getAttribute("data-copy-shift")));
+      });
+    });
+
+    grid.querySelectorAll("[data-delete-shift]").forEach((btn) => {
+      btn.addEventListener("click", (event) => {
+        event.stopPropagation();
+        deleteShift(Number(btn.getAttribute("data-delete-shift")));
       });
     });
 
     grid.querySelectorAll(".rota-grid-drop").forEach((cell) => {
       cell.addEventListener("dragover", (event) => {
         event.preventDefault();
-        cell.classList.add("is-drag-over");
+        const copyMode = dragCopyMode || event.altKey;
+        cell.classList.toggle("is-drag-over-copy", copyMode);
+        cell.classList.toggle("is-drag-over", !copyMode);
       });
-      cell.addEventListener("dragleave", () => cell.classList.remove("is-drag-over"));
+      cell.addEventListener("dragleave", () => {
+        cell.classList.remove("is-drag-over", "is-drag-over-copy");
+      });
       cell.addEventListener("drop", (event) => {
         event.preventDefault();
-        cell.classList.remove("is-drag-over");
+        cell.classList.remove("is-drag-over", "is-drag-over-copy");
         const index = dragShiftIndex ?? Number(event.dataTransfer?.getData("text/plain"));
         if (Number.isNaN(index) || !shifts[index]) return;
-        shifts[index].employee_id = Number(cell.getAttribute("data-employee-id"));
-        shifts[index].employee_name = employeeName(shifts[index].employee_id);
-        shifts[index].shift_date = cell.getAttribute("data-shift-date");
-        markDirty();
-        renderAll();
+        const employeeId = Number(cell.getAttribute("data-employee-id"));
+        const shiftDate = cell.getAttribute("data-shift-date");
+        const copyMode =
+          event.altKey || event.dataTransfer?.getData("application/x-rota-copy") === "1" || dragCopyMode;
+        if (copyMode) {
+          copyShift(index, employeeId, shiftDate);
+        } else {
+          moveShift(index, employeeId, shiftDate);
+        }
+        dragShiftIndex = null;
+        dragCopyMode = false;
       });
-      cell.addEventListener("click", () => {
-        openShiftPanel({
-          employeeId: Number(cell.getAttribute("data-employee-id")),
-          shiftDate: cell.getAttribute("data-shift-date"),
-        });
+      cell.addEventListener("click", (event) => {
+        if (event.target.closest(".rota-shift-block") || event.target.closest(".rota-shift-actions")) return;
+        if (cell.querySelector(".rota-shift-block")) return;
+        quickAddShift(Number(cell.getAttribute("data-employee-id")), cell.getAttribute("data-shift-date"));
       });
     });
   }
@@ -772,10 +1046,10 @@
     };
     if (editingShiftIndex != null && shifts[editingShiftIndex]) {
       shifts[editingShiftIndex] = { ...shifts[editingShiftIndex], ...payload };
-      setMessage("Shift updated — click Save draft.");
+      setMessage("Shift updated — click Save draft.", "success");
     } else {
       shifts.push(payload);
-      setMessage("Shift added — click Save draft.");
+      setMessage("Shift added — click Save draft.", "success");
     }
     shifts.sort((a, b) => `${a.shift_date}${a.start_time}`.localeCompare(`${b.shift_date}${b.start_time}`));
     markDirty();
@@ -938,7 +1212,8 @@
 
     setView("grid");
     await loadEmployeesList();
-    await Promise.all([loadWeek(), loadShiftRequests()]);
+    await loadWeek();
+    await loadShiftRequests();
   }
 
   window.addEventListener("admin:section", (event) => {
