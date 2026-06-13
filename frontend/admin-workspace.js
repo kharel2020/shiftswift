@@ -145,6 +145,7 @@
     [
       ["compliance", badges.compliance],
       ["leave", badges.leave],
+      ["disciplinary", badges.disciplinary],
     ].forEach(([section, count]) => {
       const link = document.querySelector(`.nav-link[data-section="${section}"]`);
       if (!link) return;
@@ -241,6 +242,7 @@
         const recruitment = m.recruitment || {};
         const rota = m.rota || {};
         const grievance = m.grievance || {};
+        const disciplinary = m.disciplinary || {};
         const offboarding = m.offboarding || {};
         const contracts = m.contracts || {};
         const docs = m.documents || {};
@@ -320,6 +322,14 @@
             sub: grievance.open_cases ? "Open cases" : "No open cases",
             href: "#grievance",
             tone: (grievance.open_cases ?? 0) > 0 ? "warn" : "",
+          }),
+          moduleCard({
+            icon: "📋",
+            title: "Disciplinary",
+            value: String(disciplinary.open_cases ?? 0),
+            sub: disciplinary.open_cases ? "Open cases" : "No open cases",
+            href: "#disciplinary",
+            tone: (disciplinary.open_cases ?? 0) > 0 ? "warn" : "",
           }),
           moduleCard({
             icon: "📄",

@@ -15,6 +15,7 @@ from modules.leave.service import (
     create_leave_request,
     leave_balance,
     review_leave_request,
+    sync_approved_leave_to_sponsor_absence,
 )
 
 
@@ -81,7 +82,11 @@ def test_review_leave_request_approves_pending() -> None:
     conn = MagicMock()
     cursor = MagicMock()
     conn.cursor.return_value.__enter__.return_value = cursor
-    cursor.fetchone.side_effect = [(1, "sick", 1.0, "pending")]
+    cursor.fetchone.side_effect = [
+        (1, "sick", 1.0, "pending"),
+        (date(2026, 7, 6), date(2026, 7, 6)),
+        (False,),
+    ]
     cursor.fetchall.return_value = [
         (
             1,
@@ -112,3 +117,22 @@ def test_review_leave_request_approves_pending() -> None:
 
     assert item["status"] == "approved"
     conn.commit.assert_called_once()
+
+
+def test_sync_approved_leave_skips_non_sponsored() -> None:
+    conn = MagicMock()
+    cursor = MagicMock()
+    conn.cursor.return_value.__enter__.return_value = cursor
+    cursor.fetchone.return_value = (False,)
+
+    synced = sync_approved_leave_to_sponsor_absence(
+        tenant_id=1,
+        employee_id=1,
+        request_id=42,
+        leave_type="annual",
+        start_date=date(2026, 7, 6),
+        end_date=date(2026, 7, 6),
+        conn=conn,
+    )
+
+    assert synced == 0

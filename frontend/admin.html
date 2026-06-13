@@ -32,6 +32,7 @@
           <p class="nav-crumb" id="employee-nav-crumb" hidden aria-live="polite"></p>
           <a class="nav-link" href="#recruitment" data-section="recruitment">Recruitment</a>
           <a class="nav-link" href="#grievance" data-section="grievance" data-feature="grievance">Grievance</a>
+          <a class="nav-link" href="#disciplinary" data-section="disciplinary" data-feature="disciplinary">Disciplinary</a>
           <a class="nav-link" href="#offboarding" data-section="offboarding">Offboarding</a>
           <a class="nav-link" href="#promotions" data-section="promotions">Promotions</a>
           <a class="nav-link" href="#templates" data-section="templates">HR Templates & AI</a>
@@ -318,6 +319,55 @@
                 <p>Select a case from the register to view investigation details, ACAS deadlines, and encrypted notes.</p>
               </div>
               <div id="grievance-case-detail-content" hidden></div>
+            </aside>
+          </div>
+        </section>
+
+        <section id="disciplinary" class="admin-section" data-feature="disciplinary" hidden>
+          <header class="section-header grievance-page-header">
+            <div>
+              <h2>Disciplinary cases</h2>
+              <p class="muted">Investigation register with encrypted notes and hearing outcomes — ACAS code aligned.</p>
+            </div>
+            <div class="section-actions">
+              <button type="button" class="btn ghost" id="disciplinary-export-btn">Export all cases</button>
+            </div>
+          </header>
+
+          <div class="grievance-status-workflow" id="disciplinary-status-workflow" aria-label="Case status workflow"></div>
+
+          <div class="grievance-workspace-layout">
+            <div class="grievance-main-pane">
+              <article class="hr-surface-panel hr-log-panel">
+                <h4 class="hr-section-title">Open disciplinary case</h4>
+                <p class="muted grievance-next-ref" id="disciplinary-next-ref"></p>
+                <div id="disciplinary-case-form"></div>
+              </article>
+
+              <h4 class="hr-section-title">Case register</h4>
+              <div class="hr-table-wrap">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Reference</th>
+                      <th>Employee</th>
+                      <th>Misconduct</th>
+                      <th>Severity</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="disciplinary-cases-body">
+                    <tr><td colspan="5" class="muted">Open this section to load cases…</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <aside class="grievance-detail-panel" id="disciplinary-case-detail">
+              <div id="disciplinary-case-detail-empty" class="grievance-detail-empty muted">
+                <p>Select a case from the register to view investigation details and encrypted notes.</p>
+              </div>
+              <div id="disciplinary-case-detail-content" hidden></div>
             </aside>
           </div>
         </section>
@@ -1777,6 +1827,7 @@
     <script src="./admin-absence.js?v=1"></script>
     <script src="./admin-rtw.js?v=1"></script>
     <script src="./admin-grievance.js?v=5"></script>
+    <script src="./admin-disciplinary.js?v=1"></script>
     <script src="./admin-offboarding.js?v=admin-v5"></script>
     <script src="./admin-templates.js?v=admin-v8"></script>
     <script src="./admin-time-punch.js?v=6"></script>

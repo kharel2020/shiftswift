@@ -16,6 +16,7 @@ from contracts_routes import router as contracts_router
 from core.crypto import encryption_configured
 from modules.events.routes import router as events_router
 from modules.grievance.routes import router as grievance_router
+from modules.disciplinary.routes import router as disciplinary_router
 from modules.offboarding.routes import router as offboarding_router
 from modules.ai.routes import router as ai_router
 from modules.employee_portal.routes import router as employee_portal_router
@@ -109,6 +110,7 @@ app.include_router(auth_router)
 app.include_router(admin_router)
 app.include_router(compliance_router)
 app.include_router(grievance_router)
+app.include_router(disciplinary_router)
 app.include_router(offboarding_router)
 app.include_router(ai_router)
 app.include_router(hr_templates_router)

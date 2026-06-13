@@ -22,6 +22,12 @@ from modules.employees.constants import (
     WORKER_TYPES,
 )
 from modules.grievance.constants import ALLEGATION_TYPES, SEVERITY_LEVELS, STATUS_WORKFLOW
+from modules.disciplinary.constants import (
+    CLOSE_OUTCOMES,
+    MISCONDUCT_TYPES,
+    SEVERITY_LEVELS as DISCIPLINARY_SEVERITY_LEVELS,
+    STATUS_WORKFLOW as DISCIPLINARY_STATUS_WORKFLOW,
+)
 from modules.recruitment.constants import (
     HIRING_DECISIONS,
     OFFER_STATUSES,
@@ -223,6 +229,10 @@ def admin_metadata() -> dict[str, object]:
         "grievance_allegation_types": ALLEGATION_TYPES,
         "grievance_severities": SEVERITY_LEVELS,
         "grievance_status_workflow": STATUS_WORKFLOW,
+        "disciplinary_misconduct_types": MISCONDUCT_TYPES,
+        "disciplinary_severities": DISCIPLINARY_SEVERITY_LEVELS,
+        "disciplinary_status_workflow": DISCIPLINARY_STATUS_WORKFLOW,
+        "disciplinary_close_outcomes": CLOSE_OUTCOMES,
         "employee_document_categories": EMPLOYEE_DOCUMENT_CATEGORIES,
         "rtw_statuses": RTW_STATUSES,
         "absence_excuse_types": [

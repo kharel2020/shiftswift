@@ -716,6 +716,14 @@ def admin_overview(*, tenant_id: int, conn: Any) -> dict[str, Any]:
         open_grievances = int(cur.fetchone()[0])
         cur.execute(
             """
+            SELECT COUNT(*) FROM disciplinary_cases
+            WHERE tenant_id = %s AND status <> 'closed'
+            """,
+            (tenant_id,),
+        )
+        open_disciplinary = int(cur.fetchone()[0])
+        cur.execute(
+            """
             SELECT COUNT(*) FROM offboarding_workflows
             WHERE tenant_id = %s AND status = 'in_progress'
             """,
@@ -815,6 +823,16 @@ def admin_overview(*, tenant_id: int, conn: Any) -> dict[str, Any]:
                 "detail": "Send or chase contract signatures from the employment contracts workspace.",
                 "href": "#employment-contracts",
                 "section": "employment-contracts",
+            }
+        )
+    if open_disciplinary:
+        open_actions.append(
+            {
+                "severity": "warn",
+                "title": f"{open_disciplinary} open disciplinary case{'s' if open_disciplinary != 1 else ''}",
+                "detail": "Review investigation progress and hearing outcomes.",
+                "href": "#disciplinary",
+                "section": "disciplinary",
             }
         )
     if open_grievances:
@@ -925,6 +943,7 @@ def admin_overview(*, tenant_id: int, conn: Any) -> dict[str, Any]:
                 "shift_count": rota_shifts,
             },
             "grievance": {"open_cases": open_grievances},
+            "disciplinary": {"open_cases": open_disciplinary},
             "offboarding": {"in_progress": offboarding_in_progress},
             "contracts": {"pending_signature": contracts_pending},
             "documents": {"count": document_count},
@@ -933,6 +952,7 @@ def admin_overview(*, tenant_id: int, conn: Any) -> dict[str, Any]:
         "nav_badges": {
             "compliance": day9_alerts + rtw_expired + rtw_expiring_soon,
             "leave": pending_leave_requests,
+            "disciplinary": open_disciplinary,
         },
         **plan_flags,
     }

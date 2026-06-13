@@ -20,6 +20,61 @@ def count_weekdays(*, start: date, end: date) -> float:
     return float(total)
 
 
+def _leave_excuse_type(leave_type: str) -> str:
+    return {
+        "annual": "paid_annual_leave",
+        "sick": "sick_authorized",
+        "unpaid": "unpaid_authorized",
+        "other": "unpaid_authorized",
+    }.get(leave_type, "unpaid_authorized")
+
+
+def sync_approved_leave_to_sponsor_absence(
+    *,
+    tenant_id: int,
+    employee_id: int,
+    request_id: int,
+    leave_type: str,
+    start_date: date,
+    end_date: date,
+    conn: Any,
+) -> int:
+    """Mirror approved leave onto sponsored_absence_days for sponsor licence tracking."""
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT COALESCE(is_sponsored, FALSE)
+            FROM employees
+            WHERE tenant_id = %s AND id = %s
+            """,
+            (tenant_id, employee_id),
+        )
+        row = cur.fetchone()
+        if not row or not row[0]:
+            return 0
+
+    from sponsor_licence_compliance import record_sponsored_absence_day
+
+    excuse_type = _leave_excuse_type(leave_type)
+    source = f"leave:{request_id}"
+    synced = 0
+    current = start_date
+    while current <= end_date:
+        if current.weekday() < 5:
+            record_sponsored_absence_day(
+                tenant_id=tenant_id,
+                employee_id=employee_id,
+                absence_date=current,
+                excuse_type=excuse_type,
+                source=source,
+                conn=conn,
+                commit=False,
+            )
+            synced += 1
+        current += timedelta(days=1)
+    return synced
+
+
 def _serialize_row(row: tuple[Any, ...]) -> dict[str, Any]:
     (
         request_id,
@@ -227,6 +282,16 @@ def review_leave_request(
                 raise ValueError("Insufficient annual leave balance for approval.")
         cur.execute(
             """
+            SELECT start_date, end_date FROM leave_requests
+            WHERE tenant_id = %s AND id = %s
+            """,
+            (tenant_id, request_id),
+        )
+        period = cur.fetchone()
+        start_date = period[0] if period else None
+        end_date = period[1] if period else None
+        cur.execute(
+            """
             UPDATE leave_requests
             SET status = %s,
                 reviewed_by = %s,
@@ -242,6 +307,16 @@ def review_leave_request(
                 tenant_id,
                 request_id,
             ),
+        )
+    if decision == "approved" and start_date and end_date:
+        sync_approved_leave_to_sponsor_absence(
+            tenant_id=tenant_id,
+            employee_id=int(employee_id),
+            request_id=request_id,
+            leave_type=str(leave_type),
+            start_date=start_date,
+            end_date=end_date,
+            conn=conn,
         )
     conn.commit()
     items = list_leave_requests(tenant_id=tenant_id, conn=conn, limit=500)

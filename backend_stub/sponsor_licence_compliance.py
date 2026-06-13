@@ -516,6 +516,7 @@ def record_sponsored_absence_day(
     is_excused: bool | None = None,
     source: str = "admin",
     conn: Any,
+    commit: bool = True,
 ) -> dict[str, Any]:
     resolved_excused, resolved_type = resolve_absence_fields(
         excuse_type=excuse_type,
@@ -566,7 +567,8 @@ def record_sponsored_absence_day(
                 },
             ),
         )
-    conn.commit()
+    if commit:
+        conn.commit()
     meta = ABSENCE_EXCUSE_TYPES[resolved_type]
     return {
         "id": row[0],

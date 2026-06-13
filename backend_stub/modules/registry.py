@@ -32,6 +32,13 @@ MODULES: list[dict[str, object]] = [
         "setup": ["DATABASE_URL", "ENCRYPTION_KEY"],
     },
     {
+        "id": "disciplinary",
+        "name": "Disciplinary Case Management",
+        "prefix": "/disciplinary",
+        "description": "Encrypted investigation notes, hearing outcomes, audit trail.",
+        "setup": ["DATABASE_URL", "ENCRYPTION_KEY"],
+    },
+    {
         "id": "offboarding",
         "name": "Offboarding & Leavers",
         "prefix": "/offboarding",

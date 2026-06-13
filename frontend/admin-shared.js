@@ -54,6 +54,7 @@ window.Admin = (() => {
     sponsor_licence_acknowledged: false,
     holds_sponsor_licence: false,
     grievance_enabled: false,
+    disciplinary_enabled: false,
     audit_export_enabled: false,
     multi_site_enabled: false,
     api_access_enabled: false,
@@ -65,6 +66,7 @@ window.Admin = (() => {
     payroll: "payroll_enabled",
     "sponsor-compliance": "sponsor_compliance_enabled",
     grievance: "grievance_enabled",
+    disciplinary: "disciplinary_enabled",
     "audit-export": "audit_export_enabled",
     "multi-site": "multi_site_enabled",
     "api-access": "api_access_enabled",
@@ -73,6 +75,7 @@ window.Admin = (() => {
   const FEATURE_UPGRADE_LABELS = {
     "sponsor-compliance": "Sponsor licence compliance is included on Growth and Scale plans.",
     grievance: "Grievance workflows are included on Growth and Scale plans.",
+    disciplinary: "Disciplinary workflows are included on Growth and Scale plans.",
     "audit-export": "Home Office audit export is included on Growth and Scale plans.",
     "multi-site": "Multi-site dashboard is included on Scale plans.",
     "api-access": "API access is included on Scale plans.",
@@ -117,6 +120,7 @@ window.Admin = (() => {
         sponsor_licence_acknowledged: Boolean(data.sponsor_licence_acknowledged),
         holds_sponsor_licence: Boolean(data.holds_sponsor_licence),
         grievance_enabled: Boolean(data.grievance_enabled),
+        disciplinary_enabled: Boolean(data.disciplinary_enabled),
         audit_export_enabled: Boolean(data.audit_export_enabled),
         multi_site_enabled: Boolean(data.multi_site_enabled),
         api_access_enabled: Boolean(data.api_access_enabled),
@@ -564,6 +568,26 @@ window.Admin = (() => {
     },
     grievanceNote: {
       id: "grievance-note",
+      columns: 2,
+      submitLabel: "Add encrypted note",
+      successMessage: "Note saved.",
+      fields: [
+        { name: "body", label: "Note", type: "textarea", span: 2, required: true, rows: 5 },
+        {
+          name: "note_type",
+          label: "Type",
+          type: "select",
+          options: [
+            { value: "investigation", label: "Investigation" },
+            { value: "hearing", label: "Hearing" },
+            { value: "appeal", label: "Appeal" },
+          ],
+          defaultValue: "investigation",
+        },
+      ],
+    },
+    disciplinaryNote: {
+      id: "disciplinary-note",
       columns: 2,
       submitLabel: "Add encrypted note",
       successMessage: "Note saved.",
