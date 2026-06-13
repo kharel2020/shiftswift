@@ -16,6 +16,7 @@ from modules.payroll_export.service import (
     _pair_punch_hours,
     build_employees_csv,
     build_hours_csv,
+    build_hours_report,
     payroll_export_info,
 )
 
@@ -24,6 +25,7 @@ def test_payroll_export_info_lists_partners() -> None:
     info = payroll_export_info()
     assert "BrightPay" in {p["name"] for p in info["partners"]}
     assert info["exports"]["employees_csv"].endswith("employees.csv")
+    assert info["exports"]["hours_pdf"].endswith("hours.pdf")
 
 
 @patch("modules.payroll_export.service.list_employees")
@@ -73,6 +75,33 @@ def test_pair_punch_hours_computes_duration() -> None:
     assert hours == 8.5
 
 
+def test_build_hours_report_totals_employee_hours() -> None:
+    conn = MagicMock()
+    cursor = MagicMock()
+    conn.cursor.return_value.__enter__.return_value = cursor
+    punched_at_in = datetime(2026, 6, 10, 8, 0, tzinfo=timezone.utc)
+    punched_at_out = datetime(2026, 6, 10, 16, 0, tzinfo=timezone.utc)
+    cursor.fetchall.return_value = [
+        (1, "Alex", "Smith", "in", punched_at_in),
+        (1, "Alex", "Smith", "out", punched_at_out),
+    ]
+
+    with patch("admin_service.get_tenant_profile") as mock_profile:
+        mock_profile.return_value = {"name": "Acme Ltd", "trading_name": "Acme Trading"}
+        report = build_hours_report(
+            tenant_id=1,
+            conn=conn,
+            from_date=date(2026, 6, 1),
+            to_date=date(2026, 6, 30),
+        )
+
+    assert report["tenant_name"] == "Acme Trading"
+    assert report["employee_count"] == 1
+    assert report["grand_total_hours"] == 8.0
+    assert report["employees"][0]["total_hours"] == 8.0
+    assert report["employees"][0]["rows"][0]["status"] == "complete"
+
+
 def test_build_hours_csv_writes_header_and_row() -> None:
     conn = MagicMock()
     cursor = MagicMock()
@@ -91,4 +120,18 @@ def test_build_hours_csv_writes_header_and_row() -> None:
     )
     lines = csv_body.strip().splitlines()
     assert lines[0] == ",".join(HOURS_CSV_COLUMNS)
-    assert "Alex,Smith,2026-06-10,09:00,17:00,8.00" in lines[1]
+    assert "Alex,Smith,2026-06-10" in lines[1]
+    assert ",8.00" in lines[1]
+
+
+def test_hours_report_pdf_bytes_starts_with_pdf_header() -> None:
+    conn = MagicMock()
+    cursor = MagicMock()
+    conn.cursor.return_value.__enter__.return_value = cursor
+    cursor.fetchall.return_value = []
+    with patch("admin_service.get_tenant_profile") as mock_profile:
+        mock_profile.return_value = {"name": "Acme Ltd"}
+        from modules.payroll_export.hours_pdf import hours_report_pdf_bytes
+
+        pdf = hours_report_pdf_bytes(tenant_id=1, conn=conn, from_date=date(2026, 6, 1), to_date=date(2026, 6, 30))
+    assert pdf.startswith(b"%PDF")

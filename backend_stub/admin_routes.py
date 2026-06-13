@@ -900,3 +900,35 @@ def payroll_export_hours_csv(
         media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@router.get("/payroll-export/hours.pdf")
+def payroll_export_hours_pdf(
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+    from_date: date | None = None,
+    to_date: date | None = None,
+):
+    from fastapi.responses import Response
+
+    from modules.payroll_export.hours_pdf import hours_report_pdf_bytes
+    from plan_features import assert_tenant_feature
+
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = _db_conn()
+    try:
+        assert_tenant_feature(tenant_id=tenant_id, feature="payroll", conn=conn)
+        pdf_bytes = hours_report_pdf_bytes(
+            tenant_id=tenant_id,
+            conn=conn,
+            from_date=from_date,
+            to_date=to_date,
+        )
+    finally:
+        conn.close()
+    filename = f"shiftswift-hours-{from_date or 'month'}-{tenant_id}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

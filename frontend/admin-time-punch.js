@@ -40,6 +40,17 @@
     return new Date().toISOString().slice(0, 10);
   }
 
+  function firstOfMonthIso(d = new Date()) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+  }
+
+  function exportPeriodDates() {
+    return {
+      date_from: filters.date_from || firstOfMonthIso(),
+      date_to: filters.date_to || todayIso(),
+    };
+  }
+
   function mondayIso(d = new Date()) {
     const day = new Date(d);
     const diff = (day.getDay() + 6) % 7;
@@ -692,6 +703,26 @@
     }
   }
 
+  async function exportHoursPdf() {
+    try {
+      const period = exportPeriodDates();
+      const params = new URLSearchParams({
+        date_from: period.date_from,
+        date_to: period.date_to,
+      });
+      await downloadAuthenticated(
+        `/admin/time-punch/hours-report.pdf?${params.toString()}`,
+        `working-hours-${period.date_from}-to-${period.date_to}.pdf`,
+      );
+      showMessage(
+        `Hours PDF downloaded for ${period.date_from} to ${period.date_to}. Send this to your accountant.`,
+        "ok",
+      );
+    } catch (error) {
+      showMessage(error.message || "Hours PDF export failed.");
+    }
+  }
+
   async function exportPunchesCsv(useTodayOnly) {
     try {
       const params = new URLSearchParams();
@@ -728,6 +759,7 @@
     });
 
     $("punch-header-export-btn")?.addEventListener("click", () => exportPunchesCsv(false));
+    $("punch-export-hours-pdf-btn")?.addEventListener("click", () => exportHoursPdf());
     $("punch-header-admin-btn")?.addEventListener("click", () => {
       setActiveTab("log");
       $("punch-admin-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });

@@ -298,6 +298,36 @@ def export_punches_csv(
     )
 
 
+@admin_router.get("/hours-report.pdf")
+def export_hours_report_pdf(
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+    date_from: str | None = None,
+    date_to: str | None = None,
+) -> Response:
+    from modules.payroll_export.hours_pdf import hours_report_pdf_bytes
+
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    filters = _punch_filters(date_from=date_from, date_to=date_to)
+    conn = get_connection()
+    try:
+        pdf_bytes = hours_report_pdf_bytes(
+            tenant_id=tenant_id,
+            conn=conn,
+            from_date=filters.get("date_from"),
+            to_date=filters.get("date_to"),
+        )
+    finally:
+        conn.close()
+    period = filters.get("date_from") or date.today().replace(day=1).isoformat()
+    filename = f"working-hours-{period}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 @admin_router.post("/punches/admin")
 def admin_punch(
     payload: AdminPunchRequest,

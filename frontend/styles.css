@@ -6127,6 +6127,12 @@ button.lifecycle-accordion-header .lifecycle-accordion-chevron {
   flex-shrink: 0;
 }
 
+.punch-table-head__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .punch-today-preview {
   margin-top: 22px;
   padding-top: 18px;

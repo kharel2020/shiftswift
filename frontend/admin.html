@@ -1255,7 +1255,10 @@
 
                 <div class="punch-table-head">
                   <h4 class="hr-section-title">Punch log</h4>
-                  <button type="button" class="btn outline punch-table-head__btn" id="punch-export-csv-btn">Export CSV</button>
+                  <div class="punch-table-head__actions">
+                    <button type="button" class="btn outline punch-table-head__btn" id="punch-export-hours-pdf-btn">Export hours PDF</button>
+                    <button type="button" class="btn outline punch-table-head__btn" id="punch-export-csv-btn">Export CSV</button>
+                  </div>
                 </div>
                 <div class="punch-filters">
                   <label class="edit-field"><span class="edit-label">Employee</span><select id="punch-filter-employee"><option value="">All employees</option></select></label>
@@ -1297,7 +1300,7 @@
                   <ol class="punch-setup-steps">
                     <li><strong>Step 1</strong> — Sync your business address to create your first punch site.</li>
                     <li><strong>Step 2</strong> — Staff clock in/out from the Time Clock app within the geofence.</li>
-                    <li><strong>Step 3</strong> — Review punch activity and export for payroll.</li>
+                    <li><strong>Step 3</strong> — Review punch activity and export hours PDF or CSV for payroll.</li>
                   </ol>
                   <button type="button" class="btn primary" id="punch-setup-sync-btn">Sync from address</button>
                 </div>
@@ -1707,7 +1710,7 @@
     <script src="./admin-grievance.js?v=5"></script>
     <script src="./admin-offboarding.js?v=admin-v5"></script>
     <script src="./admin-templates.js?v=admin-v8"></script>
-    <script src="./admin-time-punch.js?v=5"></script>
+    <script src="./admin-time-punch.js?v=6"></script>
     <script src="./admin-rota.js?v=6"></script>
     <script src="./app.js?v=admin-v4"></script>
     <script src="./contracts.js?v=5"></script>
