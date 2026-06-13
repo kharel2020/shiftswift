@@ -72,6 +72,7 @@ def main() -> int:
         "trial_reminders": {"checked": 0, "reminders_sent": 0, "expired": 0},
         "payment_failure": {"checked": 0, "reminders_sent": 0, "holds_applied": 0},
         "portal_setup_reminders": {"tenants_checked": 0, "reminders_sent": 0, "pending_employees": 0},
+        "payroll_hours_reports": {"tenants_checked": 0, "reports_sent": 0, "skipped": 0},
     }
     try:
         for tenant_id in _tenant_ids(conn):
@@ -102,6 +103,13 @@ def main() -> int:
         summary["portal_setup_reminders"] = process_portal_setup_reminders(
             conn=conn,
             settings=load_settings(),
+        )
+        from modules.payroll_export.monthly_report import process_monthly_payroll_hours_reports
+
+        summary["payroll_hours_reports"] = process_monthly_payroll_hours_reports(
+            settings=load_settings(),
+            conn=conn,
+            as_of=as_of,
         )
         from core.notifications import process_queued_notifications
 

@@ -44,6 +44,19 @@
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
   }
 
+  function toLocalIsoDate(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+
+  function previousCalendarMonthRange(reference = new Date()) {
+    const start = new Date(reference.getFullYear(), reference.getMonth() - 1, 1);
+    const end = new Date(reference.getFullYear(), reference.getMonth(), 0);
+    return {
+      date_from: toLocalIsoDate(start),
+      date_to: toLocalIsoDate(end),
+    };
+  }
+
   function exportPeriodDates() {
     return {
       date_from: filters.date_from || firstOfMonthIso(),
@@ -522,11 +535,77 @@
     return `/admin/time-punch/punches?${params.toString()}`;
   }
 
+  function renderAccountantSettings() {
+    const form = $("punch-accountant-form");
+    if (!form || !tenantProfile) return;
+    const emailInput = form.querySelector('[name="payroll_accountant_email"]');
+    const enabledInput = form.querySelector('[name="payroll_hours_report_enabled"]');
+    if (emailInput) emailInput.value = tenantProfile.payroll_accountant_email || "";
+    if (enabledInput) enabledInput.checked = Boolean(tenantProfile.payroll_hours_report_enabled);
+  }
+
+  function setAccountantStatus(text, tone) {
+    const el = $("punch-accountant-status");
+    if (!el) return;
+    el.textContent = text || "";
+    el.className =
+      tone === "ok" ? "edit-form-status punch-accountant-status--ok" : "edit-form-status muted";
+  }
+
+  async function saveAccountantSettings() {
+    const form = $("punch-accountant-form");
+    if (!form) return;
+    const email = form.querySelector('[name="payroll_accountant_email"]')?.value?.trim() || "";
+    const enabled = Boolean(form.querySelector('[name="payroll_hours_report_enabled"]')?.checked);
+    setAccountantStatus("Saving…");
+    try {
+      const res = await apiFetch("/admin/tenant-profile", {
+        method: "PATCH",
+        body: JSON.stringify({
+          payroll_accountant_email: email || null,
+          payroll_hours_report_enabled: enabled,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Save failed");
+      tenantProfile = { ...(tenantProfile || {}), ...data };
+      renderAccountantSettings();
+      setAccountantStatus("Settings saved.", "ok");
+    } catch (error) {
+      setAccountantStatus(error.message || "Could not save settings.");
+    }
+  }
+
+  async function sendAccountantReportNow() {
+    const form = $("punch-accountant-form");
+    const email = form?.querySelector('[name="payroll_accountant_email"]')?.value?.trim() || "";
+    if (!email) {
+      setAccountantStatus("Add an accountant email first.");
+      return;
+    }
+    setAccountantStatus("Sending report…");
+    try {
+      const res = await apiFetch("/admin/payroll-export/hours/email-now", {
+        method: "POST",
+        body: JSON.stringify({ accountant_email: email, use_previous_month: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Send failed");
+      setAccountantStatus(
+        `Sent ${data.period_start} to ${data.period_end} (${data.employee_count} staff, ${Number(data.total_hours).toFixed(1)}h) to ${data.recipient_email}.`,
+        "ok"
+      );
+    } catch (error) {
+      setAccountantStatus(error.message || "Could not send report.");
+    }
+  }
+
   async function loadTenantProfile() {
     try {
       const res = await apiFetch("/admin/tenant-profile");
       if (!res.ok) throw new Error("Load failed");
       tenantProfile = await res.json();
+      renderAccountantSettings();
     } catch {
       tenantProfile = null;
     }
@@ -703,24 +782,43 @@
     }
   }
 
-  async function exportHoursPdf() {
+  async function exportHoursPdf(period = null) {
     try {
-      const period = exportPeriodDates();
+      const resolved = period || exportPeriodDates();
       const params = new URLSearchParams({
-        date_from: period.date_from,
-        date_to: period.date_to,
+        date_from: resolved.date_from,
+        date_to: resolved.date_to,
       });
       await downloadAuthenticated(
         `/admin/time-punch/hours-report.pdf?${params.toString()}`,
-        `working-hours-${period.date_from}-to-${period.date_to}.pdf`,
+        `working-hours-${resolved.date_from}-to-${resolved.date_to}.pdf`,
       );
       showMessage(
-        `Hours PDF downloaded for ${period.date_from} to ${period.date_to}. Send this to your accountant.`,
+        `Hours PDF downloaded for ${resolved.date_from} to ${resolved.date_to}. Send this to your accountant.`,
         "ok",
       );
     } catch (error) {
       showMessage(error.message || "Hours PDF export failed.");
     }
+  }
+
+  async function applyLastMonthFilters() {
+    const period = previousCalendarMonthRange();
+    const fromEl = $("punch-filter-from");
+    const toEl = $("punch-filter-to");
+    if (fromEl) fromEl.value = period.date_from;
+    if (toEl) toEl.value = period.date_to;
+    filters = {
+      ...filters,
+      date_from: period.date_from,
+      date_to: period.date_to,
+    };
+    await loadPunches();
+    showMessage(`Showing punch log for ${period.date_from} to ${period.date_to}.`, "ok");
+  }
+
+  async function exportLastMonthHoursPdf() {
+    await exportHoursPdf(previousCalendarMonthRange());
   }
 
   async function exportPunchesCsv(useTodayOnly) {
@@ -760,6 +858,7 @@
 
     $("punch-header-export-btn")?.addEventListener("click", () => exportPunchesCsv(false));
     $("punch-export-hours-pdf-btn")?.addEventListener("click", () => exportHoursPdf());
+    $("punch-export-last-month-pdf-btn")?.addEventListener("click", () => exportLastMonthHoursPdf());
     $("punch-header-admin-btn")?.addEventListener("click", () => {
       setActiveTab("log");
       $("punch-admin-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -791,6 +890,7 @@
       submitAdminPunch(event.currentTarget);
     });
 
+    $("punch-filter-last-month")?.addEventListener("click", () => applyLastMonthFilters());
     $("punch-filter-apply")?.addEventListener("click", async () => {
       filters = {
         date_from: $("punch-filter-from")?.value || "",
@@ -815,6 +915,8 @@
 
     $("punch-export-csv-btn")?.addEventListener("click", () => exportPunchesCsv(false));
     $("punch-preview-export-btn")?.addEventListener("click", () => exportPunchesCsv(true));
+    $("punch-accountant-save-btn")?.addEventListener("click", () => saveAccountantSettings());
+    $("punch-accountant-send-btn")?.addEventListener("click", () => sendAccountantReportNow());
   }
 
   async function initSection() {

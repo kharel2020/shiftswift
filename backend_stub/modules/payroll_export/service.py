@@ -72,10 +72,43 @@ def build_employees_csv(*, tenant_id: int, conn: Any) -> str:
     return buffer.getvalue()
 
 
+def _day_hours_from_events(
+    events: list[tuple[str, datetime]],
+) -> tuple[float | None, datetime | None, datetime | None, bool, list[tuple[datetime, datetime, float]]]:
+    """Sum sequential in/out pairs for one employee-day; break gaps are excluded."""
+    ordered = sorted(events, key=lambda item: item[1])
+    segments: list[tuple[datetime, datetime, float]] = []
+    pending_in: datetime | None = None
+    orphans = 0
+    for typ, ts in ordered:
+        if typ == "in":
+            if pending_in is not None:
+                orphans += 1
+            pending_in = ts
+        elif typ == "out":
+            if pending_in is not None and ts > pending_in:
+                hours = round((ts - pending_in).total_seconds() / 3600, 2)
+                segments.append((pending_in, ts, hours))
+                pending_in = None
+            else:
+                orphans += 1
+    if pending_in is not None:
+        orphans += 1
+
+    if not segments:
+        clock_in = next((ts for typ, ts in ordered if typ == "in"), None)
+        clock_out = next((ts for typ, ts in reversed(ordered) if typ == "out"), None)
+        return None, clock_in, clock_out, False, segments
+
+    total = round(sum(segment[2] for segment in segments), 2)
+    complete = orphans == 0
+    return total, segments[0][0], segments[-1][1], complete, segments
+
+
 def _pair_punch_hours(
     punches: list[tuple[Any, ...]],
 ) -> list[tuple[int, str, str, date, datetime | None, datetime | None, float | None]]:
-    """Pair in/out punches per employee per day; return computed hours when possible."""
+    """One row per employee per day with hours summed across split shifts."""
     by_emp_day: dict[tuple[int, date], list[tuple[str, datetime]]] = {}
     names: dict[int, tuple[str, str]] = {}
     for emp_id, first, last, punch_type, punched_at in punches:
@@ -89,14 +122,34 @@ def _pair_punch_hours(
 
     rows: list[tuple[int, str, str, date, datetime | None, datetime | None, float | None]] = []
     for (emp_id, day), events in sorted(by_emp_day.items()):
-        events.sort(key=lambda item: item[1])
         first_name, last_name = names.get(emp_id, ("", ""))
-        clock_in = next((ts for typ, ts in events if typ == "in"), None)
-        clock_out = next((ts for typ, ts in reversed(events) if typ == "out"), None)
-        hours = None
-        if clock_in and clock_out and clock_out > clock_in:
-            hours = round((clock_out - clock_in).total_seconds() / 3600, 2)
+        total, clock_in, clock_out, complete, _segments = _day_hours_from_events(events)
+        hours = total if complete else None
         rows.append((emp_id, first_name, last_name, day, clock_in, clock_out, hours))
+    return rows
+
+
+def _pair_punch_segments(
+    punches: list[tuple[Any, ...]],
+) -> list[tuple[int, str, str, date, datetime, datetime, float]]:
+    """One row per complete in/out segment (multiple rows per day when staff clock out for breaks)."""
+    by_emp_day: dict[tuple[int, date], list[tuple[str, datetime]]] = {}
+    names: dict[int, tuple[str, str]] = {}
+    for emp_id, first, last, punch_type, punched_at in punches:
+        names[int(emp_id)] = (str(first or ""), str(last or ""))
+        if not isinstance(punched_at, datetime):
+            continue
+        if punched_at.tzinfo is None:
+            punched_at = punched_at.replace(tzinfo=timezone.utc)
+        day = punched_at.astimezone(UK_TZ).date()
+        by_emp_day.setdefault((int(emp_id), day), []).append((punch_type, punched_at))
+
+    rows: list[tuple[int, str, str, date, datetime, datetime, float]] = []
+    for (emp_id, day), events in sorted(by_emp_day.items()):
+        first_name, last_name = names.get(emp_id, ("", ""))
+        _total, _clock_in, _clock_out, _complete, segments = _day_hours_from_events(events)
+        for seg_in, seg_out, hours in segments:
+            rows.append((emp_id, first_name, last_name, day, seg_in, seg_out, hours))
     return rows
 
 
@@ -214,9 +267,9 @@ def build_hours_report(
         "generated_at": datetime.now(timezone.utc).astimezone(UK_TZ).strftime("%d %b %Y %H:%M %Z"),
         "timezone": "Europe/London",
         "methodology": (
-            "Each row pairs the first clock-in and last clock-out on the same calendar day (UK time). "
-            "Hours worked = clock out minus clock in. Rows marked incomplete are missing a punch pair "
-            "and are excluded from employee totals."
+            "Each working day sums sequential clock-in / clock-out pairs in UK time. "
+            "Lunch or split shifts with a clock-out and clock-in between segments exclude the break. "
+            "Days with unmatched punches are marked incomplete and excluded from employee totals."
         ),
         "employees": employees,
         "grand_total_hours": round(grand_total_hours, 2),
@@ -237,7 +290,7 @@ def build_hours_csv(
     buffer = io.StringIO()
     writer = csv.writer(buffer)
     writer.writerow(HOURS_CSV_COLUMNS)
-    for emp_id, first, last, day, clock_in, clock_out, hours in _pair_punch_hours(punch_rows):
+    for emp_id, first, last, day, clock_in, clock_out, hours in _pair_punch_segments(punch_rows):
         writer.writerow(
             [
                 str(emp_id),

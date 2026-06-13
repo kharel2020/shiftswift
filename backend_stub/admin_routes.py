@@ -95,6 +95,13 @@ class TenantProfileUpdate(BaseModel):
     signatory_name: str | None = Field(default=None, max_length=120)
     signatory_title: str | None = Field(default=None, max_length=120)
     signatory_email: str | None = Field(default=None, max_length=254)
+    payroll_accountant_email: str | None = Field(default=None, max_length=254)
+    payroll_hours_report_enabled: bool | None = None
+
+
+class PayrollHoursEmailRequest(BaseModel):
+    accountant_email: str | None = Field(default=None, max_length=254)
+    use_previous_month: bool = True
 
 
 class NotificationPreferencesUpdate(BaseModel):
@@ -932,3 +939,46 @@ def payroll_export_hours_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@router.post("/payroll-export/hours/email-now")
+def email_payroll_hours_report_now(
+    payload: PayrollHoursEmailRequest,
+    request: Request,
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, object]:
+    from modules.payroll_export.monthly_report import _previous_calendar_month, send_payroll_hours_report
+
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = _db_conn()
+    try:
+        profile = get_tenant_profile(tenant_id=tenant_id, conn=conn)
+        recipient = (payload.accountant_email or profile.get("payroll_accountant_email") or "").strip()
+        if not recipient:
+            raise HTTPException(
+                status_code=400,
+                detail="Add your accountant email in Time Clock settings before sending.",
+            )
+        today = date.today()
+        if payload.use_previous_month:
+            period_start, period_end = _previous_calendar_month(today)
+        else:
+            period_start = today.replace(day=1)
+            period_end = today
+        return send_payroll_hours_report(
+            settings=settings,
+            tenant_id=tenant_id,
+            recipient_email=recipient,
+            period_start=period_start,
+            period_end=period_end,
+            conn=conn,
+            cc_hr_email=profile.get("billing_email"),
+            allow_resend=True,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    finally:
+        conn.close()

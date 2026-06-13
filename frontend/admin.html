@@ -1256,16 +1256,39 @@
                 <div class="punch-table-head">
                   <h4 class="hr-section-title">Punch log</h4>
                   <div class="punch-table-head__actions">
+                    <button type="button" class="btn outline punch-table-head__btn" id="punch-export-last-month-pdf-btn">Last month PDF</button>
                     <button type="button" class="btn outline punch-table-head__btn" id="punch-export-hours-pdf-btn">Export hours PDF</button>
                     <button type="button" class="btn outline punch-table-head__btn" id="punch-export-csv-btn">Export CSV</button>
                   </div>
                 </div>
+                <article class="card punch-accountant-card" id="punch-accountant-settings">
+                  <h4 class="hr-section-title">Payroll accountant report</h4>
+                  <p class="muted punch-tab-intro">
+                    Email working hours to your accountant or payroll bureau. ShiftSwift HR records clock times only — it does not calculate pay or submit to HMRC.
+                  </p>
+                  <form id="punch-accountant-form" class="edit-form edit-form--cols-2">
+                    <label class="edit-field" data-span="2">
+                      <span class="edit-label">Accountant / payroll email</span>
+                      <input type="email" name="payroll_accountant_email" placeholder="payroll@youraccountant.co.uk" autocomplete="email" />
+                    </label>
+                    <label class="edit-field signup-check punch-accountant-enable" data-span="2">
+                      <input type="checkbox" name="payroll_hours_report_enabled" />
+                      <span>Automatically email last month's hours PDF on the 1st of each month (billing email CC'd)</span>
+                    </label>
+                    <div class="edit-form-actions punch-accountant-actions" data-span="2">
+                      <button type="button" class="btn secondary" id="punch-accountant-save-btn">Save settings</button>
+                      <button type="button" class="btn ghost" id="punch-accountant-send-btn">Send last month now</button>
+                      <p class="edit-form-status muted" id="punch-accountant-status" aria-live="polite"></p>
+                    </div>
+                  </form>
+                </article>
                 <div class="punch-filters">
                   <label class="edit-field"><span class="edit-label">Employee</span><select id="punch-filter-employee"><option value="">All employees</option></select></label>
                   <label class="edit-field"><span class="edit-label">Site</span><select id="punch-filter-site"><option value="">All sites</option></select></label>
                   <label class="edit-field"><span class="edit-label">From</span><input type="date" id="punch-filter-from" /></label>
                   <label class="edit-field"><span class="edit-label">To</span><input type="date" id="punch-filter-to" /></label>
                   <label class="edit-field"><span class="edit-label">Type</span><select id="punch-filter-type"><option value="">All types</option><option value="in">Clock in</option><option value="out">Clock out</option></select></label>
+                  <button type="button" class="btn ghost" id="punch-filter-last-month">Last month</button>
                   <button type="button" class="btn ghost" id="punch-filter-apply">Apply</button>
                   <button type="button" class="btn ghost" id="punch-filter-clear">Clear</button>
                 </div>

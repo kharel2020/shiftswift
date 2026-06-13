@@ -504,9 +504,32 @@ def _send_email(
     )
     if reply_to and _looks_like_email(str(reply_to)):
         msg["Reply-To"] = format_reply_to_header(str(reply_to).strip(), contacts=contacts)
+    cc_addr = payload.get("cc")
+    if cc_addr and _looks_like_email(str(cc_addr)):
+        msg["Cc"] = str(cc_addr).strip()
     text_body, html_body = _resolve_html_and_text(subject=subject, body=body, payload=payload)
     msg.set_content(text_body, charset="utf-8")
     msg.add_alternative(html_body, subtype="html", charset="utf-8")
+
+    import base64
+
+    for attachment in payload.get("attachments") or []:
+        if not isinstance(attachment, dict):
+            continue
+        filename = str(attachment.get("filename") or "attachment.bin")
+        content_type = str(attachment.get("content_type") or "application/octet-stream")
+        raw = attachment.get("content_base64")
+        if not raw:
+            continue
+        maintype, _, subtype = content_type.partition("/")
+        if not subtype:
+            maintype, subtype = "application", "octet-stream"
+        msg.add_attachment(
+            base64.b64decode(str(raw)),
+            maintype=maintype,
+            subtype=subtype,
+            filename=filename,
+        )
 
     host = os.getenv("SMTP_HOST", "")
     port = int(os.getenv("SMTP_PORT", "587"))

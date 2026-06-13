@@ -47,6 +47,8 @@ TENANT_PROFILE_FIELDS = (
     "signatory_name",
     "signatory_title",
     "signatory_email",
+    "payroll_accountant_email",
+    "payroll_hours_report_enabled",
 )
 
 NOTIFICATION_PREF_DEFAULTS: dict[str, str] = {
@@ -79,7 +81,8 @@ def get_tenant_profile(*, tenant_id: int, conn: Any) -> dict[str, Any]:
                    subscription_plan, subscription_status, max_employees,
                    payroll_plan_id, payroll_enabled,
                    holds_sponsor_licence, sponsor_licence_acknowledged_at,
-                   sponsor_licence_acknowledged_by, sponsor_licence_ack_version
+                   sponsor_licence_acknowledged_by, sponsor_licence_ack_version,
+                   payroll_accountant_email, payroll_hours_report_enabled
             FROM tenants WHERE id = %s
             """,
             (tenant_id,),
@@ -109,6 +112,8 @@ def get_tenant_profile(*, tenant_id: int, conn: Any) -> dict[str, Any]:
             "sponsor_licence_acknowledged_at": row[17].isoformat() if row[17] else None,
             "sponsor_licence_acknowledged_by": row[18],
             "sponsor_licence_ack_version": row[19],
+            "payroll_accountant_email": row[20],
+            "payroll_hours_report_enabled": bool(row[21]),
         }
 
 

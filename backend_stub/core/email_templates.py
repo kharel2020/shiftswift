@@ -379,6 +379,43 @@ def compliance_alert_email(*, message: str) -> EmailContent:
     return EmailContent(subject=subject, text=text, html=html)
 
 
+def payroll_hours_report_email(
+    *,
+    tenant_name: str,
+    period_start: str,
+    period_end: str,
+    employee_count: int,
+    total_hours: float,
+    methodology: str,
+) -> EmailContent:
+    subject = f"{APP_NAME} — Working hours report for {tenant_name} ({period_start} to {period_end})"
+    summary = (
+        f"{employee_count} employee{'s' if employee_count != 1 else ''} with clock records · "
+        f"{total_hours:.2f} total hours (complete punch pairs only)"
+    )
+    text = (
+        f"Hello,\n\n"
+        f"Please find attached the ShiftSwift HR working hours report for {tenant_name}.\n\n"
+        f"Period: {period_start} to {period_end}\n"
+        f"{summary}\n\n"
+        f"How hours are calculated:\n{methodology}\n\n"
+        f"ShiftSwift HR does not run payroll or calculate pay — use this report with your payroll software.\n\n"
+        f"— {APP_NAME}\n"
+    )
+    html = render_email(
+        preheader=f"Working hours for {period_start} to {period_end}.",
+        title="Monthly working hours report",
+        intro=f"Attached is the working hours report for <strong>{tenant_name}</strong>.",
+        paragraphs=[
+            f"Period: {period_start} to {period_end}",
+            summary,
+            f"<strong>How hours are calculated:</strong> {methodology}",
+            "ShiftSwift HR does not run payroll or calculate pay — use this report with your payroll software or bureau.",
+        ],
+    )
+    return EmailContent(subject=subject, text=text, html=html)
+
+
 def employee_portal_invite_email(
     *,
     employee_name: str,

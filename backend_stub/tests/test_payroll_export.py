@@ -75,6 +75,33 @@ def test_pair_punch_hours_computes_duration() -> None:
     assert hours == 8.5
 
 
+def test_pair_punch_hours_excludes_lunch_break_gaps() -> None:
+    punches = [
+        (1, "Alex", "Smith", "in", datetime(2026, 6, 10, 7, 0, tzinfo=timezone.utc)),
+        (1, "Alex", "Smith", "out", datetime(2026, 6, 10, 10, 0, tzinfo=timezone.utc)),
+        (1, "Alex", "Smith", "in", datetime(2026, 6, 10, 11, 0, tzinfo=timezone.utc)),
+        (1, "Alex", "Smith", "out", datetime(2026, 6, 10, 15, 0, tzinfo=timezone.utc)),
+    ]
+    rows = _pair_punch_hours(punches)
+    assert len(rows) == 1
+    assert rows[0][6] == 7.0
+
+
+def test_pair_punch_segments_emits_one_row_per_shift() -> None:
+    from modules.payroll_export.service import _pair_punch_segments
+
+    punches = [
+        (1, "Alex", "Smith", "in", datetime(2026, 6, 10, 7, 0, tzinfo=timezone.utc)),
+        (1, "Alex", "Smith", "out", datetime(2026, 6, 10, 10, 0, tzinfo=timezone.utc)),
+        (1, "Alex", "Smith", "in", datetime(2026, 6, 10, 11, 0, tzinfo=timezone.utc)),
+        (1, "Alex", "Smith", "out", datetime(2026, 6, 10, 15, 0, tzinfo=timezone.utc)),
+    ]
+    rows = _pair_punch_segments(punches)
+    assert len(rows) == 2
+    assert rows[0][6] == 3.0
+    assert rows[1][6] == 4.0
+
+
 def test_build_hours_report_totals_employee_hours() -> None:
     conn = MagicMock()
     cursor = MagicMock()
@@ -122,6 +149,122 @@ def test_build_hours_csv_writes_header_and_row() -> None:
     assert lines[0] == ",".join(HOURS_CSV_COLUMNS)
     assert "Alex,Smith,2026-06-10" in lines[1]
     assert ",8.00" in lines[1]
+
+
+def test_previous_calendar_month() -> None:
+    from modules.payroll_export.monthly_report import _previous_calendar_month
+
+    start, end = _previous_calendar_month(date(2026, 3, 1))
+    assert start == date(2026, 2, 1)
+    assert end == date(2026, 2, 28)
+
+    start, end = _previous_calendar_month(date(2026, 1, 15))
+    assert start == date(2025, 12, 1)
+    assert end == date(2025, 12, 31)
+
+
+def test_process_monthly_reports_skips_when_not_first_of_month() -> None:
+    from modules.payroll_export.monthly_report import process_monthly_payroll_hours_reports
+
+    conn = MagicMock()
+    summary = process_monthly_payroll_hours_reports(settings=MagicMock(), conn=conn, as_of=date(2026, 6, 10))
+    assert summary == {"tenants_checked": 0, "reports_sent": 0, "skipped": 0}
+    conn.cursor.assert_not_called()
+
+
+@patch("modules.payroll_export.monthly_report.send_payroll_hours_report")
+def test_process_monthly_reports_sends_on_first(mock_send: MagicMock) -> None:
+    from modules.payroll_export.monthly_report import process_monthly_payroll_hours_reports
+
+    conn = MagicMock()
+    cursor = MagicMock()
+    conn.cursor.return_value.__enter__.return_value = cursor
+    cursor.fetchall.side_effect = [
+        [(1, "payroll@example.com", "hr@example.com")],
+    ]
+    cursor.fetchone.return_value = None
+
+    summary = process_monthly_payroll_hours_reports(settings=MagicMock(), conn=conn, as_of=date(2026, 6, 1))
+
+    assert summary["tenants_checked"] == 1
+    assert summary["reports_sent"] == 1
+    mock_send.assert_called_once()
+
+
+def test_send_payroll_hours_report_rejects_invalid_email() -> None:
+    from modules.payroll_export.monthly_report import send_payroll_hours_report
+
+    conn = MagicMock()
+    try:
+        send_payroll_hours_report(
+            settings=MagicMock(),
+            tenant_id=1,
+            recipient_email="not-an-email",
+            period_start=date(2026, 5, 1),
+            period_end=date(2026, 5, 31),
+            conn=conn,
+        )
+    except ValueError as exc:
+        assert "valid accountant" in str(exc).lower()
+    else:
+        raise AssertionError("expected ValueError")
+
+
+@patch("modules.payroll_export.monthly_report.send_email_content")
+@patch("modules.payroll_export.monthly_report.hours_report_pdf_bytes", return_value=b"%PDF-test")
+@patch("modules.payroll_export.monthly_report.build_hours_report")
+@patch("admin_service.get_tenant_profile")
+def test_send_payroll_hours_report_emails_pdf(
+    mock_profile: MagicMock,
+    mock_report: MagicMock,
+    mock_pdf: MagicMock,
+    mock_send: MagicMock,
+) -> None:
+    from modules.payroll_export.monthly_report import send_payroll_hours_report
+
+    mock_profile.return_value = {"trading_name": "Acme Ltd", "name": "Acme"}
+    mock_report.return_value = {
+        "employee_count": 2,
+        "grand_total_hours": 120.5,
+        "methodology": "First clock-in and last clock-out per day.",
+    }
+    conn = MagicMock()
+    cursor = MagicMock()
+    conn.cursor.return_value.__enter__.return_value = cursor
+    cursor.fetchone.return_value = None
+
+    result = send_payroll_hours_report(
+        settings=MagicMock(),
+        tenant_id=1,
+        recipient_email="payroll@example.com",
+        period_start=date(2026, 5, 1),
+        period_end=date(2026, 5, 31),
+        conn=conn,
+        cc_hr_email="hr@example.com",
+    )
+
+    assert result["recipient_email"] == "payroll@example.com"
+    mock_send.assert_called_once()
+    payload = mock_send.call_args.kwargs["payload"]
+    assert payload["cc"] == "hr@example.com"
+    assert payload["attachments"][0]["filename"].endswith(".pdf")
+    conn.commit.assert_called_once()
+
+
+def test_payroll_hours_report_email_template() -> None:
+    from core.email_templates import payroll_hours_report_email
+
+    content = payroll_hours_report_email(
+        tenant_name="Acme Ltd",
+        period_start="2026-05-01",
+        period_end="2026-05-31",
+        employee_count=3,
+        total_hours=240.0,
+        methodology="First clock-in and last clock-out per day.",
+    )
+    assert "Acme Ltd" in content.subject
+    assert "2026-05-01" in content.text
+    assert "does not run payroll" in content.text.lower()
 
 
 def test_hours_report_pdf_bytes_starts_with_pdf_header() -> None:
