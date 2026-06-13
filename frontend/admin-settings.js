@@ -1,6 +1,6 @@
 /** Settings workspace — left nav, plan badge, business profile, billing, notifications. */
 (function initAdminSettings() {
-  const { apiFetch, escapeHtml, isFeatureEnabled, parseHashPath } = window.Admin;
+  const { apiFetch, escapeHtml, isFeatureEnabled, parseHashPath, mountEditForm, FORM_SCHEMAS } = window.Admin;
 
   const PANELS = ["business", "documents", "billing", "notifications", "users", "multisite", "api"];
   const PANEL_COPY = {
@@ -36,7 +36,7 @@
   const SAVED_AT_KEY = `settings_business_saved_${window.Admin?.TENANT_ID ?? "default"}`;
 
   let sectionReady = false;
-  let businessFormBound = false;
+  let settingsNavBound = false;
 
   function settingsPanelId() {
     const { path } = parseHashPath(window.location.hash || "#settings/business");
@@ -95,9 +95,14 @@
     const subtitleEl = document.getElementById("settings-panel-subtitle");
     if (titleEl) titleEl.textContent = copy.title;
     if (subtitleEl) subtitleEl.textContent = copy.subtitle;
+    if (panelId === "business") {
+      void loadBusinessPanel();
+    }
   }
 
   function bindSettingsNav() {
+    if (settingsNavBound) return;
+    settingsNavBound = true;
     document.querySelectorAll("[data-settings-nav]").forEach((btn) => {
       btn.addEventListener("click", () => {
         const panel = btn.dataset.settingsNav;
@@ -171,9 +176,16 @@
     });
   }
 
+  function businessFormMounted() {
+    const host = document.getElementById("tenant-profile-form");
+    return Boolean(host?.querySelector('[data-form-id="tenant-profile"]'));
+  }
+
   async function loadBusinessPanel() {
     const host = document.getElementById("tenant-profile-form");
-    if (!host || businessFormBound) return;
+    if (!host || businessFormMounted()) return;
+
+    host.innerHTML = '<p class="muted">Loading business details…</p>';
 
     let values = {};
     try {
@@ -183,72 +195,30 @@
       /* optional */
     }
 
-    const savedAt = localStorage.getItem(SAVED_AT_KEY);
-    updateLastSavedLabel(savedAt);
+    try {
+      host.innerHTML = '<div id="tenant-profile-form-mount"></div><p id="tenant-profile-last-saved" class="settings-last-saved muted"></p>';
+      const mountHost = document.getElementById("tenant-profile-form-mount");
+      const savedAt = localStorage.getItem(SAVED_AT_KEY);
+      updateLastSavedLabel(savedAt);
 
-    host.innerHTML = `
-      <form class="settings-business-form" id="tenant-profile-form-el">
-        <section class="settings-form-section">
-          <h4 class="settings-form-section__title">Legal &amp; registration</h4>
-          <div class="edit-form edit-form--cols-2">
-            <label class="edit-field"><span class="edit-label">Legal company name</span><input name="name" type="text" required value="${escapeHtml(values.name || "")}" /></label>
-            <label class="edit-field"><span class="edit-label">Trading name (if different)</span><input name="trading_name" type="text" placeholder="e.g. Himalayan Inn" value="${escapeHtml(values.trading_name || "")}" /></label>
-            <label class="edit-field"><span class="edit-label">Company number</span><input name="company_number" type="text" placeholder="e.g. 14568900" value="${escapeHtml(values.company_number || "")}" /></label>
-            <label class="edit-field"><span class="edit-label">VAT number (optional)</span><input name="vat_number" type="text" placeholder="e.g. GB 123 456 789" value="${escapeHtml(values.vat_number || "")}" /></label>
-            <label class="edit-field" data-span="2"><span class="edit-label">Registered address</span><textarea name="registered_address" rows="3" placeholder="Full registered address including postcode">${escapeHtml(values.registered_address || "")}</textarea></label>
-          </div>
-        </section>
-        <section class="settings-form-section">
-          <h4 class="settings-form-section__title">Contact</h4>
-          <div class="edit-form edit-form--cols-2">
-            <label class="edit-field"><span class="edit-label">Phone</span><input name="phone" type="tel" placeholder="e.g. +44 115 000 0000" value="${escapeHtml(values.phone || "")}" /></label>
-            <label class="edit-field"><span class="edit-label">Billing email</span><input name="billing_email" type="email" value="${escapeHtml(values.billing_email || "")}" /></label>
-          </div>
-        </section>
-        <section class="settings-form-section">
-          <h4 class="settings-form-section__title">Signatory</h4>
-          <div class="edit-form edit-form--cols-2">
-            <label class="edit-field"><span class="edit-label">Full name</span><input name="signatory_name" type="text" placeholder="e.g. Gobinda Chhetri" value="${escapeHtml(values.signatory_name || "")}" /></label>
-            <label class="edit-field"><span class="edit-label">Title / role</span><input name="signatory_title" type="text" value="${escapeHtml(values.signatory_title || "Director")}" /></label>
-            <label class="edit-field" data-span="2"><span class="edit-label">Email</span><input name="signatory_email" type="email" placeholder="signatory@yourbusiness.co.uk" value="${escapeHtml(values.signatory_email || "")}" /></label>
-          </div>
-        </section>
-        <div class="settings-form-actions">
-          <button type="submit" class="btn outline settings-save-btn">
-            <span class="settings-save-btn__icon" aria-hidden="true">💾</span>
-            Save business details
-          </button>
-          <span id="tenant-profile-last-saved" class="settings-last-saved muted"></span>
-          <p class="edit-form-status muted" data-status></p>
-        </div>
-      </form>`;
-
-    updateLastSavedLabel(savedAt);
-
-    host.querySelector("#tenant-profile-form-el").addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const form = event.currentTarget;
-      const status = form.querySelector("[data-status]");
-      if (status) status.textContent = "Saving…";
-      const payload = Object.fromEntries(new FormData(form).entries());
-      try {
-        const res = await apiFetch("/admin/tenant-profile", {
-          method: "PATCH",
-          body: JSON.stringify(payload),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || "Update failed");
-        const now = new Date().toISOString();
-        localStorage.setItem(SAVED_AT_KEY, now);
-        updateLastSavedLabel(now);
-        if (status) status.textContent = "";
-        showSettingsToast("Business details saved ✓");
-      } catch (error) {
-        if (status) status.textContent = error.message || "Save failed.";
-      }
-    });
-
-    businessFormBound = true;
+      mountEditForm(mountHost, FORM_SCHEMAS.tenantProfile, {
+        values,
+        onSubmit: async (payload) => {
+          const res = await apiFetch("/admin/tenant-profile", {
+            method: "PATCH",
+            body: JSON.stringify(payload),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.detail || "Update failed");
+          const now = new Date().toISOString();
+          localStorage.setItem(SAVED_AT_KEY, now);
+          updateLastSavedLabel(now);
+          showSettingsToast("Business details saved ✓");
+        },
+      });
+    } catch (error) {
+      host.innerHTML = `<p class="muted">${escapeHtml(error.message || "Could not load business form.")}</p>`;
+    }
   }
 
   async function loadBillingPanel() {
@@ -404,12 +374,22 @@
     }
   }
 
+  function bootstrapSettingsSection() {
+    if (sectionReady) return;
+    sectionReady = true;
+    window.Admin.loadFormOptions()
+      .then(initSettingsSection)
+      .catch((error) => {
+        const host = document.getElementById("tenant-profile-form");
+        if (host && !businessFormMounted()) {
+          host.innerHTML = `<p class="muted">${escapeHtml(error.message || "Could not load settings.")}</p>`;
+        }
+      });
+  }
+
   window.addEventListener("admin:section", (event) => {
-    if (event.detail?.section === "settings" && !sectionReady) {
-      sectionReady = true;
-      window.Admin.loadFormOptions().then(initSettingsSection);
-    }
     if (event.detail?.section === "settings") {
+      bootstrapSettingsSection();
       activateSettingsPanel(settingsPanelId());
     }
   });
@@ -419,8 +399,7 @@
   });
 
   if (parseHashPath(window.location.hash).baseSection === "settings") {
-    sectionReady = true;
-    window.Admin.loadFormOptions().then(initSettingsSection);
+    bootstrapSettingsSection();
   }
 
   window.AdminSettings = { showSettingsToast, startUpgrade };

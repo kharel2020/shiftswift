@@ -286,6 +286,39 @@ def compliance_alert_email(*, message: str) -> EmailContent:
     return EmailContent(subject=subject, text=text, html=html)
 
 
+def employee_portal_invite_email(
+    *,
+    employee_name: str,
+    tenant_name: str,
+    setup_url: str,
+    login_url: str,
+    reset_hours: int,
+) -> EmailContent:
+    subject = f"{APP_NAME} — Set up your employee portal"
+    intro = f"{tenant_name} has invited you to ShiftSwift HR's employee portal."
+    text = (
+        f"Hello {employee_name},\n\n"
+        f"{intro}\n\n"
+        f"Choose a password using this secure link (expires in {reset_hours} hours):\n"
+        f"{setup_url}\n\n"
+        f"After that, sign in as an employee at:\n{login_url}\n\n"
+        f"Use the same work email address this invite was sent to.\n\n"
+        f"— {APP_NAME}\n"
+    )
+    html = render_email(
+        preheader=f"Set up your {tenant_name} employee portal access.",
+        title="Welcome to your employee portal",
+        intro=f"Hello {employee_name}, {intro}",
+        paragraphs=[
+            f"This link expires in {reset_hours} hours. Choose a password, then sign in using your work email.",
+            f"Portal sign-in: {login_url}",
+        ],
+        cta_url=setup_url,
+        cta_label="Choose your password",
+    )
+    return EmailContent(subject=subject, text=text, html=html)
+
+
 def employee_document_shared_email(
     *,
     employee_name: str,

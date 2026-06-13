@@ -242,6 +242,7 @@ def tenant_notification_delivery_enabled(*, tenant_id: int, event_id: str, conn:
 
 def list_employees(*, tenant_id: int, conn: Any, limit: int = 200) -> list[dict[str, Any]]:
     from modules.documents.service import fetch_document_categories_by_employee
+    from modules.employees.portal_invites import enrich_employees_portal_status
 
     items = list_employee_summaries(tenant_id=tenant_id, conn=conn, limit=limit)
     profile = get_tenant_profile(tenant_id=tenant_id, conn=conn)
@@ -255,7 +256,7 @@ def list_employees(*, tenant_id: int, conn: Any, limit: int = 200) -> list[dict[
             document_categories=categories_by_employee.get(item["id"], []),
         )
         enriched.append({**item, **summary})
-    return enriched
+    return enrich_employees_portal_status(tenant_id=tenant_id, employees=enriched, conn=conn)
 
 
 def create_employee(

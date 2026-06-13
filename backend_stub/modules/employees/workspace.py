@@ -159,8 +159,16 @@ def build_workspace(*, tenant_id: int, employee_id: int, conn: Any) -> dict[str,
     completed = sum(1 for s in editable if s["complete"])
     completion_pct = int(round((completed / len(editable)) * 100)) if editable else 0
 
+    from modules.employees.portal_invites import enrich_employees_portal_status
+
+    portal_meta = enrich_employees_portal_status(
+        tenant_id=tenant_id,
+        employees=[employee],
+        conn=conn,
+    )[0]
+
     return {
-        "employee": employee,
+        "employee": {**employee, **portal_meta},
         "documents": documents,
         "document_requirements": req_status,
         "sections": sections,

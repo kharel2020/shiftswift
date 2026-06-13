@@ -42,6 +42,87 @@ def _find_business_user(
     return row
 
 
+def create_password_reset_token(
+    *,
+    conn: Any,
+    username: str,
+    ip_address: str | None = None,
+    user_agent: str | None = None,
+) -> tuple[str, str]:
+    """Invalidate prior tokens, store a new one, and return raw token + setup URL."""
+    raw_token = secrets.token_urlsafe(32)
+    token_hash = _hash_token(raw_token)
+    expires = datetime.now(timezone.utc) + timedelta(hours=RESET_HOURS)
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE password_reset_tokens
+            SET used_at = NOW()
+            WHERE username = %s AND used_at IS NULL
+            """,
+            (username,),
+        )
+        cur.execute(
+            """
+            INSERT INTO password_reset_tokens
+              (username, token_hash, expires_at, ip_address, user_agent)
+            VALUES (%s, %s, %s, %s, %s)
+            """,
+            (username, token_hash, expires, ip_address, user_agent),
+        )
+    reset_url = f"{_app_url()}/reset-password.html?token={raw_token}"
+    return raw_token, reset_url
+
+
+def send_account_setup_email(
+    *,
+    settings: Settings,
+    conn: Any,
+    user: dict[str, Any],
+    content_factory: Any,
+    ip_address: str | None = None,
+    user_agent: str | None = None,
+    security_event_type: str = "password_reset_requested",
+    commit: bool = True,
+) -> str:
+    """Send a branded setup/reset email and return the setup URL."""
+    from core.email_templates import EmailContent
+
+    _, reset_url = create_password_reset_token(
+        conn=conn,
+        username=str(user["username"]),
+        ip_address=ip_address,
+        user_agent=user_agent,
+    )
+    content = content_factory(reset_url)
+    if not isinstance(content, EmailContent):
+        raise TypeError("content_factory must return EmailContent")
+    audience = "employee" if user.get("role") == "employee" else "hr"
+    purpose = "employee" if user.get("role") == "employee" else "password_reset"
+    send_email_content(
+        conn=conn,
+        tenant_id=int(user["tenant_id"]),
+        content=content,
+        purpose=purpose,
+        to=str(user["username"]),
+        audience=audience,
+        deliver_now=True,
+        commit=False,
+    )
+    log_security_event(
+        settings,
+        event_type=security_event_type,
+        username=str(user["username"]),
+        tenant_id=str(user["tenant_id"]),
+        ip_address=ip_address,
+        user_agent=user_agent,
+        success=True,
+    )
+    if commit:
+        conn.commit()
+    return reset_url
+
+
 def request_password_reset(
     *,
     settings: Settings,
@@ -54,56 +135,23 @@ def request_password_reset(
     """Create reset token and queue email. Always returns the same public message."""
     user = _find_business_user(settings, email=email, role_hint=role_hint)
     if user:
-        raw_token = secrets.token_urlsafe(32)
-        token_hash = _hash_token(raw_token)
-        expires = datetime.now(timezone.utc) + timedelta(hours=RESET_HOURS)
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                UPDATE password_reset_tokens
-                SET used_at = NOW()
-                WHERE username = %s AND used_at IS NULL
-                """,
-                (user["username"],),
-            )
-            cur.execute(
-                """
-                INSERT INTO password_reset_tokens
-                  (username, token_hash, expires_at, ip_address, user_agent)
-                VALUES (%s, %s, %s, %s, %s)
-                """,
-                (user["username"], token_hash, expires, ip_address, user_agent),
-            )
-        reset_url = f"{_app_url()}/reset-password.html?token={raw_token}"
         role_label = "employee" if user["role"] == "employee" else "HR admin"
         from core.email_templates import password_reset_email
 
-        content = password_reset_email(
-            role_label=role_label,
-            reset_url=reset_url,
-            reset_hours=RESET_HOURS,
-        )
-        audience = "employee" if user["role"] == "employee" else "hr"
-        send_email_content(
+        send_account_setup_email(
+            settings=settings,
             conn=conn,
-            tenant_id=int(user["tenant_id"]),
-            content=content,
-            purpose="password_reset",
-            to=user["username"],
-            audience=audience,
-            deliver_now=True,
-            commit=False,
-        )
-        log_security_event(
-            settings,
-            event_type="password_reset_requested",
-            username=user["username"],
-            tenant_id=str(user["tenant_id"]),
+            user=user,
+            content_factory=lambda reset_url: password_reset_email(
+                role_label=role_label,
+                reset_url=reset_url,
+                reset_hours=RESET_HOURS,
+            ),
             ip_address=ip_address,
             user_agent=user_agent,
-            success=True,
+            security_event_type="password_reset_requested",
+            commit=True,
         )
-        conn.commit()
     return {
         "message": (
             "If an account exists for that email, we sent a password reset link. "

@@ -6117,3 +6117,20 @@ button.lifecycle-accordion-header .lifecycle-accordion-chevron {
   margin: 0;
 }
 
+.employee-portal-invite-row {
+  margin-top: 12px;
+}
+
+.employee-portal-status {
+  margin: 0 0 8px;
+}
+
+.employees-register-actions {
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.employees-register-actions .muted {
+  margin: 0;
+}
+

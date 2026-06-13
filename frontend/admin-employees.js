@@ -215,7 +215,80 @@
     const avatar = $("employee-avatar");
     if (avatar) avatar.textContent = employeeInitials(employee);
     renderSummaryStrip(employee);
+    renderPortalInviteActions(employee);
     setSidebarBreadcrumb(fullName);
+  }
+
+  function portalStatusCopy(employee) {
+    if (employee?.portal_has_account) return "Employee portal account active";
+    if (!employee?.email) return "Add a work email to send a portal invite";
+    if (employee?.status !== "active" && employee?.status !== "onboarding") {
+      return "Portal invites are available for active or onboarding employees";
+    }
+    return "No employee portal account yet";
+  }
+
+  function renderPortalInviteActions(employee) {
+    const copyHost = document.querySelector(".employee-profile-copy");
+    if (!copyHost) return;
+    let host = document.getElementById("employee-portal-invite-row");
+    if (!host) {
+      host = document.createElement("div");
+      host.id = "employee-portal-invite-row";
+      host.className = "employee-portal-invite-row";
+      copyHost.appendChild(host);
+    }
+    const canInvite = Boolean(employee?.email) && (employee?.portal_invite_eligible || employee?.portal_has_account);
+    host.innerHTML = `
+      <p class="muted employee-portal-status">${escapeHtml(portalStatusCopy(employee))}</p>
+      <div class="link-row">
+        <button type="button" class="btn outline" id="employee-portal-invite-btn" ${canInvite ? "" : "disabled"}>
+          ${employee?.portal_has_account ? "Resend portal setup link" : "Send portal invite"}
+        </button>
+      </div>
+      <p class="muted employee-portal-invite-message" id="employee-portal-invite-message" aria-live="polite"></p>`;
+    host.querySelector("#employee-portal-invite-btn")?.addEventListener("click", () => {
+      if (activeEmployeeId) void sendPortalInvite(activeEmployeeId, "employee-portal-invite-message");
+    });
+  }
+
+  async function sendPortalInvite(employeeId, statusId = "employees-bulk-invite-status") {
+    const statusEl = document.getElementById(statusId);
+    if (statusEl) statusEl.textContent = "Sending invite…";
+    try {
+      const res = await apiFetch(`/admin/employees/${employeeId}/invite-portal`, { method: "POST", body: "{}" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Invite failed");
+      if (statusEl) statusEl.textContent = data.message || "Invite sent.";
+      await refreshEmployeesTable();
+      if (activeEmployeeId === employeeId && workspaceCache) {
+        workspaceCache.employee = {
+          ...workspaceCache.employee,
+          portal_has_account: true,
+          portal_invite_eligible: false,
+        };
+        renderPortalInviteActions(workspaceCache.employee);
+      }
+    } catch (error) {
+      if (statusEl) statusEl.textContent = error.message || "Invite failed.";
+    }
+  }
+
+  async function sendBulkPortalInvites() {
+    const statusEl = document.getElementById("employees-bulk-invite-status");
+    if (statusEl) statusEl.textContent = "Sending invites…";
+    try {
+      const res = await apiFetch("/admin/employees/invite-portal", {
+        method: "POST",
+        body: JSON.stringify({ resend_existing: false }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Bulk invite failed");
+      if (statusEl) statusEl.textContent = data.message || "Invites sent.";
+      await refreshEmployeesTable();
+    } catch (error) {
+      if (statusEl) statusEl.textContent = error.message || "Bulk invite failed.";
+    }
   }
 
   function openLifecycleSection(sectionKey, workspace) {
@@ -769,12 +842,20 @@
         <div><dt>Department</dt><dd>${escapeHtml(row.department || "Not set")}</dd></div>
         <div><dt>Lifecycle progress</dt><dd>${escapeHtml(String(row.completion_pct ?? 0))}% · ${escapeHtml(next)}</dd></div>
         <div><dt>Email</dt><dd>${escapeHtml(row.email || "Not set")}</dd></div>
+        <div><dt>Employee portal</dt><dd>${escapeHtml(portalStatusCopy(row))}</dd></div>
       </dl>
       <div class="hr-detail-foot">
         <button type="button" class="btn" id="employees-side-open-btn">Open lifecycle</button>
+        <button type="button" class="btn outline" id="employees-side-invite-btn" ${
+          row.email && (row.portal_invite_eligible || row.portal_has_account) ? "" : "disabled"
+        }>${row.portal_has_account ? "Resend portal link" : "Send portal invite"}</button>
         <button type="button" class="btn ghost" id="employees-side-delete-btn">Remove</button>
-      </div>`;
+      </div>
+      <p class="muted" id="employees-side-invite-status" aria-live="polite"></p>`;
     content.querySelector("#employees-side-open-btn")?.addEventListener("click", () => openEmployee(row.id));
+    content.querySelector("#employees-side-invite-btn")?.addEventListener("click", () => {
+      void sendPortalInvite(row.id, "employees-side-invite-status");
+    });
     content.querySelector("#employees-side-delete-btn")?.addEventListener("click", async () => {
       if (!window.confirm("Remove this employee record?")) return;
       const res = await apiFetch(`/admin/employees/${row.id}`, { method: "DELETE" });
@@ -813,6 +894,7 @@
       sectionLoaded = true;
       await loadFormOptions();
       mountQuickAddForm();
+      document.getElementById("employees-bulk-invite-btn")?.addEventListener("click", sendBulkPortalInvites);
     }
     await refreshEmployeesTable();
   }

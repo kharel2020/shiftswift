@@ -93,6 +93,36 @@ class EmployeeDocumentUpdate(BaseModel):
     original_filename: str | None = Field(default=None, max_length=255)
 
 
+class BulkPortalInviteRequest(BaseModel):
+    resend_existing: bool = Field(default=False)
+
+
+@router.post("/invite-portal")
+def bulk_invite_employees_to_portal(
+    payload: BulkPortalInviteRequest,
+    request: Request,
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, object]:
+    from modules.employees.portal_invites import invite_missing_portal_accounts
+
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = get_connection()
+    try:
+        return invite_missing_portal_accounts(
+            tenant_id=tenant_id,
+            conn=conn,
+            settings=settings,
+            actor_username=current_user.username,
+            actor_role=current_user.role,
+            ip_address=client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+            resend_existing=payload.resend_existing,
+        )
+    finally:
+        conn.close()
+
+
 @router.get("/{employee_id}")
 def read_employee(
     employee_id: int,
@@ -172,6 +202,37 @@ def patch_employee_section(
     finally:
         conn.close()
     return workspace
+
+
+@router.post("/{employee_id}/invite-portal")
+def invite_employee_to_portal_route(
+    employee_id: int,
+    request: Request,
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, object]:
+    from modules.employees.portal_invites import invite_employee_to_portal
+
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = get_connection()
+    try:
+        return invite_employee_to_portal(
+            tenant_id=tenant_id,
+            employee_id=employee_id,
+            conn=conn,
+            settings=settings,
+            actor_username=current_user.username,
+            actor_role=current_user.role,
+            ip_address=client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+            resend_if_exists=True,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    finally:
+        conn.close()
 
 
 @router.get("/{employee_id}/documents/requirements")

@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon.png?v=brandkit-v1" />
     <link rel="icon" type="image/svg+xml" href="./assets/shiftswift-hr-icon.svg?v=brandkit-v1" />
     <link rel="apple-touch-icon" href="./assets/shiftswift-hr-icon.png?v=brandkit-v1" />
-    <link rel="stylesheet" href="./styles.css?v=admin-v25" />
+    <link rel="stylesheet" href="./styles.css?v=admin-v26" />
   </head>
   <body>
     <div id="sidebar-overlay" class="sidebar-overlay" aria-hidden="true"></div>
@@ -108,6 +108,10 @@
                   <div id="employee-quick-add-form"></div>
                 </article>
                 <h4 class="hr-section-title">Employee register</h4>
+                <div class="employees-register-actions link-row">
+                  <button type="button" class="btn outline" id="employees-bulk-invite-btn">Invite all without portal accounts</button>
+                  <p class="muted" id="employees-bulk-invite-status" aria-live="polite"></p>
+                </div>
                 <div class="hr-table-wrap">
                   <table class="data-table">
                     <thead>
@@ -1667,9 +1671,9 @@
     <script src="./brand-config.js?v=brand-v4"></script>
     <script src="./admin-shared.js?v=admin-v8"></script>
     <script src="./admin-workspace.js?v=admin-v9"></script>
-    <script src="./admin-settings.js?v=2"></script>
+    <script src="./admin-settings.js?v=3"></script>
     <script src="./admin-documents.js?v=4"></script>
-    <script src="./admin-employees.js?v=9"></script>
+    <script src="./admin-employees.js?v=10"></script>
     <script src="./admin-recruitment.js?v=6"></script>
     <script src="./admin-promotions.js?v=admin-v5"></script>
     <script src="./admin-compliance.js?v=admin-v8"></script>
