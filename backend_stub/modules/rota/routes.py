@@ -52,6 +52,7 @@ class SaveRotaRequest(BaseModel):
 
 class PublishRotaRequest(BaseModel):
     expected_version: int = Field(ge=1)
+    notify_staff: bool = Field(default=False)
 
 
 class CopyWeekRequest(BaseModel):
@@ -227,6 +228,7 @@ def publish_week_rota(
                 expected_version=payload.expected_version,
                 actor_username=current_user.username,
                 conn=conn,
+                notify_staff=payload.notify_staff,
             )
         finally:
             conn.close()

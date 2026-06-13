@@ -1141,12 +1141,13 @@
       return;
     }
     const btn = document.getElementById("rota-publish-btn");
+    const notifyStaff = document.getElementById("rota-notify-staff")?.checked ?? false;
     if (btn) btn.disabled = true;
     setMessage("Publishing…");
     try {
       const res = await apiFetch(`/admin/rota/weeks/${currentWeekStart}/publish`, {
         method: "POST",
-        body: JSON.stringify({ expected_version: weekMeta.version }),
+        body: JSON.stringify({ expected_version: weekMeta.version, notify_staff: notifyStaff }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -1156,7 +1157,13 @@
       weekMeta = data.week;
       shifts = data.shifts || [];
       await loadWeek();
-      setMessage(data.message || "Rota published — staff can see shifts in Time Clock.");
+      let msg = data.message || "Rota published — staff can see shifts in Time Clock.";
+      if (notifyStaff && data.notifications) {
+        const { emails_sent: sent = 0, emails_skipped: skipped = 0 } = data.notifications;
+        if (sent > 0) msg += ` · ${sent} email${sent === 1 ? "" : "s"} sent`;
+        else if (skipped > 0) msg += " · no staff emails sent (check addresses or notification settings)";
+      }
+      setMessage(msg);
     } catch (error) {
       setMessage(error.message || "Publish failed.", "error");
     } finally {

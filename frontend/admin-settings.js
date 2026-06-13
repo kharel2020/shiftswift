@@ -34,7 +34,6 @@
     },
   };
   const SAVED_AT_KEY = `settings_business_saved_${window.Admin?.TENANT_ID ?? "default"}`;
-  const NOTIFY_KEY = `settings_notifications_${window.Admin?.TENANT_ID ?? "default"}`;
 
   let sectionReady = false;
   let businessFormBound = false;
@@ -300,49 +299,65 @@
     const host = document.getElementById("settings-notifications-content");
     if (!host || host.dataset.ready === "true") return;
 
-    let prefs = {};
-    try {
-      prefs = JSON.parse(localStorage.getItem(NOTIFY_KEY) || "{}");
-    } catch {
-      prefs = {};
-    }
+    host.innerHTML = `<p class="muted">Loading notification preferences…</p>`;
 
-    host.innerHTML = `
-      <p class="muted">Choose how your organisation receives alerts. SMS requires a mobile number on file for each recipient (coming soon).</p>
+    apiFetch("/admin/notification-preferences")
+      .then(async (res) => {
+        const data = res.ok ? await res.json() : null;
+        const events = data?.events?.length ? data.events : NOTIFICATION_EVENTS;
+        const prefs = data?.preferences || {};
+
+        host.innerHTML = `
+      <p class="muted">Choose how your organisation receives alerts. Employee emails respect each person's notification setting.</p>
       <div class="settings-notify-table-wrap">
         <table class="data-table settings-notify-table">
           <thead><tr><th>Event</th><th>Delivery</th></tr></thead>
           <tbody>
-            ${NOTIFICATION_EVENTS.map(
-              (ev) => `
+            ${events.map((ev) => {
+              const fallback = NOTIFICATION_EVENTS.find((item) => item.id === ev.id)?.default || "email";
+              const current = prefs[ev.id] || fallback;
+              return `
               <tr>
                 <td>${escapeHtml(ev.label)}</td>
                 <td>
                   <select class="settings-notify-select" data-notify-id="${escapeHtml(ev.id)}">
-                    <option value="email" ${(prefs[ev.id] || ev.default) === "email" ? "selected" : ""}>Email</option>
-                    <option value="email_sms" ${(prefs[ev.id] || ev.default) === "email_sms" ? "selected" : ""}>Email + SMS</option>
-                    <option value="off" ${prefs[ev.id] === "off" ? "selected" : ""}>Off</option>
+                    <option value="email" ${current === "email" ? "selected" : ""}>Email</option>
+                    <option value="email_sms" ${current === "email_sms" ? "selected" : ""}>Email + SMS</option>
+                    <option value="off" ${current === "off" ? "selected" : ""}>Off</option>
                   </select>
                 </td>
-              </tr>`
-            ).join("")}
+              </tr>`;
+            }).join("")}
           </tbody>
         </table>
       </div>
-      <p class="muted settings-notify-foot">Preferences are saved in this browser until server-side notification settings are available.</p>`;
+      <p class="muted settings-notify-foot">Rota publish emails also require the “Notify staff by email” checkbox when publishing.</p>`;
 
-    host.querySelectorAll(".settings-notify-select").forEach((select) => {
-      select.addEventListener("change", () => {
-        const next = { ...prefs };
-        host.querySelectorAll(".settings-notify-select").forEach((el) => {
-          next[el.dataset.notifyId] = el.value;
+        host.querySelectorAll(".settings-notify-select").forEach((select) => {
+          select.addEventListener("change", async () => {
+            const preferences = {};
+            host.querySelectorAll(".settings-notify-select").forEach((el) => {
+              preferences[el.dataset.notifyId] = el.value;
+            });
+            try {
+              const saveRes = await apiFetch("/admin/notification-preferences", {
+                method: "PATCH",
+                body: JSON.stringify({ preferences }),
+              });
+              const saveData = await saveRes.json();
+              if (!saveRes.ok) throw new Error(saveData.detail || "Save failed");
+              showSettingsToast("Notification preferences saved ✓");
+            } catch (error) {
+              showSettingsToast(error.message || "Could not save preferences");
+            }
+          });
         });
-        localStorage.setItem(NOTIFY_KEY, JSON.stringify(next));
-        showSettingsToast("Notification preferences saved ✓");
-      });
-    });
 
-    host.dataset.ready = "true";
+        host.dataset.ready = "true";
+      })
+      .catch(() => {
+        host.innerHTML = `<p class="muted">Could not load notification preferences.</p>`;
+      });
   }
 
   function loadUsersPanel() {

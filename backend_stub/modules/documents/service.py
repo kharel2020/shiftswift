@@ -128,6 +128,9 @@ def validate_employee_document_data(data: dict[str, Any]) -> dict[str, Any]:
         document_url = str(document_url).strip() or None
     if not document_url and not data.get("notes") and not data.get("storage_path"):
         raise ValueError("Provide a document URL, upload a file, or notes describing where the file is stored")
+    pay_period = data.get("pay_period")
+    if pay_period is not None:
+        pay_period = str(pay_period).strip() or None
     return {
         "title": title,
         "category": category,
@@ -135,6 +138,7 @@ def validate_employee_document_data(data: dict[str, Any]) -> dict[str, Any]:
         "document_url": document_url,
         "notes": data.get("notes"),
         "expires_at": data.get("expires_at"),
+        "pay_period": pay_period,
         "original_filename": data.get("original_filename"),
         "storage_path": data.get("storage_path"),
         "content_sha256": data.get("content_sha256"),
@@ -200,6 +204,7 @@ def _row_to_employee_document(row: tuple[Any, ...]) -> dict[str, Any]:
         "content_sha256": row[13],
         "content_type": row[14],
         "file_size_bytes": row[15],
+        "pay_period": row[16],
         "has_file": bool(row[12]),
     }
 
@@ -207,7 +212,7 @@ def _row_to_employee_document(row: tuple[Any, ...]) -> dict[str, Any]:
 EMPLOYEE_DOCUMENT_SELECT = """
     id, title, category, lifecycle_stage, document_url, notes, uploaded_by,
     expires_at, original_filename, created_at, updated_at, employee_id,
-    storage_path, content_sha256, content_type, file_size_bytes
+    storage_path, content_sha256, content_type, file_size_bytes, pay_period
 """
 
 
@@ -276,9 +281,9 @@ def create_employee_document(
             INSERT INTO employee_documents (
               tenant_id, employee_id, title, category, lifecycle_stage,
               document_url, notes, uploaded_by, expires_at, original_filename,
-              storage_path, content_sha256, content_type, file_size_bytes
+              storage_path, content_sha256, content_type, file_size_bytes, pay_period
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING """
             + EMPLOYEE_DOCUMENT_SELECT,
             (
@@ -296,6 +301,7 @@ def create_employee_document(
                 payload.get("content_sha256"),
                 payload.get("content_type"),
                 payload.get("file_size_bytes"),
+                payload.get("pay_period"),
             ),
         )
         row = cur.fetchone()
@@ -329,6 +335,7 @@ def update_employee_document(
             "content_sha256",
             "content_type",
             "file_size_bytes",
+            "pay_period",
         )
     }
     if not allowed:

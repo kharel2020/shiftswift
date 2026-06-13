@@ -359,6 +359,7 @@ def publish_week(
     expected_version: int,
     actor_username: str,
     conn: Any,
+    notify_staff: bool = False,
 ) -> dict[str, Any]:
     with conn.cursor() as cur:
         cur.execute(
@@ -401,7 +402,17 @@ def publish_week(
 
     conn.commit()
     _, shifts = list_shifts_for_week(tenant_id=tenant_id, week_start=week_start, conn=conn)
-    return {"week": week, "shifts": shifts, "message": "Rota published"}
+    result: dict[str, Any] = {"week": week, "shifts": shifts, "message": "Rota published"}
+    if notify_staff:
+        from modules.rota.notifications import notify_rota_published
+
+        result["notifications"] = notify_rota_published(
+            tenant_id=tenant_id,
+            week_start=week_start,
+            shifts=shifts,
+            conn=conn,
+        )
+    return result
 
 
 def copy_week_from_previous(

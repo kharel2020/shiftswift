@@ -17,6 +17,7 @@ WORKER_TYPES = [
 
 EMPLOYEE_DOCUMENT_CATEGORIES = [
     {"value": "contract", "label": "Employment contract"},
+    {"value": "payslip", "label": "Payslip"},
     {"value": "id", "label": "ID / passport"},
     {"value": "rtw", "label": "Right to work"},
     {"value": "qualification", "label": "Qualification"},

@@ -3921,6 +3921,13 @@ button.lifecycle-accordion-header .lifecycle-accordion-chevron {
   color: var(--green-700);
 }
 
+.rota-notify-check {
+  align-self: center;
+  margin: 0 4px;
+  white-space: nowrap;
+  font-size: 0.92rem;
+}
+
 .rota-week-nav {
   display: flex;
   flex-wrap: wrap;
@@ -6092,5 +6099,21 @@ button.lifecycle-accordion-header .lifecycle-accordion-chevron {
   .punch-admin-form {
     grid-template-columns: 1fr;
   }
+}
+
+.employee-payslip-group + .employee-payslip-group {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--card-border);
+}
+
+.employee-payslip-group__title {
+  margin: 0 0 10px;
+  font-size: 1rem;
+  color: var(--green-800, #085041);
+}
+
+.employee-payslips-list .muted {
+  margin: 0;
 }
 

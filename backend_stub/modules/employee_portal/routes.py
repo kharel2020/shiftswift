@@ -41,6 +41,7 @@ def _portal_document_row(doc: dict[str, Any]) -> dict[str, Any]:
         "content_type": doc.get("content_type"),
         "original_filename": doc.get("original_filename"),
         "expires_at": doc.get("expires_at"),
+        "pay_period": doc.get("pay_period"),
         "created_at": doc.get("created_at"),
     }
 

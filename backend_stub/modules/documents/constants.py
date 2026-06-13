@@ -25,6 +25,7 @@ TENANT_DOCUMENT_CATEGORIES = [
 
 EMPLOYEE_DOCUMENT_CATEGORIES = [
     {"value": "contract", "label": "Employment contract"},
+    {"value": "payslip", "label": "Payslip"},
     {"value": "id", "label": "ID / passport"},
     {"value": "rtw", "label": "Right to work"},
     {"value": "qualification", "label": "Qualification"},
@@ -36,7 +37,7 @@ EMPLOYEE_DOCUMENT_CATEGORIES = [
 
 # Categories visible in the employee self-service portal (HR-only docs such as RTW copies stay admin-only).
 EMPLOYEE_SELF_SERVICE_CATEGORIES = frozenset(
-    {"contract", "policy", "general", "qualification", "other"}
+    {"contract", "policy", "general", "qualification", "payslip", "other"}
 )
 
 EMPLOYEE_DOCUMENT_CATEGORY_LABELS = {item["value"]: item["label"] for item in EMPLOYEE_DOCUMENT_CATEGORIES}

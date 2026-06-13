@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import date, datetime, timedelta
 from typing import Any
 
@@ -47,6 +48,22 @@ TENANT_PROFILE_FIELDS = (
     "signatory_title",
     "signatory_email",
 )
+
+NOTIFICATION_PREF_DEFAULTS: dict[str, str] = {
+    "rtw_expiry": "email",
+    "absence_day5": "email",
+    "absence_day9": "email_sms",
+    "rota_published": "email",
+}
+
+NOTIFICATION_PREF_EVENTS = (
+    {"id": "rtw_expiry", "label": "RTW expiry approaching"},
+    {"id": "absence_day5", "label": "Absence day-5 warning"},
+    {"id": "absence_day9", "label": "Absence day-9 alert"},
+    {"id": "rota_published", "label": "Rota published"},
+)
+
+VALID_NOTIFICATION_DELIVERY = frozenset({"email", "email_sms", "off"})
 
 
 from modules.employees.repository import EMPLOYEE_COLUMNS, _row_to_employee, fetch_employee, list_employee_summaries
@@ -137,6 +154,90 @@ def update_tenant_profile(
         conn=conn,
     )
     return get_tenant_profile(tenant_id=tenant_id, conn=conn)
+
+
+def get_notification_preferences(*, tenant_id: int, conn: Any) -> dict[str, Any]:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT notify_on_rota_publish, notification_preferences
+            FROM tenants
+            WHERE id = %s
+            """,
+            (tenant_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            raise LookupError("tenant not found")
+        notify_on_rota_publish = bool(row[0])
+        stored = row[1] if isinstance(row[1], dict) else {}
+
+    preferences = dict(NOTIFICATION_PREF_DEFAULTS)
+    for key, value in (stored or {}).items():
+        if key in NOTIFICATION_PREF_DEFAULTS and value in VALID_NOTIFICATION_DELIVERY:
+            preferences[key] = value
+    if not notify_on_rota_publish:
+        preferences["rota_published"] = "off"
+
+    return {
+        "preferences": preferences,
+        "notify_on_rota_publish": notify_on_rota_publish,
+        "events": list(NOTIFICATION_PREF_EVENTS),
+    }
+
+
+def update_notification_preferences(
+    *,
+    tenant_id: int,
+    preferences: dict[str, str],
+    actor_username: str,
+    actor_role: str,
+    ip_address: str | None,
+    user_agent: str | None,
+    conn: Any,
+) -> dict[str, Any]:
+    merged = dict(NOTIFICATION_PREF_DEFAULTS)
+    for key, value in preferences.items():
+        if key not in NOTIFICATION_PREF_DEFAULTS:
+            continue
+        if value not in VALID_NOTIFICATION_DELIVERY:
+            raise ValueError(f"Invalid delivery mode for {key}")
+        merged[key] = value
+
+    notify_on_rota_publish = merged.get("rota_published", "email") != "off"
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE tenants
+            SET notification_preferences = %s::jsonb,
+                notify_on_rota_publish = %s
+            WHERE id = %s
+            """,
+            (json.dumps(merged), notify_on_rota_publish, tenant_id),
+        )
+        conn.commit()
+
+    log_employee_data_event(
+        tenant_id=tenant_id,
+        actor_username=actor_username,
+        actor_role=actor_role,
+        action="update",
+        entity_type="notification_preferences",
+        entity_id=tenant_id,
+        field_name=",".join(sorted(preferences.keys())),
+        new_value="updated",
+        ip_address=ip_address,
+        user_agent=user_agent,
+        conn=conn,
+    )
+    return get_notification_preferences(tenant_id=tenant_id, conn=conn)
+
+
+def tenant_notification_delivery_enabled(*, tenant_id: int, event_id: str, conn: Any) -> bool:
+    if event_id not in NOTIFICATION_PREF_DEFAULTS:
+        return False
+    prefs = get_notification_preferences(tenant_id=tenant_id, conn=conn)
+    return prefs["preferences"].get(event_id, "email") != "off"
 
 
 def list_employees(*, tenant_id: int, conn: Any, limit: int = 200) -> list[dict[str, Any]]:

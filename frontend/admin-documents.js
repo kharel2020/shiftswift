@@ -187,6 +187,125 @@
     form.dataset.ready = "true";
   }
 
+  function mountDistributeForm() {
+    const form = document.getElementById("document-distribute-form");
+    if (!form || form.dataset.ready === "true") return;
+
+    const categories = window.Admin.formOptions?.employee_document_categories || [];
+    const categorySelect = document.getElementById("document-distribute-category");
+    const employeeSelect = document.getElementById("document-distribute-employee");
+    const payPeriodInput = document.getElementById("document-distribute-pay-period");
+    const dropzone = document.getElementById("document-distribute-dropzone");
+    const fileInput = document.getElementById("document-distribute-file");
+    const filenameEl = document.getElementById("document-distribute-filename");
+
+    if (categorySelect) {
+      categorySelect.innerHTML = categories
+        .map((item) => `<option value="${escapeHtml(item.value)}">${escapeHtml(item.label)}</option>`)
+        .join("");
+      categorySelect.value = categories.some((item) => item.value === "payslip") ? "payslip" : categories[0]?.value || "general";
+    }
+
+    if (employeeSelect) {
+      const employees = (window.Admin.formOptions?.employees || []).filter(
+        (item) => item.status === "active" || item.status === "onboarding"
+      );
+      employeeSelect.innerHTML =
+        `<option value="">All active employees</option>` +
+        employees
+          .map(
+            (item) =>
+              `<option value="${escapeHtml(item.id)}">${escapeHtml(item.label || `${item.first_name} ${item.last_name}`)}</option>`
+          )
+          .join("");
+    }
+
+    const syncPayPeriodRequired = () => {
+      if (!payPeriodInput) return;
+      const isPayslip = categorySelect?.value === "payslip";
+      payPeriodInput.required = isPayslip;
+      payPeriodInput.closest(".edit-field")?.classList.toggle("edit-field--required", isPayslip);
+    };
+    categorySelect?.addEventListener("change", syncPayPeriodRequired);
+    syncPayPeriodRequired();
+
+    if (dropzone && fileInput && !dropzone.dataset.ready) {
+      const showFile = (file) => {
+        if (!filenameEl) return;
+        if (!file) {
+          filenameEl.hidden = true;
+          filenameEl.textContent = "";
+          return;
+        }
+        filenameEl.hidden = false;
+        filenameEl.textContent = file.name;
+      };
+      dropzone.querySelector("[data-distribute-browse]")?.addEventListener("click", () => fileInput.click());
+      fileInput.addEventListener("change", () => showFile(fileInput.files?.[0]));
+      ["dragenter", "dragover"].forEach((eventName) => {
+        dropzone.addEventListener(eventName, (event) => {
+          event.preventDefault();
+          dropzone.classList.add("doc-upload-dropzone--active");
+        });
+      });
+      ["dragleave", "drop"].forEach((eventName) => {
+        dropzone.addEventListener(eventName, (event) => {
+          event.preventDefault();
+          dropzone.classList.remove("doc-upload-dropzone--active");
+        });
+      });
+      dropzone.addEventListener("drop", (event) => {
+        const file = event.dataTransfer?.files?.[0];
+        if (!file) return;
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        fileInput.files = dt.files;
+        showFile(file);
+      });
+      dropzone.dataset.ready = "true";
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const status = form.querySelector("[data-status]");
+      if (status) status.textContent = "Uploading…";
+      const fd = new FormData(form);
+      const sendEmail = form.querySelector('[name="send_email"]')?.checked ?? false;
+      fd.set("send_email", sendEmail ? "true" : "false");
+      if (!fd.get("employee_id")) fd.delete("employee_id");
+      if (categorySelect?.value !== "payslip") fd.delete("pay_period");
+      try {
+        const res = await fetch(`${API_BASE}/admin/documents/distribute`, {
+          method: "POST",
+          headers: authHeaders(false),
+          body: fd,
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Distribution failed");
+        form.reset();
+        if (filenameEl) {
+          filenameEl.hidden = true;
+          filenameEl.textContent = "";
+        }
+        syncPayPeriodRequired();
+        if (status) {
+          const emailNote =
+            data.emails_sent > 0
+              ? ` · ${data.emails_sent} email${data.emails_sent === 1 ? "" : "s"} sent`
+              : data.emails_skipped > 0
+                ? ` · ${data.emails_skipped} without email`
+                : "";
+          status.textContent = `${data.message || "Distributed."}${emailNote}`;
+        }
+        window.AdminSettings?.showSettingsToast?.("Document distributed ✓");
+      } catch (error) {
+        if (status) status.textContent = error.message;
+      }
+    });
+
+    form.dataset.ready = "true";
+  }
+
   let refreshDocuments = async () => {};
 
   async function loadSettingsDocuments() {
@@ -197,6 +316,7 @@
 
     bindDocumentTabs();
     mountUploadForm();
+    mountDistributeForm();
 
     document.getElementById("documents-export-csv")?.addEventListener("click", async () => {
       await downloadAuthenticated(

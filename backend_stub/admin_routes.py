@@ -45,6 +45,8 @@ from admin_service import (
     get_tenant_profile,
     list_documents,
     list_employees,
+    get_notification_preferences,
+    update_notification_preferences,
     update_document,
     update_employee,
     update_tenant_profile,
@@ -93,6 +95,10 @@ class TenantProfileUpdate(BaseModel):
     signatory_name: str | None = Field(default=None, max_length=120)
     signatory_title: str | None = Field(default=None, max_length=120)
     signatory_email: str | None = Field(default=None, max_length=254)
+
+
+class NotificationPreferencesUpdate(BaseModel):
+    preferences: dict[str, str] = Field(default_factory=dict)
 
 
 class EmployeeCreate(BaseModel):
@@ -559,6 +565,104 @@ async def upload_tenant_document(
     finally:
         conn.close()
     return doc
+
+
+@router.post("/documents/distribute")
+async def distribute_document_route(
+    request: Request,
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    file: UploadFile = File(...),
+    title: str = Form(...),
+    category: str = Form(default="payslip"),
+    pay_period: str | None = Form(default=None),
+    notes: str | None = Form(default=None),
+    employee_id: int | None = Form(default=None),
+    send_email: bool = Form(default=True),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, object]:
+    from modules.documents.distribute import distribute_document
+    from modules.documents.storage import read_validated_upload
+
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    file_bytes, content_type, ext = await read_validated_upload(file, max_bytes=settings.max_upload_bytes)
+    conn = _db_conn()
+    try:
+        result = distribute_document(
+            tenant_id=tenant_id,
+            file_bytes=file_bytes,
+            content_type=content_type,
+            ext=ext,
+            original_filename=file.filename,
+            title=title.strip(),
+            category=category,
+            pay_period=(pay_period or "").strip() or None,
+            notes=notes,
+            employee_id=employee_id,
+            send_email=send_email,
+            uploaded_by=current_user.username,
+            conn=conn,
+        )
+        log_employee_data_event(
+            tenant_id=tenant_id,
+            actor_username=current_user.username,
+            actor_role=current_user.role,
+            action="distribute",
+            entity_type="employee_document",
+            entity_id=0,
+            field_name=f"count={result['distributed_count']}",
+            ip_address=client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+            conn=conn,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    finally:
+        conn.close()
+    return result
+
+
+@router.get("/notification-preferences")
+def read_notification_preferences(
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, object]:
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = _db_conn()
+    try:
+        return get_notification_preferences(tenant_id=tenant_id, conn=conn)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    finally:
+        conn.close()
+
+
+@router.patch("/notification-preferences")
+def patch_notification_preferences(
+    payload: NotificationPreferencesUpdate,
+    request: Request,
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, object]:
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    if not payload.preferences:
+        raise HTTPException(status_code=400, detail="No preferences to update")
+    conn = _db_conn()
+    try:
+        return update_notification_preferences(
+            tenant_id=tenant_id,
+            preferences=payload.preferences,
+            actor_username=current_user.username,
+            actor_role=current_user.role,
+            ip_address=client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+            conn=conn,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    finally:
+        conn.close()
 
 
 @router.get("/documents/{document_id}/file")

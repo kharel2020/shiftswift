@@ -286,6 +286,70 @@ def compliance_alert_email(*, message: str) -> EmailContent:
     return EmailContent(subject=subject, text=text, html=html)
 
 
+def employee_document_shared_email(
+    *,
+    employee_name: str,
+    document_title: str,
+    category_label: str,
+    pay_period: str | None,
+    tenant_name: str,
+) -> EmailContent:
+    period_line = f" for {pay_period}" if pay_period else ""
+    subject = f"{APP_NAME} — New {category_label.lower()}{period_line}"
+    portal_url = f"{APP_URL}/employee.html#documents"
+    intro = f"{tenant_name} has shared a new document with you: {document_title}."
+    details = [("Type", category_label)]
+    if pay_period:
+        details.append(("Pay period", pay_period))
+    text = (
+        f"Hello {employee_name},\n\n"
+        f"{intro}\n\n"
+        f"Sign in to your employee portal to view and download it:\n{portal_url}\n\n"
+        f"— {APP_NAME}\n"
+    )
+    html = render_email(
+        preheader=f"New {category_label.lower()} from {tenant_name}.",
+        title="New document available",
+        intro=f"Hello {employee_name}, {intro}",
+        details=details,
+        cta_url=portal_url,
+        cta_label="Open employee portal",
+    )
+    return EmailContent(subject=subject, text=text, html=html)
+
+
+def rota_published_email(
+    *,
+    employee_name: str,
+    tenant_name: str,
+    week_label: str,
+    shift_lines: list[str],
+) -> EmailContent:
+    subject = f"{APP_NAME} — Your rota for {week_label}"
+    portal_url = f"{APP_URL}/employee.html#rota"
+    shift_text = "\n".join(f"• {line}" for line in shift_lines) if shift_lines else "See your employee portal for details."
+    intro = f"{tenant_name} has published your shifts for {week_label}."
+    text = (
+        f"Hello {employee_name},\n\n"
+        f"{intro}\n\n"
+        f"{shift_text}\n\n"
+        f"View your full rota:\n{portal_url}\n\n"
+        f"— {APP_NAME}\n"
+    )
+    paragraphs = shift_lines[:8] if shift_lines else ["Open your employee portal to see your full schedule."]
+    if len(shift_lines) > 8:
+        paragraphs.append(f"…and {len(shift_lines) - 8} more shift(s) in the portal.")
+    html = render_email(
+        preheader=f"Your rota for {week_label} is ready.",
+        title="Your rota is published",
+        intro=f"Hello {employee_name}, {intro}",
+        paragraphs=paragraphs,
+        cta_url=portal_url,
+        cta_label="View my rota",
+    )
+    return EmailContent(subject=subject, text=text, html=html)
+
+
 def payment_failure_email(
     *,
     tenant_name: str,
