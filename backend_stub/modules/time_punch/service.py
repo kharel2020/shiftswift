@@ -252,6 +252,58 @@ def eligible_sites_for_employee(*, tenant_id: int, employee_id: int, conn: Any) 
         return [_site_row(row) for row in cur.fetchall()]
 
 
+def _nearest_punch_site(
+    *,
+    latitude: float,
+    longitude: float,
+    sites: list[dict[str, Any]],
+) -> tuple[dict[str, Any], float]:
+    best_site: dict[str, Any] | None = None
+    best_distance: float | None = None
+    for site in sites:
+        distance = haversine_meters(latitude, longitude, site["latitude"], site["longitude"])
+        if best_distance is None or distance < best_distance:
+            best_distance = distance
+            best_site = site
+    assert best_site is not None and best_distance is not None
+    return best_site, best_distance
+
+
+def preview_geofence(
+    *,
+    tenant_id: int,
+    employee_id: int,
+    latitude: float,
+    longitude: float,
+    accuracy_meters: float | None,
+    conn: Any,
+) -> dict[str, Any]:
+    """Server-side geofence check — same distance rules as record_punch, without writing."""
+    sites = eligible_sites_for_employee(tenant_id=tenant_id, employee_id=employee_id, conn=conn)
+    if not sites:
+        raise LookupError("No punch sites configured for this business")
+
+    best_site, best_distance = _nearest_punch_site(latitude=latitude, longitude=longitude, sites=sites)
+    radius = float(best_site["radius_meters"])
+    within = best_distance <= radius
+    dist_int = int(round(best_distance))
+    radius_int = int(radius)
+    if within:
+        message = f"Within {best_site['name']} ({dist_int}m from site, limit {radius_int}m)."
+    else:
+        message = f"You appear to be {dist_int}m from {best_site['name']}. Move closer to clock in."
+
+    return {
+        "within_geofence": within,
+        "distance_meters": round(best_distance, 1),
+        "site_name": best_site["name"],
+        "site_id": best_site["id"],
+        "radius_meters": radius_int,
+        "accuracy_meters": accuracy_meters,
+        "message": message,
+    }
+
+
 def last_punch(*, tenant_id: int, employee_id: int, conn: Any) -> dict[str, Any] | None:
     with conn.cursor() as cur:
         cur.execute(
@@ -348,15 +400,7 @@ def record_punch(
     if not sites:
         raise LookupError("No punch sites configured for this business")
 
-    best_site = None
-    best_distance = None
-    for site in sites:
-        distance = haversine_meters(latitude, longitude, site["latitude"], site["longitude"])
-        if best_distance is None or distance < best_distance:
-            best_distance = distance
-            best_site = site
-
-    assert best_site is not None and best_distance is not None
+    best_site, best_distance = _nearest_punch_site(latitude=latitude, longitude=longitude, sites=sites)
     within = best_distance <= float(best_site["radius_meters"])
     if not within:
         raise PermissionError(
@@ -500,6 +544,7 @@ def _punch_row(row: tuple[Any, ...]) -> dict[str, Any]:
         "punch_site_id": row[10] if len(row) > 10 else None,
         "radius_meters": radius_meters,
         "within_geofence": within_geofence,
+        "accuracy_meters": float(row[13]) if len(row) > 13 and row[13] is not None else None,
     }
 
 
@@ -539,7 +584,7 @@ def list_recent_punches(
             SELECT tp.id, tp.punch_type, tp.punched_at, tp.distance_meters,
                    e.first_name, e.last_name, e.email, ps.name,
                    COALESCE(tp.admin_override, FALSE), tp.admin_note,
-                   tp.punch_site_id, ps.radius_meters, tp.within_geofence
+                   tp.punch_site_id, ps.radius_meters, tp.within_geofence, tp.accuracy_meters
             FROM time_punches tp
             JOIN employees e ON e.id = tp.employee_id
             JOIN punch_sites ps ON ps.id = tp.punch_site_id
@@ -584,6 +629,7 @@ def export_punches_csv(
             "Type",
             "Site",
             "Distance (m)",
+            "GPS accuracy (m)",
             "Admin override",
             "Admin note",
         ]
@@ -597,6 +643,7 @@ def export_punches_csv(
                 "Clock in" if item.get("punch_type") == "in" else "Clock out",
                 item.get("site_name") or "",
                 item.get("distance_meters") if item.get("distance_meters") is not None else "",
+                item.get("accuracy_meters") if item.get("accuracy_meters") is not None else "",
                 "Yes" if item.get("admin_override") else "No",
                 item.get("admin_note") or "",
             ]

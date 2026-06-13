@@ -7,6 +7,7 @@ from datetime import date, timedelta
 from typing import Any
 
 from core.notifications import send_email_content
+from modules.push.service import app_url_path, send_employee_push
 
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 DAY_LABELS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
@@ -42,32 +43,36 @@ def notify_rota_published(
     shifts: list[dict[str, Any]],
     conn: Any,
 ) -> dict[str, int]:
-    """Email each scheduled employee about their published shifts."""
+    """Email and push each scheduled employee about their published shifts."""
     from admin_service import get_tenant_profile, tenant_notification_delivery_enabled
     from core.email_templates import rota_published_email
 
-    if not tenant_notification_delivery_enabled(
+    employee_ids_in_rota = {int(s["employee_id"]) for s in shifts}
+    if not employee_ids_in_rota:
+        return {"emails_sent": 0, "emails_skipped": 0, "pushes_sent": 0}
+
+    delivery_enabled = tenant_notification_delivery_enabled(
         tenant_id=tenant_id,
         event_id="rota_published",
         conn=conn,
-    ):
-        return {"emails_sent": 0, "emails_skipped": len({s["employee_id"] for s in shifts})}
-
+    )
     profile = get_tenant_profile(tenant_id=tenant_id, conn=conn)
     if not profile.get("notify_on_rota_publish", True):
-        return {"emails_sent": 0, "emails_skipped": len({s["employee_id"] for s in shifts})}
+        return {
+            "emails_sent": 0,
+            "emails_skipped": len(employee_ids_in_rota),
+            "pushes_sent": 0,
+        }
 
     tenant_name = profile.get("trading_name") or profile.get("name") or "Your employer"
     week_label = _week_label(week_start)
+    rota_url = app_url_path("employee.html#my-shifts")
 
     shifts_by_employee: dict[int, list[dict[str, Any]]] = {}
     for shift in shifts:
         shifts_by_employee.setdefault(int(shift["employee_id"]), []).append(shift)
 
     employee_ids = list(shifts_by_employee.keys())
-    if not employee_ids:
-        return {"emails_sent": 0, "emails_skipped": 0}
-
     with conn.cursor() as cur:
         cur.execute(
             """
@@ -79,44 +84,62 @@ def notify_rota_published(
         )
         rows = {row[0]: row for row in cur.fetchall()}
 
-    sent = skipped = 0
+    sent = skipped = pushes_sent = 0
     for employee_id, employee_shifts in shifts_by_employee.items():
         row = rows.get(employee_id)
         if not row:
             skipped += 1
             continue
-        if not row[4]:
-            skipped += 1
-            continue
-        email = (row[3] or "").strip()
-        if not _looks_like_email(email):
-            skipped += 1
-            continue
 
         employee_name = f"{row[1]} {row[2]}".strip() or "there"
         shift_lines = _shift_summary_lines(employee_shifts)
-        content = rota_published_email(
-            employee_name=employee_name,
-            tenant_name=tenant_name,
-            week_label=week_label,
-            shift_lines=shift_lines,
-        )
-        send_email_content(
-            conn=conn,
-            tenant_id=tenant_id,
-            content=content,
-            purpose="employee",
-            to=email,
-            audience="employee",
-            payload={
-                "type": "rota_published",
-                "employee_id": employee_id,
-                "week_start": week_start.isoformat(),
-            },
-            deliver_now=True,
-            commit=False,
-        )
-        sent += 1
+        shift_count = len(employee_shifts)
+
+        if delivery_enabled and row[4]:
+            email = (row[3] or "").strip()
+            if _looks_like_email(email):
+                content = rota_published_email(
+                    employee_name=employee_name,
+                    tenant_name=tenant_name,
+                    week_label=week_label,
+                    shift_lines=shift_lines,
+                )
+                send_email_content(
+                    conn=conn,
+                    tenant_id=tenant_id,
+                    content=content,
+                    purpose="employee",
+                    to=email,
+                    audience="employee",
+                    payload={
+                        "type": "rota_published",
+                        "employee_id": employee_id,
+                        "week_start": week_start.isoformat(),
+                    },
+                    deliver_now=True,
+                    commit=False,
+                )
+                sent += 1
+            else:
+                skipped += 1
+        else:
+            skipped += 1
+
+        if delivery_enabled:
+            push_result = send_employee_push(
+                tenant_id=tenant_id,
+                employee_id=employee_id,
+                notification_key=f"rota_published:{week_start.isoformat()}:{employee_id}",
+                title="Your rota is ready — ShiftSwift HR",
+                body=(
+                    f"Your rota for {week_label} is ready — "
+                    f"{shift_count} shift{'s' if shift_count != 1 else ''}. Tap to view your shifts."
+                ),
+                url=rota_url,
+                tag=f"rota-{week_start.isoformat()}",
+                conn=conn,
+            )
+            pushes_sent += int(push_result.get("sent") or 0)
 
     conn.commit()
-    return {"emails_sent": sent, "emails_skipped": skipped}
+    return {"emails_sent": sent, "emails_skipped": skipped, "pushes_sent": pushes_sent}

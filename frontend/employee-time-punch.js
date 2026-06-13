@@ -9,12 +9,15 @@
   const statusEl = document.getElementById("punch-status");
   const sitesEl = document.getElementById("punch-sites");
   const messageEl = document.getElementById("punch-message");
+  const geofenceEl = document.getElementById("punch-geofence-status");
   const clockInBtn = document.getElementById("punch-in-btn");
   const clockOutBtn = document.getElementById("punch-out-btn");
   const expectedEl = document.getElementById("employee-expected-shift");
 
   let punchInFlight = false;
   let clockedInState = false;
+  let geofenceWithin = false;
+  let geofenceCheckInFlight = false;
   let refreshInFlight = null;
 
   function token() {
@@ -82,10 +85,26 @@
     messageEl.className = type ? `punch-message punch-message--${type}` : "punch-message";
   }
 
+  function setGeofenceStatus(text, tone) {
+    if (!geofenceEl) return;
+    geofenceEl.textContent = text || "";
+    geofenceEl.hidden = !text;
+    geofenceEl.className = tone
+      ? `punch-geofence-status punch-geofence-status--${tone}`
+      : "punch-geofence-status";
+  }
+
   function syncClockButtons() {
     const online = navigator.onLine;
-    if (clockInBtn) clockInBtn.disabled = punchInFlight || !online || clockedInState;
-    if (clockOutBtn) clockOutBtn.disabled = punchInFlight || !online || !clockedInState;
+    if (clockInBtn) {
+      clockInBtn.disabled =
+        punchInFlight || !online || clockedInState || !geofenceWithin || geofenceCheckInFlight;
+      clockInBtn.classList.toggle("is-ready", geofenceWithin && !clockedInState && online && !punchInFlight);
+    }
+    if (clockOutBtn) {
+      clockOutBtn.disabled =
+        punchInFlight || !online || !clockedInState || !geofenceWithin || geofenceCheckInFlight;
+    }
   }
 
   function formatTime(iso) {
@@ -128,6 +147,7 @@
         expectedEl.hidden = true;
       }
       syncClockButtons();
+      refreshGeofencePreview();
     } catch {
       statusEl.textContent = "Could not reach the time punch service.";
     }
@@ -140,23 +160,80 @@
     return error?.message || "Could not read your location.";
   }
 
-  async function readLocation() {
+  function readLocationOnce(options) {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
         reject(new Error("Location is not supported on this device."));
         return;
       }
-      navigator.geolocation.getCurrentPosition(
-        (pos) =>
-          resolve({
-            latitude: pos.coords.latitude,
-            longitude: pos.coords.longitude,
-            accuracy_meters: pos.coords.accuracy,
-          }),
-        (err) => reject(new Error(friendlyGeoError(err))),
-        { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
-      );
+      navigator.geolocation.getCurrentPosition(resolve, reject, options);
     });
+  }
+
+  async function readLocation() {
+    const primary = { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 };
+    try {
+      const pos = await readLocationOnce(primary);
+      return {
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+        accuracy_meters: pos.coords.accuracy,
+      };
+    } catch (firstError) {
+      if (firstError?.code !== 3) {
+        throw new Error(friendlyGeoError(firstError));
+      }
+      const pos = await readLocationOnce({ enableHighAccuracy: false, timeout: 25000, maximumAge: 15000 });
+      return {
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+        accuracy_meters: pos.coords.accuracy,
+      };
+    }
+  }
+
+  function maybePromptPushNotifications() {
+    if (!window.ShiftSwiftPush) return;
+    window.ShiftSwiftPush.promptSubscribe({
+      apiBase: API_BASE,
+      token: token(),
+      tenantId,
+      reason: "Get shift reminders and clock-in alerts on this device.",
+    }).catch(() => null);
+  }
+
+  async function refreshGeofencePreview() {
+    if (!geofenceEl || !navigator.onLine) return;
+    if (geofenceCheckInFlight) return;
+
+    geofenceCheckInFlight = true;
+    geofenceWithin = false;
+    setGeofenceStatus("Getting your location…", "loading");
+    syncClockButtons();
+
+    try {
+      const location = await readLocation();
+      const response = await apiFetch("/time-punch/preview", {
+        method: "POST",
+        body: JSON.stringify(location),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setGeofenceStatus(parseApiError(data, "Could not verify your location."), "error");
+        return;
+      }
+
+      geofenceWithin = Boolean(data.within_geofence);
+      const accuracyNote =
+        data.accuracy_meters != null ? ` GPS accuracy ±${Math.round(data.accuracy_meters)}m.` : "";
+      setGeofenceStatus(`${data.message}${accuracyNote}`, geofenceWithin ? "ok" : "warn");
+      if (geofenceWithin) maybePromptPushNotifications();
+    } catch (error) {
+      setGeofenceStatus(error.message || "Could not read your location.", "error");
+    } finally {
+      geofenceCheckInFlight = false;
+      syncClockButtons();
+    }
   }
 
   async function submitPunch(punchType) {
@@ -199,6 +276,5 @@
     if (!document.hidden && navigator.onLine) loadStatus();
   });
 
-  syncClockButtons();
   loadStatus();
 })();

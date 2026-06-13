@@ -75,6 +75,7 @@ def main() -> int:
         "portal_setup_reminders": {"tenants_checked": 0, "reminders_sent": 0, "pending_employees": 0},
         "payroll_hours_reports": {"tenants_checked": 0, "reports_sent": 0, "skipped": 0},
         "missed_punch_alerts": 0,
+        "push_reminders": 0,
     }
     try:
         job_now = datetime.now(timezone.utc)
@@ -98,6 +99,10 @@ def main() -> int:
             summary["rtw_expiry_alerts"] += len(rtw_alerts)
             missed = evaluate_missed_punch_alerts(tenant_id=tenant_id, conn=conn, now=job_now)
             summary["missed_punch_alerts"] += len(missed)
+            from modules.push.shift_reminders import evaluate_shift_push_reminders
+
+            push_sent = evaluate_shift_push_reminders(tenant_id=tenant_id, conn=conn, now=job_now)
+            summary["push_reminders"] = summary.get("push_reminders", 0) + len(push_sent)
         summary["events_processed"] = process_pending_events(conn=conn)
         summary["hr_templates"] = sync_all_templates(conn=conn)
         summary["trial_reminders"] = process_trial_reminders(conn=conn)

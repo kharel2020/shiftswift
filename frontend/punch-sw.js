@@ -1,5 +1,5 @@
 /* ShiftSwift Time Clock — PWA service worker (offline shell + safe caching). */
-const CACHE_NAME = "shiftswift-punch-v3";
+const CACHE_NAME = "shiftswift-punch-v4";
 const SHELL = [
   "./punch.html",
   "./punch.css",
@@ -7,6 +7,7 @@ const SHELL = [
   "./cookie-consent.js",
   "./cookie-consent.css",
   "./punch.js",
+  "./push-notifications.js",
   "./brand-config.js",
   "./punch-manifest.webmanifest",
   "./assets/shiftswift-hr-icon.png",
@@ -96,5 +97,63 @@ self.addEventListener("fetch", (event) => {
       }
       return networkFetch.then((response) => response || caches.match("./punch.html"));
     })
+  );
+});
+
+function parsePushPayload(event) {
+  const fallback = {
+    title: "ShiftSwift HR",
+    body: "",
+    url: "./punch.html",
+    tag: "shiftswift",
+  };
+  if (!event.data) return fallback;
+  try {
+    return { ...fallback, ...event.data.json() };
+  } catch {
+    try {
+      return { ...fallback, body: event.data.text() };
+    } catch {
+      return fallback;
+    }
+  }
+}
+
+self.addEventListener("push", (event) => {
+  event.waitUntil(
+    (async () => {
+      const data = parsePushPayload(event);
+      await self.registration.showNotification(data.title, {
+        body: data.body,
+        icon: "./assets/shiftswift-hr-icon.png",
+        badge: "./assets/shiftswift-hr-icon.png",
+        tag: data.tag || "shiftswift",
+        renotify: true,
+        data: { url: data.url || "./punch.html" },
+        actions: [
+          { action: "open", title: "Clock in now" },
+          { action: "dismiss", title: "Dismiss" },
+        ],
+      });
+    })()
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  if (event.action === "dismiss") return;
+
+  const targetUrl = event.notification.data?.url || "./punch.html";
+  event.waitUntil(
+    (async () => {
+      const allClients = await clients.matchAll({ type: "window", includeUncontrolled: true });
+      for (const client of allClients) {
+        if (client.url.includes("punch.html") || client.url.includes("employee.html")) {
+          await client.focus();
+          return;
+        }
+      }
+      await clients.openWindow(targetUrl);
+    })()
   );
 });

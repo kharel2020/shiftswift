@@ -225,6 +225,9 @@
           <article class="card punch-card">
             <div id="employee-expected-shift" class="punch-expected-shift" hidden></div>
             <p id="punch-status" class="muted">Loading punch status…</p>
+            <div id="punch-geofence-status" class="punch-geofence-status punch-geofence-status--loading" aria-live="polite">
+              Getting your location…
+            </div>
             <div class="punch-actions">
               <button type="button" class="btn primary" id="punch-in-btn">Clock in</button>
               <button type="button" class="btn ghost" id="punch-out-btn" disabled>Clock out</button>
@@ -403,19 +406,20 @@
     </div>
 
     <script src="./brand-config.js?v=brand-v4"></script>
+    <script src="./push-notifications.js?v=1"></script>
     <script
       src="./portal-pwa-install.js?v=2"
       data-portal="employee"
       data-app-name="ShiftSwift Employee Portal"
       data-manifest="./employee-manifest.webmanifest?v=2"
-      data-sw="./app-sw.js?v=8"
+      data-sw="./app-sw.js?v=10"
     ></script>
     <script src="./mobile-shell.js?v=4"></script>
     <script src="./mobile-tables.js?v=1"></script>
     <script src="./admin-icons.js?v=1"></script>
     <script src="./employee-mobile.js?v=2"></script>
     <script src="./employee.js?v=5"></script>
-    <script src="./employee-time-punch.js?v=3"></script>
+    <script src="./employee-time-punch.js?v=4"></script>
     <script src="./employee-rota.js?v=1"></script>
     <script src="./employee-documents.js?v=3"></script>
     <script src="./employee-notes.js?v=1"></script>

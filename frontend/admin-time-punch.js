@@ -142,10 +142,12 @@
     }
     if (punch.distance_meters == null) return '<span class="muted">—</span>';
     const within = punchWithinGeofence(punch);
+    const accuracy =
+      punch.accuracy_meters != null ? ` · Accuracy ±${Math.round(punch.accuracy_meters)}m` : "";
     if (within) {
-      return `<span class="punch-distance punch-distance--ok" title="Within geofence">✓ ${Math.round(punch.distance_meters)}m</span>`;
+      return `<span class="punch-distance punch-distance--ok" title="Within geofence">✓ ${Math.round(punch.distance_meters)}m${accuracy}</span>`;
     }
-    return `<span class="punch-distance punch-distance--warn" title="Outside geofence">⚠ ${Math.round(punch.distance_meters)}m</span>`;
+    return `<span class="punch-distance punch-distance--warn" title="Outside geofence">⚠ ${Math.round(punch.distance_meters)}m${accuracy}</span>`;
   }
 
   function renderTypeBadge(type) {

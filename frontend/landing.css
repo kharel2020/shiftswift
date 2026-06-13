@@ -1247,6 +1247,7 @@ body.is-loading .page {
 
 .faq-section {
   padding-top: 8px;
+  scroll-margin-bottom: 6rem;
 }
 
 .compare-section h2,

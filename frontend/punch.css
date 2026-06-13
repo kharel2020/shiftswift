@@ -178,6 +178,10 @@ body.punch-app {
   color: var(--white);
 }
 
+.punch-btn--in.is-ready:not(:disabled) {
+  box-shadow: 0 0 0 3px rgba(34, 168, 122, 0.35);
+}
+
 .punch-btn--out {
   min-height: 4.5rem;
   font-size: 1.15rem;

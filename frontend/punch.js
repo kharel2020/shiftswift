@@ -17,6 +17,7 @@
   const userLine = document.getElementById("punch-user-line");
   const clockInBtn = document.getElementById("punch-in-btn");
   const clockOutBtn = document.getElementById("punch-out-btn");
+  const geofenceEl = document.getElementById("punch-geofence-status");
   const installBanner = document.getElementById("pwa-install-banner");
   const installBtn = document.getElementById("pwa-install-btn");
   const installDismiss = document.getElementById("pwa-install-dismiss");
@@ -32,6 +33,8 @@
   let punchInFlight = false;
   let refreshInFlight = null;
   let clockedInState = false;
+  let geofenceWithin = false;
+  let geofenceCheckInFlight = false;
   let waitingServiceWorker = null;
 
   function secureHostLabel() {
@@ -110,13 +113,25 @@
     syncClockButtons();
   }
 
+  function setGeofenceStatus(text, tone) {
+    if (!geofenceEl) return;
+    geofenceEl.textContent = text || "";
+    geofenceEl.hidden = !text;
+    geofenceEl.className = tone
+      ? `punch-geofence-status punch-geofence-status--${tone}`
+      : "punch-geofence-status";
+  }
+
   function syncClockButtons() {
     const online = navigator.onLine;
     if (clockInBtn) {
-      clockInBtn.disabled = punchInFlight || !online || clockedInState;
+      clockInBtn.disabled =
+        punchInFlight || !online || clockedInState || !geofenceWithin || geofenceCheckInFlight;
+      clockInBtn.classList.toggle("is-ready", geofenceWithin && !clockedInState && online && !punchInFlight);
     }
     if (clockOutBtn) {
-      clockOutBtn.disabled = punchInFlight || !online || !clockedInState;
+      clockOutBtn.disabled =
+        punchInFlight || !online || !clockedInState || !geofenceWithin || geofenceCheckInFlight;
     }
   }
 
@@ -350,6 +365,7 @@
       renderRotaContext(data);
       setOnlineState(true);
       syncClockButtons();
+      refreshGeofencePreview();
     } catch {
       statusEl.textContent = "Could not reach the time punch service.";
       statusEl.className = "punch-clock-status is-out";
@@ -400,6 +416,60 @@
         longitude: pos.coords.longitude,
         accuracy_meters: pos.coords.accuracy,
       };
+    }
+  }
+
+  function maybePromptPushNotifications() {
+    if (!window.ShiftSwiftPush || !token()) return;
+    window.ShiftSwiftPush.promptSubscribe({
+      apiBase: API_BASE,
+      token: token(),
+      tenantId: tenantId(),
+      reason: "Get shift reminders and clock-in alerts on this device.",
+    }).catch(() => null);
+  }
+
+  async function refreshGeofencePreview() {
+    if (!geofenceEl || !token() || !navigator.onLine || (clockView && clockView.hidden)) return;
+    if (geofenceCheckInFlight) return;
+
+    geofenceCheckInFlight = true;
+    geofenceWithin = false;
+    setGeofenceStatus("Getting your location…", "loading");
+    syncClockButtons();
+
+    try {
+      const location = await readLocation();
+      const response = await apiFetch("/time-punch/preview", {
+        method: "POST",
+        body: JSON.stringify(location),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.status === 401) {
+        clearSession();
+        setInlineStatus(loginStatus, "Session expired. Sign in again.");
+        showView(loginView);
+        return;
+      }
+      if (!response.ok) {
+        setGeofenceStatus(parseApiError(data, "Could not verify your location."), "error");
+        return;
+      }
+
+      geofenceWithin = Boolean(data.within_geofence);
+      const accuracyNote =
+        data.accuracy_meters != null ? ` GPS accuracy ±${Math.round(data.accuracy_meters)}m.` : "";
+      if (geofenceWithin) {
+        setGeofenceStatus(`${data.message}${accuracyNote}`, "ok");
+        maybePromptPushNotifications();
+      } else {
+        setGeofenceStatus(`${data.message}${accuracyNote}`, "warn");
+      }
+    } catch (error) {
+      setGeofenceStatus(error.message || "Could not read your location.", "error");
+    } finally {
+      geofenceCheckInFlight = false;
+      syncClockButtons();
     }
   }
 
@@ -526,7 +596,7 @@
 
     window.addEventListener("load", () => {
       navigator.serviceWorker
-        .register("./punch-sw.js?v=3", { scope: "./" })
+        .register("./punch-sw.js?v=4", { scope: "./" })
         .then((registration) => {
           if (registration.waiting) {
             showUpdateBanner(registration.waiting);

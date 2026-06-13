@@ -14,7 +14,7 @@ class SecureStaticHandler(SimpleHTTPRequestHandler):
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")
         self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
-        self.send_header("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+        self.send_header("Permissions-Policy", "camera=(), microphone=(), geolocation=(self)")
         if os.getenv("FORCE_HTTPS", "").lower() in {"1", "true", "yes"}:
             self.send_header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
         super().end_headers()

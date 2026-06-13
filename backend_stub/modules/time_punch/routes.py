@@ -32,6 +32,12 @@ class PunchRequest(BaseModel):
     accuracy_meters: float | None = Field(default=None, ge=0)
 
 
+class GeofencePreviewRequest(BaseModel):
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+    accuracy_meters: float | None = Field(default=None, ge=0)
+
+
 class PunchSiteUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     radius_meters: int | None = Field(default=None, ge=25, le=2000)
@@ -105,6 +111,31 @@ def punch_status(
             employee_id=employee["id"],
             conn=conn,
         )
+    finally:
+        conn.close()
+
+
+@employee_router.post("/preview")
+def punch_preview(
+    payload: GeofencePreviewRequest,
+    current_user: Annotated[AuthUser, Depends(get_employee_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, object]:
+    """Re-run geofence distance on the server before the employee taps Clock in/out."""
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = get_connection()
+    try:
+        employee = _employee_for_user(tenant_id=tenant_id, user=current_user, conn=conn)
+        return punch_service.preview_geofence(
+            tenant_id=tenant_id,
+            employee_id=employee["id"],
+            latitude=payload.latitude,
+            longitude=payload.longitude,
+            accuracy_meters=payload.accuracy_meters,
+            conn=conn,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     finally:
         conn.close()
 

@@ -456,9 +456,9 @@
 
 .pricing-footnote {
   width: 100%;
-  max-width: 42rem;
+  max-width: min(42rem, calc(100% - 32px));
   margin: 28px auto 0;
-  padding: 0 16px;
+  padding: 0 16px 24px;
   box-sizing: border-box;
   text-align: center;
   line-height: 1.65;
@@ -466,12 +466,14 @@
   font-weight: var(--text-caption-weight);
   color: var(--gray-400);
   overflow-wrap: anywhere;
-  word-break: normal;
+  word-break: break-word;
+  hyphens: auto;
 }
 
 .pricing-footnote__link {
-  display: block;
-  margin-top: 8px;
+  display: inline;
+  margin-left: 0.35rem;
+  white-space: nowrap;
 }
 
 .pricing-footnote__link a {

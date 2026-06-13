@@ -5048,6 +5048,38 @@ button.lifecycle-accordion-header .lifecycle-accordion-chevron {
 .punch-message--success { color: var(--green-800); font-weight: 600; }
 .punch-message--info { color: var(--gray-700); }
 
+.punch-geofence-status {
+  margin: 0.75rem 0 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  background: var(--gray-50, #f8fafc);
+  border: 1px solid var(--gray-200, #e2e8f0);
+}
+
+.punch-geofence-status--loading {
+  color: var(--gray-700);
+}
+
+.punch-geofence-status--ok {
+  color: var(--green-800, #166534);
+  background: #ecfdf5;
+  border-color: #bbf7d0;
+}
+
+.punch-geofence-status--warn {
+  color: #9a3412;
+  background: #fff7ed;
+  border-color: #fed7aa;
+}
+
+.punch-geofence-status--error {
+  color: var(--red-700, #c62828);
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
 .punch-site-list {
   margin: 8px 0 0;
   padding-left: 18px;

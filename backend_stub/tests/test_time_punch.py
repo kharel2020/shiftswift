@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 BACKEND = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BACKEND))
 
-from modules.time_punch.service import haversine_meters, record_punch
+from modules.time_punch.service import haversine_meters, preview_geofence, record_punch
 
 
 def test_haversine_same_point_is_zero() -> None:
@@ -52,3 +52,45 @@ def test_record_punch_rejects_when_outside_geofence() -> None:
         assert False, "expected PermissionError"
     except PermissionError as exc:
         assert "150m" in str(exc)
+
+
+def test_preview_geofence_outside() -> None:
+    conn = MagicMock()
+    cursor = MagicMock()
+    conn.cursor.return_value.__enter__.return_value = cursor
+    cursor.fetchall.return_value = [
+        (1, 1, "Himalayan Inn", "1 High St", 53.4794, -2.2451, 100, True, True),
+    ]
+
+    result = preview_geofence(
+        tenant_id=1,
+        employee_id=1,
+        latitude=51.5074,
+        longitude=-0.1278,
+        accuracy_meters=34.0,
+        conn=conn,
+    )
+    assert result["within_geofence"] is False
+    assert result["accuracy_meters"] == 34.0
+    assert "Himalayan Inn" in result["message"]
+    assert result["radius_meters"] == 100
+
+
+def test_preview_geofence_inside() -> None:
+    conn = MagicMock()
+    cursor = MagicMock()
+    conn.cursor.return_value.__enter__.return_value = cursor
+    cursor.fetchall.return_value = [
+        (1, 1, "Himalayan Inn", "1 High St", 53.4794, -2.2451, 100, True, True),
+    ]
+
+    result = preview_geofence(
+        tenant_id=1,
+        employee_id=1,
+        latitude=53.4794,
+        longitude=-2.2451,
+        accuracy_meters=12.0,
+        conn=conn,
+    )
+    assert result["within_geofence"] is True
+    assert result["distance_meters"] == 0.0
