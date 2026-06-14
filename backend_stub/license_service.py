@@ -117,6 +117,36 @@ def assert_tenant_access(*, tenant_id: int, conn: Any, master_tenant_id: str) ->
     if str(tenant_id) == str(master_tenant_id):
         return
 
+    from fastapi import HTTPException
+
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT platform_status, deleted_at, name FROM tenants WHERE id = %s",
+            (tenant_id,),
+        )
+        platform_row = cur.fetchone()
+    if not platform_row:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+    platform_status, deleted_at, tenant_name = platform_row
+    if deleted_at is not None:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "message": "This business account has been closed by the platform administrator.",
+                "platform_suspended": True,
+                "tenant_name": tenant_name,
+            },
+        )
+    if (platform_status or "active").strip().lower() == "suspended":
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "message": "This business account is temporarily suspended. Contact support@shiftswifthr.co.uk.",
+                "platform_suspended": True,
+                "tenant_name": tenant_name,
+            },
+        )
+
     snap = license_snapshot(tenant_id=tenant_id, conn=conn)
     if snap["access_allowed"]:
         return

@@ -10,8 +10,8 @@ from billing_pricing import calculate_monthly_quote, estimate_monthly_total
 from plan_features import effective_features_for_tenant, plan_display_name, plan_tier
 from trial_service import ACTIVE_STATUSES, TRIALING_STATUSES, days_until_trial_end
 
-DisplayStatus = Literal["trialing", "active", "overdue", "cancelled"]
-FilterStatus = Literal["all", "trialing", "active", "overdue", "cancelled"]
+DisplayStatus = Literal["trialing", "active", "overdue", "cancelled", "suspended", "deleted"]
+FilterStatus = Literal["all", "trialing", "active", "overdue", "cancelled", "suspended", "deleted"]
 
 ACTIVE_EMPLOYEE_STATUSES = ("active", "onboarding", "suspended")
 
@@ -25,7 +25,13 @@ def display_status(
     subscription_status: str | None,
     license_state: str | None = None,
     payment_failed_at: datetime | None = None,
+    platform_status: str | None = None,
+    deleted_at: datetime | None = None,
 ) -> DisplayStatus:
+    if deleted_at is not None:
+        return "deleted"
+    if (platform_status or "active").strip().lower() == "suspended":
+        return "suspended"
     status = (subscription_status or "").strip().lower()
     license = (license_state or "active").strip().lower()
     if status in {"cancelled"}:
@@ -127,6 +133,9 @@ def _serialize_tenant_row(row: tuple[Any, ...], *, as_of: datetime | None = None
         payment_failed_at,
         holds_sponsor_licence,
         created_at,
+        platform_status,
+        deleted_at,
+        internal_notes,
         active_employees,
         portal_pending,
         last_login,
@@ -139,6 +148,8 @@ def _serialize_tenant_row(row: tuple[Any, ...], *, as_of: datetime | None = None
         subscription_status=subscription_status,
         license_state=license_state,
         payment_failed_at=payment_failed_at,
+        platform_status=platform_status,
+        deleted_at=deleted_at,
     )
     staff_limit = int(max_employees or 0)
     active_count = int(active_employees or 0)
@@ -178,6 +189,10 @@ def _serialize_tenant_row(row: tuple[Any, ...], *, as_of: datetime | None = None
         "registered_address": registered_address,
         "phone": phone,
         "created_at": created_at.isoformat() if isinstance(created_at, datetime) else created_at,
+        "platform_status": platform_status or "active",
+        "deleted_at": deleted_at.isoformat() if isinstance(deleted_at, datetime) else deleted_at,
+        "internal_notes": internal_notes or "",
+        "can_impersonate": deleted_at is None and (platform_status or "active") == "active",
     }
 
 
@@ -198,6 +213,9 @@ SELECT
   t.payment_failed_at,
   t.holds_sponsor_licence,
   t.created_at,
+  t.platform_status,
+  t.deleted_at,
+  t.internal_notes,
   COALESCE(emp.active_count, 0) AS active_employees,
   COALESCE(emp.portal_pending, 0) AS portal_pending,
   login.last_login,
@@ -242,9 +260,13 @@ def list_tenants(
     master_tenant_id: int,
     status_filter: FilterStatus = "all",
     search: str | None = None,
+    include_deleted: bool = False,
     as_of: datetime | None = None,
 ) -> list[dict[str, Any]]:
-    sql = _TENANT_LIST_SQL + " ORDER BY t.name ASC, t.id ASC"
+    sql = _TENANT_LIST_SQL
+    if not include_deleted:
+        sql += " AND t.deleted_at IS NULL"
+    sql += " ORDER BY t.name ASC, t.id ASC"
     params: list[Any] = [master_tenant_id]
 
     with conn.cursor() as cur:
@@ -274,15 +296,23 @@ def overview_stats(
     *,
     conn: Any,
     master_tenant_id: int,
+    include_deleted: bool = False,
     as_of: datetime | None = None,
 ) -> dict[str, Any]:
-    tenants = list_tenants(conn=conn, master_tenant_id=master_tenant_id, as_of=as_of)
+    tenants = list_tenants(
+        conn=conn,
+        master_tenant_id=master_tenant_id,
+        include_deleted=include_deleted,
+        as_of=as_of,
+    )
     now = as_of or _utcnow()
 
     active = [t for t in tenants if t["status"] == "active"]
     trialing = [t for t in tenants if t["status"] == "trialing"]
     overdue = [t for t in tenants if t["status"] == "overdue"]
     cancelled = [t for t in tenants if t["status"] == "cancelled"]
+    suspended = [t for t in tenants if t["status"] == "suspended"]
+    deleted = [t for t in tenants if t["status"] == "deleted"]
 
     mrr = round(sum(t["mrr_gbp"] or 0 for t in tenants if t["mrr_gbp"] is not None), 2)
 
@@ -306,6 +336,8 @@ def overview_stats(
         "trialing": len(trialing),
         "overdue": len(overdue),
         "cancelled": len(cancelled),
+        "suspended": len(suspended),
+        "deleted": len(deleted),
         "mrr_gbp": mrr,
         "mrr_added_this_month_gbp": None,
         "churned_this_month": churned_this_month,
@@ -319,6 +351,8 @@ def overview_stats(
             "active": len(active),
             "overdue": len(overdue),
             "cancelled": len(cancelled),
+            "suspended": len(suspended),
+            "deleted": len(deleted),
         },
     }
 
@@ -356,7 +390,8 @@ def get_tenant_detail(
 
         cur.execute(
             """
-            SELECT subscription_status, payroll_enabled, holds_sponsor_licence, trial_ends_at
+            SELECT subscription_status, payroll_enabled, holds_sponsor_licence, trial_ends_at,
+                   platform_status, deleted_at, internal_notes
             FROM tenants WHERE id = %s
             """,
             (tenant_id,),
@@ -366,6 +401,9 @@ def get_tenant_detail(
         payroll_enabled = bool(meta[1]) if meta else False
         holds_sponsor = bool(meta[2]) if meta else False
         trial_ends_at = meta[3] if meta else None
+        platform_status = meta[4] if meta else "active"
+        deleted_at = meta[5] if meta else None
+        internal_notes = meta[6] if meta else ""
 
         trial_access = subscription_status in TRIALING_STATUSES
         features = effective_features_for_tenant(
@@ -411,5 +449,8 @@ def get_tenant_detail(
         "modules": modules,
         "monthly_quote": quote,
         "recent_activity": activity,
-        "internal_notes": "",
+        "internal_notes": internal_notes or "",
+        "platform_status": platform_status or "active",
+        "deleted_at": deleted_at.isoformat() if isinstance(deleted_at, datetime) else deleted_at,
+        "can_impersonate": deleted_at is None and (platform_status or "active") == "active",
     }

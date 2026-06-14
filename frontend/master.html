@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#142033" />
     <script src="./app-icons.js?v=brandkit-v5"></script>
     <title>ShiftSwift OPS | Master Admin</title>
-    <link rel="stylesheet" href="./master.css?v=2" />
+    <link rel="stylesheet" href="./master.css?v=3" />
   </head>
   <body class="master-app">
     <div id="master-overlay" class="master-overlay" hidden aria-hidden="true"></div>
@@ -24,20 +24,21 @@
 
       <nav class="master-nav">
         <p class="master-nav__group">Platform</p>
-        <a class="master-nav__link is-active" href="#tenants" data-master-nav="tenants">Tenants</a>
-        <a class="master-nav__link is-disabled" href="#" aria-disabled="true" title="Coming soon">MRR &amp; revenue</a>
-        <a class="master-nav__link is-disabled" href="#" aria-disabled="true" title="Coming soon">Billing &amp; Stripe</a>
-        <a class="master-nav__link is-disabled" href="#" aria-disabled="true" title="Coming soon">Platform alerts</a>
+        <a class="master-nav__link is-active" href="#tenants" data-master-section="tenants">Tenants</a>
+        <a class="master-nav__link" href="#revenue" data-master-section="revenue">MRR &amp; revenue</a>
+        <a class="master-nav__link" href="#billing" data-master-section="billing">Billing &amp; Stripe</a>
+        <a class="master-nav__link" href="#alerts" data-master-section="alerts">Platform alerts</a>
 
         <p class="master-nav__group">Operations</p>
-        <a class="master-nav__link is-disabled" href="#" aria-disabled="true">Support tickets</a>
-        <a class="master-nav__link is-disabled" href="#" aria-disabled="true">Audit log</a>
-        <a class="master-nav__link is-disabled" href="#" aria-disabled="true">Email logs</a>
+        <a class="master-nav__link" href="#support" data-master-section="support">Support tickets</a>
+        <a class="master-nav__link" href="#audit" data-master-section="audit">Audit log</a>
+        <a class="master-nav__link" href="#email-log" data-master-section="email-log">Email logs</a>
 
         <p class="master-nav__group">System</p>
-        <a class="master-nav__link is-disabled" href="#" aria-disabled="true">Infrastructure</a>
-        <a class="master-nav__link is-disabled" href="#" aria-disabled="true">API keys</a>
-        <a class="master-nav__link is-disabled" href="#" aria-disabled="true">Platform settings</a>
+        <a class="master-nav__link" href="#infrastructure" data-master-section="infrastructure">Infrastructure</a>
+        <a class="master-nav__link" href="#api-keys" data-master-section="api-keys">API keys</a>
+        <a class="master-nav__link" href="#settings" data-master-section="settings">Platform settings</a>
+        <a class="master-nav__link" href="#account" data-master-section="account">Master account</a>
       </nav>
 
       <div class="master-sidebar__user">
@@ -62,6 +63,7 @@
       </header>
 
       <main class="master-main">
+        <section id="master-section-tenants" class="master-section" data-master-panel="tenants">
         <header class="master-page-head">
           <div>
             <h1>Tenant accounts</h1>
@@ -69,8 +71,10 @@
           </div>
           <div class="master-page-actions">
             <button type="button" class="master-btn master-btn--ghost" id="master-export-btn" disabled>Export CSV</button>
-            <button type="button" class="master-btn master-btn--ghost" disabled title="Coming soon">Sync Stripe</button>
-            <button type="button" class="master-btn master-btn--ghost" disabled title="Coming soon">+ Add tenant</button>
+            <label class="master-check master-page-actions__check">
+              <input type="checkbox" id="master-include-deleted" />
+              <span>Show deleted</span>
+            </label>
           </div>
         </header>
 
@@ -130,25 +134,80 @@
 
               <div class="master-notes">
                 <h3>Internal notes</h3>
-                <textarea id="detail-notes" rows="3" placeholder="Support notes (coming soon)" disabled></textarea>
+                <textarea id="detail-notes" rows="3" placeholder="Support notes visible to platform admins only"></textarea>
+                <button type="button" class="master-btn master-btn--ghost" id="detail-save-notes">Save notes</button>
+                <p class="master-inline-status muted" id="detail-notes-status" aria-live="polite"></p>
               </div>
 
               <div class="master-detail-actions">
                 <button type="button" class="master-btn master-btn--gold" id="detail-impersonate">Impersonate this account</button>
                 <div class="master-detail-actions__row">
-                  <button type="button" class="master-btn master-btn--ghost" disabled>Extend trial</button>
-                  <button type="button" class="master-btn master-btn--ghost" disabled>Email tenant</button>
+                  <button type="button" class="master-btn master-btn--ghost" id="detail-extend-trial">Extend trial</button>
+                  <button type="button" class="master-btn master-btn--ghost" id="detail-email-tenant">Email tenant</button>
                 </div>
-                <button type="button" class="master-btn master-btn--danger" disabled>Suspend account</button>
+                <button type="button" class="master-btn master-btn--ghost" id="detail-suspend-toggle">Suspend account</button>
+                <button type="button" class="master-btn master-btn--ghost" id="detail-restore-tenant" hidden>Restore deleted tenant</button>
+                <button type="button" class="master-btn master-btn--danger" id="detail-delete-tenant">Delete tenant</button>
               </div>
             </div>
           </aside>
         </div>
+        </section>
+
+        <section id="master-section-revenue" class="master-section" data-master-panel="revenue" hidden>
+          <header class="master-page-head"><div><h1>MRR &amp; revenue</h1><p class="master-page-sub muted">Paying tenants and plan breakdown</p></div></header>
+          <div id="master-revenue-content" class="master-panel-card"><p class="muted">Loading…</p></div>
+        </section>
+
+        <section id="master-section-billing" class="master-section" data-master-panel="billing" hidden>
+          <header class="master-page-head"><div><h1>Billing &amp; Stripe</h1><p class="master-page-sub muted">Stripe connection status (keys managed on server)</p></div></header>
+          <div id="master-billing-content" class="master-panel-card"><p class="muted">Loading…</p></div>
+        </section>
+
+        <section id="master-section-alerts" class="master-section" data-master-panel="alerts" hidden>
+          <header class="master-page-head"><div><h1>Platform alerts</h1><p class="master-page-sub muted">Overdue billing and compliance attention</p></div></header>
+          <div id="master-alerts-content" class="master-panel-card"><p class="muted">Loading…</p></div>
+        </section>
+
+        <section id="master-section-support" class="master-section" data-master-panel="support" hidden>
+          <header class="master-page-head"><div><h1>Support tickets</h1><p class="master-page-sub muted">Coming soon — integrate your helpdesk here</p></div></header>
+          <div class="master-panel-card master-empty-panel"><p>Support ticket inbox is not connected yet. Use tenant email and audit log for now.</p></div>
+        </section>
+
+        <section id="master-section-audit" class="master-section" data-master-panel="audit" hidden>
+          <header class="master-page-head"><div><h1>Audit log</h1><p class="master-page-sub muted">Platform master actions</p></div></header>
+          <div id="master-audit-content" class="master-panel-card"><p class="muted">Loading…</p></div>
+        </section>
+
+        <section id="master-section-email-log" class="master-section" data-master-panel="email-log" hidden>
+          <header class="master-page-head"><div><h1>Email logs</h1><p class="master-page-sub muted">Queued and sent platform emails</p></div></header>
+          <div id="master-email-log-content" class="master-panel-card"><p class="muted">Loading…</p></div>
+        </section>
+
+        <section id="master-section-infrastructure" class="master-section" data-master-panel="infrastructure" hidden>
+          <header class="master-page-head"><div><h1>Infrastructure</h1><p class="master-page-sub muted">Host and database health</p></div></header>
+          <div id="master-infra-content" class="master-panel-card"><p class="muted">Loading…</p></div>
+        </section>
+
+        <section id="master-section-api-keys" class="master-section" data-master-panel="api-keys" hidden>
+          <header class="master-page-head"><div><h1>API keys</h1><p class="master-page-sub muted">Masked key status — update on VPS <code>.env</code> and restart API</p></div></header>
+          <div id="master-api-keys-content" class="master-panel-card"><p class="muted">Loading…</p></div>
+        </section>
+
+        <section id="master-section-settings" class="master-section" data-master-panel="settings" hidden>
+          <header class="master-page-head"><div><h1>Platform settings</h1><p class="master-page-sub muted">Environment and security policy</p></div></header>
+          <div id="master-settings-content" class="master-panel-card"><p class="muted">Loading…</p></div>
+        </section>
+
+        <section id="master-section-account" class="master-section" data-master-panel="account" hidden>
+          <header class="master-page-head"><div><h1>Master account</h1><p class="master-page-sub muted">Password and MFA for platform sign-in</p></div></header>
+          <div id="master-account-content" class="master-panel-card"><p class="muted">Loading…</p></div>
+        </section>
       </main>
     </div>
 
     <script src="./brand-config.js?v=brand-v4"></script>
-    <script src="./master-auth-guard.js?v=1"></script>
-    <script src="./master.js?v=2"></script>
+    <script src="./master-auth-guard.js?v=2"></script>
+    <script src="./master.js?v=3"></script>
   </body>
 </html>

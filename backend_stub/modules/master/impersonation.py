@@ -23,12 +23,19 @@ def start_impersonation(
         raise ValueError("Cannot impersonate the platform master tenant")
 
     with conn.cursor() as cur:
-        cur.execute("SELECT id, name FROM tenants WHERE id = %s", (tenant_id,))
+        cur.execute(
+            "SELECT id, name, platform_status, deleted_at FROM tenants WHERE id = %s",
+            (tenant_id,),
+        )
         row = cur.fetchone()
     if not row:
         raise LookupError("tenant not found")
+    if row[3] is not None:
+        raise ValueError("Cannot impersonate a deleted tenant")
+    if (row[2] or "active").strip().lower() == "suspended":
+        raise ValueError("Cannot impersonate a suspended tenant — re-enable the account first")
 
-    _tenant_id, tenant_name = row
+    _tenant_id, tenant_name = row[0], row[1]
     access_token, expires_in = create_impersonation_access_token(
         settings,
         master_username=master_username,
