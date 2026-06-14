@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import time
 from collections import defaultdict, deque
 from dataclasses import dataclass
@@ -24,6 +25,7 @@ class AuthUser:
     username: str
     role: str
     tenant_id: str
+    impersonated_by: str | None = None
 
 
 @dataclass
@@ -103,6 +105,41 @@ def create_token_pair(settings: Settings, user: AuthUser) -> TokenPair:
     )
 
 
+def create_impersonation_access_token(
+    settings: Settings,
+    *,
+    master_username: str,
+    tenant_id: int,
+    expires_minutes: int | None = None,
+) -> tuple[str, int]:
+    """Short-lived HR access token for platform master impersonation."""
+    minutes = expires_minutes or int(os.getenv("MASTER_IMPERSONATION_MINUTES", "60"))
+    now = datetime.now(timezone.utc)
+    access_exp = now + timedelta(minutes=minutes)
+    access_payload = {
+        "sub": master_username,
+        "role": "hr",
+        "tenant_id": str(tenant_id),
+        "type": "access",
+        "impersonation": True,
+        "impersonated_by": master_username,
+        "iat": int(now.timestamp()),
+        "exp": int(access_exp.timestamp()),
+    }
+    access_token = jwt.encode(access_payload, settings.jwt_secret, algorithm="HS256")
+    return access_token, minutes * 60
+
+
+def decode_access_payload(settings: Settings, token: str) -> dict[str, Any]:
+    try:
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=["HS256"])
+    except jwt.PyJWTError as exc:
+        raise ValueError("Invalid or expired token") from exc
+    if payload.get("type") != "access":
+        raise ValueError("Invalid token type")
+    return payload
+
+
 def decode_token(settings: Settings, token: str, expected_type: str = "access") -> AuthUser:
     try:
         payload = jwt.decode(token, settings.jwt_secret, algorithms=["HS256"])
@@ -115,7 +152,13 @@ def decode_token(settings: Settings, token: str, expected_type: str = "access") 
     tenant_id = str(payload.get("tenant_id", ""))
     if not username or not role or not tenant_id:
         raise ValueError("Malformed token")
-    return AuthUser(username=username, role=role, tenant_id=tenant_id)
+    impersonated_by = payload.get("impersonated_by") if payload.get("impersonation") else None
+    return AuthUser(
+        username=username,
+        role=role,
+        tenant_id=tenant_id,
+        impersonated_by=str(impersonated_by) if impersonated_by else None,
+    )
 
 
 def fetch_user_from_db(settings: Settings, username: str) -> dict[str, Any] | None:

@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en" data-app-icon="hr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#142033" />
+    <script src="./app-icons.js?v=brandkit-v4"></script>
+    <title>ShiftSwift OPS | Master Admin</title>
+    <link rel="stylesheet" href="./master.css?v=2" />
+  </head>
+  <body class="master-app">
+    <div id="master-overlay" class="master-overlay" hidden aria-hidden="true"></div>
+
+    <aside class="master-sidebar" id="master-sidebar">
+      <div class="master-sidebar__head">
+        <div class="master-brand">
+          <img src="./assets/shiftswift-hr-app-icon-192.png?v=brandkit-v4" alt="ShiftSwift" class="master-brand__logo app-mark app-mark--chrome" />
+          <span class="master-badge master-badge--ops">OPS</span>
+        </div>
+        <span class="master-badge master-badge--admin">Master Admin</span>
+        <button type="button" class="master-sidebar__close" id="master-sidebar-close" aria-label="Close menu">×</button>
+      </div>
+
+      <nav class="master-nav">
+        <p class="master-nav__group">Platform</p>
+        <a class="master-nav__link is-active" href="#tenants" data-master-nav="tenants">Tenants</a>
+        <a class="master-nav__link is-disabled" href="#" aria-disabled="true" title="Coming soon">MRR &amp; revenue</a>
+        <a class="master-nav__link is-disabled" href="#" aria-disabled="true" title="Coming soon">Billing &amp; Stripe</a>
+        <a class="master-nav__link is-disabled" href="#" aria-disabled="true" title="Coming soon">Platform alerts</a>
+
+        <p class="master-nav__group">Operations</p>
+        <a class="master-nav__link is-disabled" href="#" aria-disabled="true">Support tickets</a>
+        <a class="master-nav__link is-disabled" href="#" aria-disabled="true">Audit log</a>
+        <a class="master-nav__link is-disabled" href="#" aria-disabled="true">Email logs</a>
+
+        <p class="master-nav__group">System</p>
+        <a class="master-nav__link is-disabled" href="#" aria-disabled="true">Infrastructure</a>
+        <a class="master-nav__link is-disabled" href="#" aria-disabled="true">API keys</a>
+        <a class="master-nav__link is-disabled" href="#" aria-disabled="true">Platform settings</a>
+      </nav>
+
+      <div class="master-sidebar__user">
+        <div class="master-sidebar__avatar" id="master-user-avatar">GC</div>
+        <div>
+          <strong id="master-user-name">Platform owner</strong>
+          <span id="master-provider-name">Datasoftware Analytics Ltd</span>
+        </div>
+      </div>
+    </aside>
+
+    <div class="master-shell">
+      <header class="master-topbar">
+        <button type="button" class="master-menu-btn" id="master-menu-btn" aria-label="Open menu" aria-controls="master-sidebar">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="master-topbar__brand">
+          <span class="master-badge master-badge--ops">OPS</span>
+          <span class="master-badge master-badge--admin">Master Admin</span>
+        </div>
+        <button type="button" class="master-topbar__signout" data-master-sign-out>Sign out</button>
+      </header>
+
+      <main class="master-main">
+        <header class="master-page-head">
+          <div>
+            <h1>Tenant accounts</h1>
+            <p class="master-page-sub" id="master-page-sub">Loading…</p>
+          </div>
+          <div class="master-page-actions">
+            <button type="button" class="master-btn master-btn--ghost" id="master-export-btn" disabled>Export CSV</button>
+            <button type="button" class="master-btn master-btn--ghost" disabled title="Coming soon">Sync Stripe</button>
+            <button type="button" class="master-btn master-btn--ghost" disabled title="Coming soon">+ Add tenant</button>
+          </div>
+        </header>
+
+        <section class="master-metrics" id="master-metrics" aria-label="Key metrics"></section>
+
+        <div class="master-toolbar">
+          <div class="master-filters" id="master-filters" role="tablist" aria-label="Filter tenants"></div>
+          <label class="master-search">
+            <span class="sr-only">Search tenants</span>
+            <input type="search" id="master-search" placeholder="Search business, email, location…" autocomplete="off" />
+          </label>
+        </div>
+
+        <div class="master-layout">
+          <section class="master-table-panel" aria-label="Tenant register">
+            <div class="master-table-wrap">
+              <table class="master-table master-table--desktop">
+                <thead>
+                  <tr>
+                    <th>Business</th>
+                    <th>Plan</th>
+                    <th>Status</th>
+                    <th>Trial / renewal</th>
+                    <th>Staff</th>
+                    <th>MRR</th>
+                    <th>Last active</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="master-table-body"></tbody>
+              </table>
+            </div>
+            <div class="master-cards" id="master-card-list"></div>
+            <p class="master-empty" id="master-empty" hidden>No tenants match this filter.</p>
+          </section>
+
+          <aside class="master-detail" id="master-detail" hidden>
+            <div class="master-detail__inner">
+              <div class="master-detail__head">
+                <div>
+                  <h2 id="detail-name">—</h2>
+                  <span class="master-status" id="detail-status"></span>
+                </div>
+                <button type="button" class="master-detail__close" id="master-detail-close" aria-label="Close detail">×</button>
+              </div>
+
+              <div class="master-alert">
+                All impersonation actions are logged with timestamp and master admin ID.
+              </div>
+
+              <dl class="master-detail-grid" id="detail-grid"></dl>
+
+              <div class="master-modules">
+                <h3>Modules active</h3>
+                <div class="master-module-pills" id="detail-modules"></div>
+              </div>
+
+              <div class="master-notes">
+                <h3>Internal notes</h3>
+                <textarea id="detail-notes" rows="3" placeholder="Support notes (coming soon)" disabled></textarea>
+              </div>
+
+              <div class="master-detail-actions">
+                <button type="button" class="master-btn master-btn--gold" id="detail-impersonate">Impersonate this account</button>
+                <div class="master-detail-actions__row">
+                  <button type="button" class="master-btn master-btn--ghost" disabled>Extend trial</button>
+                  <button type="button" class="master-btn master-btn--ghost" disabled>Email tenant</button>
+                </div>
+                <button type="button" class="master-btn master-btn--danger" disabled>Suspend account</button>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </main>
+    </div>
+
+    <script src="./brand-config.js?v=brand-v4"></script>
+    <script src="./master-auth-guard.js?v=1"></script>
+    <script src="./master.js?v=2"></script>
+  </body>
+</html>

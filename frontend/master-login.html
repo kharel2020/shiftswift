@@ -2,71 +2,11 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ShiftSwift HR | Master Admin Sign In</title>
-    <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon.png?v=brandkit-v1" />
-    <link rel="icon" type="image/svg+xml" href="./assets/shiftswift-hr-icon.svg?v=brandkit-v1" />
-    <link rel="apple-touch-icon" href="./assets/shiftswift-hr-icon.png?v=brandkit-v1" />
-    <link rel="stylesheet" href="./styles.css?v=brandkit-v3" />
+    <meta http-equiv="refresh" content="0; url=./business-login.html" />
+    <title>Redirecting…</title>
+    <script>window.location.replace("./business-login.html");</script>
   </head>
-  <body class="portal-login-page">
-    <div class="portal-login-shell">
-      <header class="portal-login-brand">
-        <a href="./index.html">
-          <img class="portal-login-brand-logo" src="./assets/shiftswift-hr-logo-nav.svg?v=brandkit-v4" alt="ShiftSwift HR" />
-        </a>
-        <p class="portal-login-brand-copy">Platform master control room</p>
-      </header>
-
-      <section class="portal-login-card">
-        <div id="login-shell" class="portal-login-card-body">
-          <div class="portal-login-card-head">
-            <h1>Master sign in</h1>
-            <p class="portal-login-card-lead">Platform administration only. Not for business HR or employees.</p>
-          </div>
-
-          <form id="master-login-form" class="portal-login-form">
-            <label>
-              Username
-              <input name="username" required autocomplete="username" placeholder="admin@shiftswifthr.co.uk" />
-            </label>
-            <label>
-              Password
-              <input name="password" type="password" required autocomplete="current-password" placeholder="Enter password" />
-            </label>
-
-            <p id="login-status" class="form-error-message" hidden></p>
-
-            <button class="btn portal-login-submit" type="submit">Open master console</button>
-
-            <p class="portal-login-secure-note">
-              Secured · <span data-secure-host>shiftswifthr.co.uk</span>
-            </p>
-          </form>
-
-          <p class="portal-login-alt-note">
-            Business HR or employee?
-            <a class="portal-login-inline-link" href="./business-login.html">Business sign in</a>
-          </p>
-        </div>
-
-        <div id="mfa-panel" class="portal-login-card-body" hidden>
-          <div class="portal-login-card-head">
-            <h1>Two-factor authentication</h1>
-            <p class="portal-login-card-lead">Enter the 6-digit code for <strong data-mfa-user></strong>.</p>
-          </div>
-          <form id="mfa-form" class="portal-login-form">
-            <label>
-              Authenticator code
-              <input name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="8" required placeholder="123456" />
-            </label>
-            <button class="btn portal-login-submit" type="submit">Verify and sign in</button>
-          </form>
-        </div>
-      </section>
-    </div>
-    <script src="./brand-config.js?v=brand-v4"></script>
-    <script src="./login.js?v=brandkit-v5"></script>
-      <script src="./cookie-consent.js?v=1"></script>
+  <body>
+    <p><a href="./business-login.html">Continue to business sign in</a></p>
   </body>
 </html>

@@ -101,6 +101,13 @@ MODULES: list[dict[str, object]] = [
         "description": "Plan shifts by week with overlap validation and publish workflow.",
         "setup": ["DATABASE_URL"],
     },
+    {
+        "id": "master",
+        "name": "Platform Master Admin",
+        "prefix": "/master",
+        "description": "Tenant register, MRR overview, and platform audit trail for Datasoftware Analytics Ltd.",
+        "setup": ["DATABASE_URL", "MASTER_CUSTOMER_ID"],
+    },
 ]
 
 

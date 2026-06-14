@@ -29,7 +29,35 @@ a { color: inherit; }
   background: transparent;
 }
 
-.brand-logo--compact { height: 36px; }
+.brand-logo--compact { height: 36px; width: 36px; max-width: 36px; border-radius: 8px; object-fit: cover; }
+
+.app-mark {
+  display: block;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.app-mark--chrome {
+  width: 36px;
+  height: 36px;
+}
+
+.app-mark--login {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  margin: 0 auto;
+}
+
+.portal-login-brand-logo.app-mark,
+.portal-login-brand-logo.app-mark--login {
+  width: 44px;
+  height: 44px;
+  max-width: 44px;
+}
 
 .brand-mark {
   width: 40px;
@@ -112,10 +140,11 @@ a { color: inherit; }
 }
 
 .portal-login-brand-logo {
-  width: auto;
-  height: clamp(52px, 14vw, 68px);
-  max-width: min(100%, 280px);
-  object-fit: contain;
+  width: 44px;
+  height: 44px;
+  max-width: 44px;
+  object-fit: cover;
+  border-radius: 10px;
   display: block;
 }
 
@@ -964,8 +993,11 @@ textarea:focus {
 
 .topbar-brand__logo {
   display: block;
-  height: 32px;
-  width: auto;
+  height: 36px;
+  width: 36px;
+  max-width: 36px;
+  border-radius: 8px;
+  object-fit: cover;
   flex-shrink: 0;
 }
 
@@ -2228,7 +2260,7 @@ textarea:focus {
   }
   body[data-mobile-tab="rota"] .rota-builder-header .section-actions .rota-week-nav,
   body[data-mobile-tab="rota"] .rota-builder-subbar,
-  body[data-mobile-tab="rota"] #rota-grid-view {
+  body[data-mobile-tab="rota"] .rota-desktop-row {
     display: none;
   }
   body[data-mobile-tab="rota"] #rota-list-panel {
@@ -2282,6 +2314,46 @@ textarea:focus {
   .admin-mobile-compliance-only {
     display: none;
   }
+  body[data-mobile-tab="rota"] .rota-list-panel__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  body[data-mobile-tab="rota"] .rota-list-panel__head h3 {
+    margin: 0;
+  }
+  body[data-mobile-tab="rota"] #rota-mobile-add-shift {
+    flex-shrink: 0;
+  }
+  body.rota-shift-panel-open .rota-shift-backdrop {
+    display: block;
+  }
+  body.rota-shift-panel-open .rota-shift-panel {
+    position: fixed;
+    inset: auto 0 0 0;
+    top: 12vh;
+    z-index: 1200;
+    width: 100%;
+    max-width: none;
+    flex: none;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -8px 32px rgba(15, 23, 42, 0.18);
+    max-height: calc(88vh - env(safe-area-inset-bottom));
+    overflow: auto;
+  }
+  body.rota-shift-panel-open .rota-shift-panel__close {
+    display: block;
+  }
+
+  .rota-list-empty {
+    display: grid;
+    gap: 12px;
+    justify-items: start;
+    padding: 8px 0 4px;
+  }
+
   body[data-mobile-tab="compliance"] .admin-mobile-compliance-only {
     display: block;
   }
@@ -5376,6 +5448,30 @@ button.lifecycle-accordion-header .lifecycle-accordion-chevron {
 
 .rota-shift-panel[hidden] {
   display: none !important;
+}
+
+.rota-desktop-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.rota-desktop-row #rota-grid-view {
+  flex: 1 1 420px;
+  min-width: 0;
+}
+
+.rota-desktop-row #rota-shift-panel:not([hidden]) {
+  flex: 0 0 280px;
+}
+
+.rota-shift-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 1190;
 }
 
 .rota-shift-panel__head {

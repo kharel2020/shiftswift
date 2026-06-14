@@ -40,7 +40,11 @@ def register_web_pages(app: FastAPI, settings: Settings) -> None:
 
     @app.get("/master-login", include_in_schema=False)
     def master_login_redirect() -> RedirectResponse:
-        return RedirectResponse(url="/app/master-login.html", status_code=307)
+        return RedirectResponse(url="/app/business-login.html", status_code=307)
+
+    @app.get("/ops-9x7k2", include_in_schema=False)
+    def ops_master_login_redirect() -> RedirectResponse:
+        return RedirectResponse(url="/app/ops-9x7k2.html", status_code=307)
 
     if not settings.is_production:
         register_branded_openapi(app)

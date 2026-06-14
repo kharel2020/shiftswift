@@ -60,6 +60,20 @@ def get_admin_user(
     return user
 
 
+def get_master_user(
+    request: Request,
+    authorization: str | None = Header(default=None, alias="Authorization"),
+) -> AuthUser:
+    """Platform master admin — tenant 999 + optional IP allowlist."""
+    from modules.master.security import assert_master_ip, assert_master_tenant
+
+    settings = load_settings()
+    user = get_admin_user(authorization=authorization)
+    assert_master_tenant(user.tenant_id, settings)
+    assert_master_ip(request, settings)
+    return user
+
+
 def resolve_tenant_id(
     user: AuthUser,
     x_tenant_id: str | None,
@@ -92,6 +106,8 @@ def require_tenant_subscription(
     """Block workspace when trial expired or Direct Debit hold is active."""
     settings = load_settings()
     tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    if current_user.impersonated_by:
+        return current_user
     if not settings.use_db or not settings.database_url:
         return current_user
 

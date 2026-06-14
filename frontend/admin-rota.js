@@ -34,6 +34,27 @@
   ];
   let panelOpen = false;
 
+  function isMobileRotaUi() {
+    return (
+      window.matchMedia("(max-width: 860px)").matches &&
+      (document.body.dataset.mobileTab === "rota" || activeView === "list")
+    );
+  }
+
+  function syncPanelOverlay(open) {
+    const backdrop = document.getElementById("rota-shift-backdrop");
+    if (!backdrop) return;
+    if (open && isMobileRotaUi()) {
+      backdrop.removeAttribute("hidden");
+      backdrop.setAttribute("aria-hidden", "false");
+      document.body.classList.add("rota-shift-panel-open");
+    } else {
+      backdrop.setAttribute("hidden", "");
+      backdrop.setAttribute("aria-hidden", "true");
+      document.body.classList.remove("rota-shift-panel-open");
+    }
+  }
+
   function mondayIso(date) {
     const d = new Date(date);
     const day = d.getDay();
@@ -541,11 +562,14 @@
   function syncPanelVisibility() {
     const panel = document.getElementById("rota-shift-panel");
     if (!panel) return;
-    if (activeView === "grid" && hasActiveEmployees() && panelOpen) {
+    const showPanel =
+      hasActiveEmployees() && panelOpen && (activeView === "grid" || isMobileRotaUi());
+    if (showPanel) {
       panel.removeAttribute("hidden");
     } else {
       panel.setAttribute("hidden", "");
     }
+    syncPanelOverlay(showPanel);
   }
 
   function renderEmptyState() {
@@ -623,7 +647,11 @@
       return;
     }
     if (!shifts.length) {
-      host.innerHTML = '<p class="muted">No shifts this week — tap Add shift to create one.</p>';
+      host.innerHTML = `<div class="rota-list-empty">
+        <p class="muted">No shifts this week.</p>
+        <button type="button" class="btn primary" id="rota-empty-add-shift">+ Add shift</button>
+      </div>`;
+      document.getElementById("rota-empty-add-shift")?.addEventListener("click", () => openShiftPanel());
       return;
     }
 
@@ -876,7 +904,7 @@
     document.getElementById("rota-view-list")?.classList.toggle("is-active", view === "list");
     if (view === "grid" && hasActiveEmployees()) {
       panelOpen = true;
-    } else if (view !== "grid") {
+    } else if (view !== "list") {
       panelOpen = false;
     }
     syncPanelVisibility();
@@ -1264,6 +1292,8 @@
     document.getElementById("rota-view-list")?.addEventListener("click", () => setView("list"));
     document.getElementById("rota-shift-cancel-btn")?.addEventListener("click", closeShiftPanel);
     document.getElementById("rota-shift-popover-close")?.addEventListener("click", closeShiftPanel);
+    document.getElementById("rota-shift-backdrop")?.addEventListener("click", closeShiftPanel);
+    document.getElementById("rota-mobile-add-shift")?.addEventListener("click", () => openShiftPanel());
     document.getElementById("rota-add-employee")?.addEventListener("change", (event) => {
       prefillRoleFromEmployee(Number(event.target.value));
       updatePanelContext();
@@ -1278,7 +1308,7 @@
     document.getElementById("rota-add-role")?.addEventListener("input", updateOverlapStatus);
     document.getElementById("rota-add-notes")?.addEventListener("input", updateOverlapStatus);
 
-    setView("grid");
+    setView(window.matchMedia("(max-width: 860px)").matches ? "list" : "grid");
     await loadEmployeesList();
     await loadWeek();
     await loadShiftRequests();

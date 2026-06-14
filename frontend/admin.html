@@ -1,9 +1,10 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-app-icon="hr">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#0f6e56" />
+    <script src="./app-icons.js?v=brandkit-v4"></script>
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -11,18 +12,17 @@
     <meta name="description" content="Manage employees, compliance, rotas, and HR for your business." />
     <title>ShiftSwift HR | Admin Console</title>
     <link rel="manifest" href="./admin-manifest.webmanifest?v=3" />
-    <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon.png?v=brandkit-v1" />
-    <link rel="icon" type="image/svg+xml" href="./assets/shiftswift-hr-icon.svg?v=brandkit-v1" />
-    <link rel="apple-touch-icon" href="./assets/shiftswift-hr-app-icon-180.png?v=brandkit-v4" />
-    <link rel="stylesheet" href="./styles.css?v=admin-v32" />
+    <title>ShiftSwift HR | Admin Console</title>
+    <link rel="stylesheet" href="./styles.css?v=admin-v33" />
   </head>
   <body>
+    <script src="./admin-impersonation.js?v=1"></script>
     <div id="sidebar-overlay" class="sidebar-overlay" aria-hidden="true"></div>
     <div class="app">
       <aside class="sidebar" id="app-sidebar">
         <div class="sidebar-head">
           <a class="brand" href="./index.html">
-            <img class="brand-logo brand-logo--compact" src="./assets/shiftswift-hr-logo-nav.svg?v=brandkit-v4" alt="ShiftSwift HR" />
+            <img class="brand-logo brand-logo--compact app-mark app-mark--chrome" src="./assets/shiftswift-hr-app-icon-192.png?v=brandkit-v4" alt="ShiftSwift HR" />
           </a>
           <button type="button" class="sidebar-close" id="sidebar-close" aria-label="Close menu">×</button>
         </div>
@@ -75,8 +75,8 @@
             </button>
             <a class="topbar-brand" href="#overview">
               <img
-                class="topbar-brand__logo"
-                src="./assets/shiftswift-hr-logo-nav.svg?v=brandkit-v4"
+                class="topbar-brand__logo app-mark app-mark--chrome"
+                src="./assets/shiftswift-hr-app-icon-192.png?v=brandkit-v4"
                 alt=""
               />
               <span class="topbar-brand__text">
@@ -1483,6 +1483,8 @@
             <p class="rota-builder-hint muted">Drag to move · Alt+drag to copy · Right-click for options · Click empty cell to add</p>
           </div>
 
+          <div class="rota-desktop-row">
+          <div class="rota-builder-shell" id="rota-builder-shell">
           <div class="rota-builder-layout" id="rota-grid-view">
             <article class="card rota-builder-main">
               <div id="rota-empty-state" class="rota-empty-state" hidden>
@@ -1493,7 +1495,9 @@
               </div>
               <div id="rota-grid" class="rota-grid-scroll" aria-label="Weekly rota grid"></div>
             </article>
-            <aside id="rota-shift-panel" class="rota-shift-panel" hidden>
+          </div>
+          </div>
+          <aside id="rota-shift-panel" class="rota-shift-panel" hidden>
               <div class="rota-shift-panel__head">
                 <h3 id="rota-shift-popover-title">Add shift</h3>
                 <button type="button" class="rota-shift-panel__close" id="rota-shift-popover-close" aria-label="Close panel">×</button>
@@ -1535,10 +1539,14 @@
                 <button type="button" class="btn ghost" id="rota-shift-cancel-btn">Cancel</button>
                 <button type="button" class="btn" id="rota-add-btn">Add to rota</button>
               </div>
-            </aside>
+          </aside>
           </div>
+          <div id="rota-shift-backdrop" class="rota-shift-backdrop" hidden aria-hidden="true"></div>
           <article class="card" id="rota-list-panel" hidden>
-            <h3>Shifts</h3>
+            <div class="rota-list-panel__head">
+              <h3>Shifts this week</h3>
+              <button type="button" class="btn primary" id="rota-mobile-add-shift">+ Add shift</button>
+            </div>
             <div id="rota-shifts-cards" class="rota-shift-cards" hidden aria-label="Shifts this week"></div>
             <div class="table-wrap rota-shifts-table-wrap">
               <table class="data-table">
@@ -1911,7 +1919,7 @@
     <script src="./admin-offboarding.js?v=admin-v5"></script>
     <script src="./admin-templates.js?v=admin-v8"></script>
     <script src="./admin-time-punch.js?v=6"></script>
-    <script src="./admin-rota.js?v=7"></script>
+    <script src="./admin-rota.js?v=8"></script>
     <script src="./admin-leave.js?v=1"></script>
     <script src="./app.js?v=admin-v6"></script>
     <script src="./contracts.js?v=5"></script>

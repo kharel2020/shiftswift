@@ -92,6 +92,7 @@ def _login_response(
     *,
     portal: Literal["master", "business"],
     business_role: Literal["hr", "employee"] | None = None,
+    enforce_master_mfa: bool = False,
 ) -> dict[str, object]:
     ip = client_ip(request)
     user_agent = request.headers.get("User-Agent")
@@ -148,14 +149,32 @@ def _login_response(
         tenant_id = str(payload.tenant_id or user.tenant_id)
 
     mfa_required = False
+    mfa_enabled = False
     if settings.use_db and settings.database_url:
         conn = _db_conn()
         try:
             with conn.cursor() as cur:
                 row = fetch_user_mfa(cur, user.username)
-            mfa_required = bool(row and row.get("mfa_enabled"))
+            mfa_enabled = bool(row and row.get("mfa_enabled"))
+            mfa_required = mfa_enabled
         finally:
             conn.close()
+
+    if portal == "master" and enforce_master_mfa and not mfa_enabled:
+        log_security_event(
+            settings,
+            event_type="master_login_mfa_required",
+            username=user.username,
+            tenant_id=tenant_id,
+            ip_address=ip,
+            user_agent=user_agent,
+            success=False,
+            detail="Master MFA must be enabled before sign-in",
+        )
+        raise HTTPException(
+            status_code=403,
+            detail="Master admin MFA must be enabled. Set up TOTP on your account before signing in.",
+        )
 
     if mfa_required:
         challenge = create_mfa_challenge_token(
@@ -225,7 +244,10 @@ def employee_login(request: Request, payload: LoginRequest) -> dict[str, object]
 @router.post("/master-login")
 def master_login(request: Request, payload: LoginRequest) -> dict[str, object]:
     """Master platform admin login — isolated from business accounts."""
-    return _login_response(request, payload, portal="master")
+    from modules.master.security import assert_master_ip, master_require_mfa
+
+    assert_master_ip(request, settings)
+    return _login_response(request, payload, portal="master", enforce_master_mfa=master_require_mfa(settings))
 
 
 @router.post("/mfa/verify")
@@ -466,6 +488,9 @@ def verify_auth(current_user: Annotated[AuthUser, Depends(get_current_user)]) ->
         "role": current_user.role,
         "tenant_id": current_user.tenant_id,
     }
+    if current_user.impersonated_by:
+        result["impersonating"] = True
+        result["impersonated_by"] = current_user.impersonated_by
     if current_user.role != "employee" or not settings.use_db or not settings.database_url:
         return result
     from employee_portal_consent import has_employee_gdpr_consent, tenant_display_name

@@ -46,8 +46,10 @@ body.punch-app {
 }
 
 .punch-brand img {
-  height: 28px;
-  width: auto;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  object-fit: cover;
 }
 
 .punch-brand-text {

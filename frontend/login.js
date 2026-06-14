@@ -289,4 +289,4 @@ document.querySelectorAll("[data-secure-host]").forEach((el) => {
 
 showLocalDevHints();
 initBusinessLoginTabs();
-bindSimpleLogin("master-login-form", "/auth/master-login", "./admin.html");
+bindSimpleLogin("ops-master-login-form", "/auth/master-login", "./master.html");
