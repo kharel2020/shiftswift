@@ -7,6 +7,7 @@ from typing import Any
 
 from auth_service import hash_password, verify_password
 from core.notifications import send_email_notification, smtp_configured
+from modules.master.service import _pick_canonical_tenant_id, list_tenants
 from trial_service import TRIALING_STATUSES
 
 ACTIVE_EMPLOYEE_STATUSES = ("active", "onboarding", "suspended")
@@ -133,6 +134,81 @@ def soft_delete_tenant(
             (tenant_id,),
         )
     return {"tenant_id": tenant_id, "deleted_at": now.isoformat()}
+
+
+def cleanup_duplicate_tenants(
+    *,
+    conn: Any,
+    master_tenant_id: int,
+    master_username: str,
+    dry_run: bool = True,
+) -> dict[str, Any]:
+    """Soft-delete orphan duplicate trials that share the same billing email."""
+    tenants = list_tenants(conn=conn, master_tenant_id=master_tenant_id, include_deleted=False)
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for tenant in tenants:
+        if not tenant.get("duplicate_billing_email"):
+            continue
+        email = (tenant.get("billing_email") or "").strip().lower()
+        if email:
+            groups.setdefault(email, []).append(tenant)
+
+    removed: list[dict[str, Any]] = []
+    kept: list[dict[str, Any]] = []
+    now = _utcnow()
+
+    for email, group in groups.items():
+        keeper_id = _pick_canonical_tenant_id(group)
+        keeper = next(row for row in group if row["id"] == keeper_id)
+        kept.append({"tenant_id": keeper_id, "billing_email": email, "name": keeper.get("name")})
+        for tenant in group:
+            if tenant["id"] == keeper_id:
+                continue
+            entry = {
+                "tenant_id": tenant["id"],
+                "billing_email": email,
+                "name": tenant.get("name"),
+                "action": "soft_delete",
+            }
+            if dry_run:
+                entry["action"] = "would_soft_delete"
+                removed.append(entry)
+                continue
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE tenants
+                    SET deleted_at = %s,
+                        deleted_by = %s,
+                        platform_status = 'suspended',
+                        platform_suspended_at = COALESCE(platform_suspended_at, %s),
+                        platform_suspended_by = COALESCE(platform_suspended_by, %s),
+                        platform_suspended_reason = COALESCE(
+                            platform_suspended_reason,
+                            'Duplicate trial removed automatically'
+                        ),
+                        updated_at = NOW()
+                    WHERE id = %s AND deleted_at IS NULL
+                    """,
+                    (now, master_username, now, master_username, tenant["id"]),
+                )
+                cur.execute(
+                    "UPDATE app_users SET is_active = FALSE, updated_at = NOW() WHERE tenant_id = %s",
+                    (tenant["id"],),
+                )
+            removed.append(entry)
+
+    return {
+        "dry_run": dry_run,
+        "groups": len(groups),
+        "kept": kept,
+        "removed": removed,
+        "message": (
+            f"Found {len(removed)} duplicate trial workspace(s) across {len(groups)} billing email(s)."
+            if dry_run
+            else f"Removed {len(removed)} duplicate trial workspace(s)."
+        ),
+    }
 
 
 def restore_tenant(

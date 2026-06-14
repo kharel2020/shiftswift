@@ -14,6 +14,7 @@ from deps import client_ip, get_master_user
 from modules.master.audit import write_master_audit
 from modules.master.platform_ops import (
     change_master_password,
+    cleanup_duplicate_tenants,
     disable_master_mfa,
     email_tenant_contact,
     extend_trial,
@@ -151,6 +152,33 @@ def master_tenant_list(
             "overview": stats,
             "provider_name": os.getenv("PROVIDER_LEGAL_NAME", "Datasoftware Analytics Ltd"),
         }
+    finally:
+        conn.close()
+
+
+@router.post("/tenants/cleanup-duplicates")
+def master_cleanup_duplicate_tenants(
+    request: Request,
+    current_user: Annotated[AuthUser, Depends(get_master_user)],
+    dry_run: bool = Query(default=True),
+) -> dict[str, object]:
+    conn = _db_conn()
+    try:
+        result = cleanup_duplicate_tenants(
+            conn=conn,
+            master_tenant_id=int(settings.master_customer_id),
+            master_username=current_user.username,
+            dry_run=dry_run,
+        )
+        _audit(
+            request=request,
+            current_user=current_user,
+            action="CLEANUP_DUPLICATE_TENANTS",
+            conn=conn,
+            detail={"dry_run": dry_run, "removed_count": len(result.get("removed") or [])},
+        )
+        conn.commit()
+        return result
     finally:
         conn.close()
 

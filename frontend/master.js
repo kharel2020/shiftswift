@@ -206,6 +206,24 @@
     });
   }
 
+  function tenantSubline(tenant) {
+    const bits = [`#${tenant.id}`];
+    if (tenant.billing_email) bits.push(tenant.billing_email);
+    if (tenant.hr_login_email) bits.push(`login: ${tenant.hr_login_email}`);
+    else bits.push("no HR login yet");
+    return bits.join(" · ");
+  }
+
+  function tenantIdentityBadge(tenant) {
+    if (tenant.duplicate_billing_email && tenant.is_canonical_tenant) {
+      return `<span class="master-tag master-tag--primary">Primary account</span>`;
+    }
+    if (tenant.duplicate_billing_email && !tenant.is_canonical_tenant) {
+      return `<span class="master-tag master-tag--warn">Duplicate trial</span>`;
+    }
+    return "";
+  }
+
   function renderTable() {
     if (!els.tableBody) return;
     const rows = state.tenants;
@@ -214,7 +232,7 @@
       .map((tenant) => {
         const selected = tenant.id === state.selectedId ? " is-selected" : "";
         return `<tr data-tenant-id="${tenant.id}" class="${selected.trim()}">
-          <td><div class="master-business"><strong>${escapeHtml(tenant.name)}</strong><span>${escapeHtml(tenant.location)}</span></div></td>
+          <td><div class="master-business"><strong>${escapeHtml(tenant.name)}</strong> ${tenantIdentityBadge(tenant)}<span>${escapeHtml(tenantSubline(tenant))}</span><span>${escapeHtml(tenant.location)}</span></div></td>
           <td><span class="${planBadgeClass(tenant.plan_tier)}">${escapeHtml(tenant.plan_label)}</span></td>
           <td><span class="${statusClass(tenant.status)}">${escapeHtml(tenant.status)}</span></td>
           <td>${escapeHtml(formatDate(tenant.renewal_or_trial_date || tenant.trial_ends_at))}</td>
@@ -234,7 +252,7 @@
       .map((tenant) => {
         const selected = tenant.id === state.selectedId ? " is-selected" : "";
         return `<article class="master-card${selected}" data-tenant-id="${tenant.id}">
-          <div class="master-card__head"><div><strong>${escapeHtml(tenant.name)}</strong><div>${escapeHtml(tenant.location)}</div></div>
+          <div class="master-card__head"><div><strong>${escapeHtml(tenant.name)}</strong> ${tenantIdentityBadge(tenant)}<div>${escapeHtml(tenantSubline(tenant))}</div><div>${escapeHtml(tenant.location)}</div></div>
           <div><span class="${planBadgeClass(tenant.plan_tier)}">${escapeHtml(tenant.plan_label)}</span> <span class="${statusClass(tenant.status)}">${escapeHtml(tenant.status)}</span></div></div>
           <div class="master-card__footer"><button type="button" class="master-view-link" data-view="${tenant.id}">View →</button></div>
         </article>`;
@@ -287,8 +305,10 @@
     const pct = staffLimit ? Math.min(100, Math.round((active / staffLimit) * 100)) : 0;
 
     document.getElementById("detail-grid").innerHTML = `
+      <div><dt>Tenant ID</dt><dd>#${tenant.id}${tenant.is_canonical_tenant === false ? " · duplicate trial" : tenant.duplicate_billing_email ? " · primary account for this email" : ""}</dd></div>
       <div><dt>Location</dt><dd>${escapeHtml(tenant.location)}</dd></div>
-      <div><dt>Contact</dt><dd>${escapeHtml(tenant.billing_email || "—")}</dd></div>
+      <div><dt>Billing email</dt><dd>${escapeHtml(tenant.billing_email || "—")}</dd></div>
+      <div><dt>HR login</dt><dd>${escapeHtml(tenant.hr_login_email || "—")}</dd></div>
       <div><dt>Platform access</dt><dd>${escapeHtml(tenant.platform_status || "active")}${tenant.deleted_at ? " · deleted" : ""}</dd></div>
       <div><dt>Plan</dt><dd>${escapeHtml(tenant.plan_label)} · ${escapeHtml(tenant.mrr_label)}</dd></div>
       <div><dt>Employees</dt><dd>${active} active · ${tenant.employees_pending_portal || 0} portal pending
@@ -412,9 +432,20 @@
   }
 
   function exportCsv() {
-    const header = ["Business", "Location", "Plan", "Status", "Staff", "MRR", "Email"];
+    const header = ["Tenant ID", "Business", "Billing email", "HR login", "Location", "Plan", "Status", "Staff", "MRR", "Duplicate trial"];
     const lines = state.tenants.map((tenant) =>
-      [tenant.name, tenant.location, tenant.plan_label, tenant.status, tenant.staff_label, tenant.mrr_gbp ?? "", tenant.billing_email || ""]
+      [
+        tenant.id,
+        tenant.name,
+        tenant.billing_email || "",
+        tenant.hr_login_email || "",
+        tenant.location,
+        tenant.plan_label,
+        tenant.status,
+        tenant.staff_label,
+        tenant.mrr_gbp ?? "",
+        tenant.duplicate_billing_email && !tenant.is_canonical_tenant ? "yes" : "no",
+      ]
         .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
         .join(",")
     );
@@ -425,6 +456,32 @@
     link.download = `shiftswift-tenants-${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
     URL.revokeObjectURL(url);
+  }
+
+  async function cleanupDuplicateTrials() {
+    const duplicates = state.tenants.filter((tenant) => tenant.duplicate_billing_email && !tenant.is_canonical_tenant);
+    if (!duplicates.length) {
+      window.alert("No duplicate trial workspaces found for the same billing email.");
+      return;
+    }
+    const preview = await apiPost("/master/tenants/cleanup-duplicates?dry_run=true");
+    const count = (preview.removed || []).length;
+    if (!count) {
+      window.alert("No duplicate trial workspaces to remove.");
+      return;
+    }
+    const names = (preview.removed || [])
+      .slice(0, 5)
+      .map((row) => `#${row.tenant_id} ${row.name || row.billing_email}`)
+      .join("\n");
+    const ok = window.confirm(
+      `Remove ${count} duplicate trial workspace(s)?\n\nKeeps the primary account for each billing email and soft-deletes the extras:\n${names}${count > 5 ? "\n…" : ""}`,
+    );
+    if (!ok) return;
+    await apiPost("/master/tenants/cleanup-duplicates?dry_run=false");
+    window.alert(`Removed ${count} duplicate trial workspace(s).`);
+    await loadTenants();
+    closeDetail();
   }
 
   async function loadTenants() {
@@ -732,6 +789,9 @@
 
   els.detailClose?.addEventListener("click", closeDetail);
   els.exportBtn?.addEventListener("click", exportCsv);
+  document.getElementById("master-cleanup-duplicates-btn")?.addEventListener("click", () => {
+    void cleanupDuplicateTrials();
+  });
 
   function closeSidebar() {
     els.sidebar?.classList.remove("is-open");

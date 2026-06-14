@@ -116,6 +116,45 @@ def _avg_trial_days_left(rows: list[dict[str, Any]]) -> int | None:
     return int(round(sum(values) / len(values)))
 
 
+def _pick_canonical_tenant_id(tenants: list[dict[str, Any]]) -> int:
+    """Prefer the tenant whose HR login matches billing email, then any HR login, then newest."""
+    if not tenants:
+        raise ValueError("No tenants to pick from")
+
+    def sort_key(row: dict[str, Any]) -> tuple[int, int, str]:
+        billing = (row.get("billing_email") or "").strip().lower()
+        login = (row.get("hr_login_email") or "").strip().lower()
+        created = row.get("created_at") or ""
+        email_match = 0 if billing and login and billing == login else 1
+        has_login = 0 if login else 1
+        return (email_match, has_login, created)
+
+    return sorted(tenants, key=sort_key)[0]["id"]
+
+
+def annotate_duplicate_billing_emails(tenants: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Mark duplicate trial workspaces that share the same billing email."""
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for tenant in tenants:
+        email = (tenant.get("billing_email") or "").strip().lower()
+        if not email:
+            tenant["duplicate_billing_email"] = False
+            tenant["is_canonical_tenant"] = True
+            continue
+        groups.setdefault(email, []).append(tenant)
+
+    for group in groups.values():
+        if len(group) == 1:
+            group[0]["duplicate_billing_email"] = False
+            group[0]["is_canonical_tenant"] = True
+            continue
+        keeper_id = _pick_canonical_tenant_id(group)
+        for tenant in group:
+            tenant["duplicate_billing_email"] = True
+            tenant["is_canonical_tenant"] = tenant["id"] == keeper_id
+    return tenants
+
+
 def _serialize_tenant_row(row: tuple[Any, ...], *, as_of: datetime | None = None) -> dict[str, Any]:
     (
         tenant_id,
@@ -140,6 +179,7 @@ def _serialize_tenant_row(row: tuple[Any, ...], *, as_of: datetime | None = None
         portal_pending,
         last_login,
         compliance_alerts,
+        hr_login_email,
     ) = row
 
     now = as_of or _utcnow()
@@ -185,6 +225,7 @@ def _serialize_tenant_row(row: tuple[Any, ...], *, as_of: datetime | None = None
         "last_active": last_active,
         "compliance_alerts": int(compliance_alerts or 0),
         "billing_email": billing_email,
+        "hr_login_email": hr_login_email,
         "company_number": company_number,
         "registered_address": registered_address,
         "phone": phone,
@@ -219,7 +260,8 @@ SELECT
   COALESCE(emp.active_count, 0) AS active_employees,
   COALESCE(emp.portal_pending, 0) AS portal_pending,
   login.last_login,
-  COALESCE(comp.alert_count, 0) AS compliance_alerts
+  COALESCE(comp.alert_count, 0) AS compliance_alerts,
+  hr.hr_login_email
 FROM tenants t
 LEFT JOIN LATERAL (
   SELECT
@@ -250,6 +292,17 @@ LEFT JOIN LATERAL (
     AND rtw.expiry_date IS NOT NULL
     AND rtw.expiry_date <= CURRENT_DATE + INTERVAL '30 days'
 ) comp ON TRUE
+LEFT JOIN LATERAL (
+  SELECT u.username AS hr_login_email
+  FROM app_users u
+  WHERE u.tenant_id = t.id
+    AND u.role = 'hr'
+    AND u.is_active = TRUE
+  ORDER BY
+    CASE WHEN lower(u.username) = lower(COALESCE(t.billing_email, '')) THEN 0 ELSE 1 END,
+    u.updated_at DESC NULLS LAST
+  LIMIT 1
+) hr ON TRUE
 WHERE t.id != %s
 """
 
@@ -285,11 +338,13 @@ def list_tenants(
             for row in tenants
             if query in row["name"].lower()
             or query in (row.get("billing_email") or "").lower()
+            or query in (row.get("hr_login_email") or "").lower()
             or query in row["location"].lower()
             or query in (row.get("company_number") or "").lower()
+            or query in str(row["id"])
         ]
 
-    return tenants
+    return annotate_duplicate_billing_emails(tenants)
 
 
 def overview_stats(
@@ -441,6 +496,22 @@ def get_tenant_detail(
         if plan
         else None
     )
+
+    email = (tenant.get("billing_email") or "").strip().lower()
+    if email:
+        peer_group = [
+            row
+            for row in list_tenants(conn=conn, master_tenant_id=master_tenant_id, include_deleted=False)
+            if (row.get("billing_email") or "").strip().lower() == email
+        ]
+        annotate_duplicate_billing_emails(peer_group)
+        peer = next((row for row in peer_group if row["id"] == tenant_id), None)
+        if peer:
+            tenant["duplicate_billing_email"] = peer["duplicate_billing_email"]
+            tenant["is_canonical_tenant"] = peer["is_canonical_tenant"]
+    else:
+        tenant["duplicate_billing_email"] = False
+        tenant["is_canonical_tenant"] = True
 
     return {
         **tenant,

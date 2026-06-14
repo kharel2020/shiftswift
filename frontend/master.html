@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#142033" />
     <script src="./app-icons.js?v=brandkit-v5"></script>
     <title>ShiftSwift OPS | Master Admin</title>
-    <link rel="stylesheet" href="./master.css?v=3" />
+    <link rel="stylesheet" href="./master.css?v=4" />
   </head>
   <body class="master-app">
     <div id="master-overlay" class="master-overlay" hidden aria-hidden="true"></div>
@@ -70,6 +70,7 @@
             <p class="master-page-sub" id="master-page-sub">Loading…</p>
           </div>
           <div class="master-page-actions">
+            <button type="button" class="master-btn master-btn--ghost" id="master-cleanup-duplicates-btn">Remove duplicate trials</button>
             <button type="button" class="master-btn master-btn--ghost" id="master-export-btn" disabled>Export CSV</button>
             <label class="master-check master-page-actions__check">
               <input type="checkbox" id="master-include-deleted" />
@@ -208,6 +209,6 @@
 
     <script src="./brand-config.js?v=brand-v4"></script>
     <script src="./master-auth-guard.js?v=2"></script>
-    <script src="./master.js?v=4"></script>
+    <script src="./master.js?v=5"></script>
   </body>
 </html>

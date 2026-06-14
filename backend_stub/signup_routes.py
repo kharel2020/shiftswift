@@ -66,18 +66,33 @@ def _db_conn() -> Any:
 
 
 def _business_email_registered(conn: Any, email: str) -> bool:
-    """True when email already has an active business-portal login (one email, one account)."""
+    """True when email already owns a workspace (one email, one HR account)."""
+    email_norm = email.strip().lower()
+    master_tenant_id = int(os.getenv("MASTER_CUSTOMER_ID", "999"))
     with conn.cursor() as cur:
         cur.execute(
             """
             SELECT 1
             FROM app_users
-            WHERE lower(username) = lower(%s)
+            WHERE lower(username) = %s
               AND is_active = TRUE
               AND COALESCE(login_portal, 'business') = 'business'
             LIMIT 1
             """,
-            (email.strip(),),
+            (email_norm,),
+        )
+        if cur.fetchone():
+            return True
+        cur.execute(
+            """
+            SELECT 1
+            FROM tenants
+            WHERE lower(trim(billing_email)) = %s
+              AND deleted_at IS NULL
+              AND id != %s
+            LIMIT 1
+            """,
+            (email_norm, master_tenant_id),
         )
         return cur.fetchone() is not None
 

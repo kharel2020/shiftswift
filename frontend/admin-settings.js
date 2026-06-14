@@ -344,10 +344,12 @@
     if (!host || host.dataset.ready === "true") return;
     const username = localStorage.getItem("username") || "Admin";
     const role = localStorage.getItem("userRole") || "hr";
+    const tenantId = window.Admin?.TENANT_ID || localStorage.getItem("tenantId") || "—";
     const roleLabel = role === "admin" ? "Platform admin" : role === "hr" ? "HR admin" : role;
 
     host.innerHTML = `
       <p class="muted">People who can sign in to this ShiftSwift HR workspace.</p>
+      <p class="muted">Workspace ID <strong>#${escapeHtml(tenantId)}</strong> · your sign-in email is your HR username.</p>
       <div class="settings-user-card">
         <div class="settings-user-card__main">
           <strong>${escapeHtml(username)}</strong>
