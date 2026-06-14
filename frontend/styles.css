@@ -5522,6 +5522,31 @@ button.lifecycle-accordion-header .lifecycle-accordion-chevron {
   color: var(--green-800);
 }
 
+.rota-status-badge--locked {
+  background: #faeeda;
+  color: #633806;
+  border: 1px solid #fac775;
+}
+
+.rota-readonly-notice {
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid #fac775;
+  background: #faeeda;
+  color: #633806;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+body.rota-week-readonly .rota-builder-hint {
+  opacity: 0.55;
+}
+
+.rota-grid--readonly .rota-shift-block {
+  cursor: default;
+}
+
 .rota-builder-subbar {
   display: flex;
   flex-wrap: wrap;

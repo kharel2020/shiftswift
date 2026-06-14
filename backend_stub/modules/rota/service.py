@@ -46,6 +46,59 @@ def week_dates(week_start: date) -> list[date]:
     return [week_start + timedelta(days=offset) for offset in range(7)]
 
 
+def week_end_date(week_start: date) -> date:
+    return week_start + timedelta(days=6)
+
+
+def is_week_fully_past(week_start: date, *, today: date | None = None) -> bool:
+    ref = today or date.today()
+    return week_end_date(week_start) < ref
+
+
+def rota_week_policy(week_start: date, week: dict[str, Any] | None) -> dict[str, Any]:
+    fully_past = is_week_fully_past(week_start)
+    published = bool(week and week.get("status") == "published")
+    readonly = fully_past and published
+    copy_blocked = fully_past
+    policy: dict[str, Any] = {
+        "is_past_week": fully_past,
+        "readonly": readonly,
+        "copy_blocked": copy_blocked,
+    }
+    if readonly:
+        policy["readonly_reason"] = (
+            "This published rota is locked because the week has ended. "
+            "It stays available for attendance and payroll records."
+        )
+    if copy_blocked:
+        policy["copy_blocked_reason"] = "Copying shifts into past weeks is disabled for compliance."
+    return policy
+
+
+def assert_week_save_allowed(*, week_start: date, status: str | None) -> None:
+    if is_week_fully_past(week_start) and status == "published":
+        raise RotaValidationError(
+            "This published rota is locked. Past published weeks cannot be changed.",
+            field="week_start",
+        )
+
+
+def assert_week_copy_allowed(*, week_start: date) -> None:
+    if is_week_fully_past(week_start):
+        raise RotaValidationError(
+            "Cannot copy shifts into a past week. Select the current week or a future week.",
+            field="week_start",
+        )
+
+
+def assert_week_publish_allowed(*, week_start: date) -> None:
+    if is_week_fully_past(week_start):
+        raise RotaValidationError(
+            "Cannot publish a rota for a week that has already ended.",
+            field="week_start",
+        )
+
+
 def shift_window(*, shift_date: date, start_time: time, end_time: time) -> tuple[datetime, datetime]:
     start = datetime.combine(shift_date, start_time, tzinfo=timezone.utc)
     if end_time <= start_time:
@@ -249,10 +302,11 @@ def get_week_rota(*, tenant_id: int, week_start: date, conn: Any) -> dict[str, A
     week, shifts = list_shifts_for_week(tenant_id=tenant_id, week_start=week_start, conn=conn)
     return {
         "week_start": week_start.isoformat(),
-        "week_end": (week_start + timedelta(days=6)).isoformat(),
+        "week_end": week_end_date(week_start).isoformat(),
         "week_days": [day.isoformat() for day in week_dates(week_start)],
         "week": week,
         "shifts": shifts,
+        "policy": rota_week_policy(week_start, week),
     }
 
 
@@ -292,6 +346,7 @@ def save_week_shifts(
         row = cur.fetchone()
         if row:
             week_id, status, version = row[0], row[1], int(row[2])
+            assert_week_save_allowed(week_start=week_start, status=status)
             if expected_version is not None and expected_version != version:
                 raise RotaConflictError(expected_version, version)
         else:
@@ -361,6 +416,7 @@ def publish_week(
     conn: Any,
     notify_staff: bool = False,
 ) -> dict[str, Any]:
+    assert_week_publish_allowed(week_start=week_start)
     with conn.cursor() as cur:
         cur.execute(
             """
@@ -423,6 +479,7 @@ def copy_week_from_previous(
     actor_username: str,
     conn: Any,
 ) -> dict[str, Any]:
+    assert_week_copy_allowed(week_start=week_start)
     previous_start = week_start - timedelta(days=7)
     _, previous_shifts = list_shifts_for_week(tenant_id=tenant_id, week_start=previous_start, conn=conn)
     if not previous_shifts:

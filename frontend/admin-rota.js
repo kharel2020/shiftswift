@@ -5,6 +5,7 @@
   let sectionReady = false;
   let currentWeekStart = mondayIso(new Date());
   let weekMeta = null;
+  let rotaPolicy = null;
   let shifts = [];
   let attendanceByShiftId = new Map();
   let employees = [];
@@ -83,6 +84,52 @@
     const d = new Date(`${isoDate}T12:00:00`);
     d.setDate(d.getDate() + days);
     return d.toISOString().slice(0, 10);
+  }
+
+  function weekEndIso(weekStart) {
+    return addDays(weekStart, 6);
+  }
+
+  function isWeekFullyPast(weekStart = currentWeekStart) {
+    const today = new Date().toISOString().slice(0, 10);
+    return weekEndIso(weekStart) < today;
+  }
+
+  function isWeekReadOnly() {
+    if (rotaPolicy && typeof rotaPolicy.readonly === "boolean") {
+      return rotaPolicy.readonly;
+    }
+    return isWeekFullyPast() && weekMeta?.status === "published";
+  }
+
+  function isWeekCopyBlocked() {
+    if (rotaPolicy && typeof rotaPolicy.copy_blocked === "boolean") {
+      return rotaPolicy.copy_blocked;
+    }
+    return isWeekFullyPast();
+  }
+
+  function readonlyMessage() {
+    return (
+      rotaPolicy?.readonly_reason ||
+      "This published rota is locked because the week has ended. It stays available for attendance and payroll records."
+    );
+  }
+
+  function copyBlockedMessage() {
+    return rotaPolicy?.copy_blocked_reason || "Copying shifts into past weeks is disabled for compliance.";
+  }
+
+  function guardWeekEditable(actionLabel = "change this rota") {
+    if (!isWeekReadOnly()) return true;
+    setMessage(`${readonlyMessage()} Cannot ${actionLabel}.`, "error");
+    return false;
+  }
+
+  function guardWeekCopy() {
+    if (!isWeekCopyBlocked()) return true;
+    setMessage(copyBlockedMessage(), "error");
+    return false;
   }
 
   function formatWeekLabel(weekStart) {
@@ -342,6 +389,7 @@
   }
 
   function moveShift(index, employeeId, shiftDate) {
+    if (!guardWeekEditable("move shifts")) return false;
     const shift = shifts[index];
     if (!shift) return false;
     const next = { ...shift, employee_id: employeeId, shift_date: shiftDate, employee_name: employeeName(employeeId) };
@@ -358,6 +406,7 @@
   }
 
   function copyShift(index, employeeId, shiftDate) {
+    if (!guardWeekEditable("copy shifts")) return false;
     const source = shifts[index];
     if (!source) return false;
     const copy = cloneShift(source);
@@ -378,6 +427,7 @@
   }
 
   function deleteShift(index) {
+    if (!guardWeekEditable("remove shifts")) return;
     if (!shifts[index]) return;
     shifts.splice(index, 1);
     markDirty();
@@ -386,6 +436,7 @@
   }
 
   function copyShiftToDays(index, dayIsos) {
+    if (!guardWeekEditable("copy shifts")) return;
     const source = shifts[index];
     if (!source) return;
     let added = 0;
@@ -416,6 +467,7 @@
   }
 
   function quickAddShift(employeeId, shiftDate) {
+    if (!guardWeekEditable("add shifts")) return;
     const emp = employeeById(employeeId);
     const roleLabel = emp?.job_title || emp?.department || "";
     const candidate = {
@@ -457,6 +509,7 @@
   }
 
   function showContextMenu(event, shiftIndex) {
+    if (isWeekReadOnly()) return;
     event.preventDefault();
     const menu = ensureContextMenu();
     menu.innerHTML = `
@@ -547,29 +600,68 @@
     const status = document.getElementById("rota-week-status");
     if (!status) return;
     if (weekMeta?.status === "published") {
-      status.innerHTML = '<span class="rota-status-badge rota-status-badge--published">Published</span>';
+      status.innerHTML = isWeekReadOnly()
+        ? '<span class="rota-status-badge rota-status-badge--locked">Locked</span>'
+        : '<span class="rota-status-badge rota-status-badge--published">Published</span>';
       return;
     }
     status.innerHTML = '<span class="rota-status-badge rota-status-badge--draft">Draft</span>';
+  }
+
+  function updateReadOnlyUi() {
+    const readonly = isWeekReadOnly();
+    const copyBlocked = isWeekCopyBlocked();
+    const notice = document.getElementById("rota-readonly-notice");
+    if (notice) {
+      if (readonly) {
+        notice.hidden = false;
+        notice.textContent = readonlyMessage();
+      } else if (copyBlocked) {
+        notice.hidden = false;
+        notice.textContent = `${copyBlockedMessage()} You can still save draft changes if this week was never published.`;
+      } else {
+        notice.hidden = true;
+        notice.textContent = "";
+      }
+    }
+    document.body.classList.toggle("rota-week-readonly", readonly);
+
+    ["rota-save-btn", "rota-clear-btn", "rota-mobile-add-shift", "rota-publish-btn"].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = readonly;
+    });
+
+    const copyBtn = document.getElementById("rota-copy-prev-btn");
+    if (copyBtn) {
+      copyBtn.disabled = copyBlocked;
+      copyBtn.title = copyBlocked ? copyBlockedMessage() : "Copy all shifts from the previous week";
+    }
+
+    if (readonly && panelOpen) closeShiftPanel();
   }
 
   function updateHeader() {
     document.getElementById("rota-week-label").textContent = formatWeekLabel(currentWeekStart);
     renderStatusBadge();
     const publishBtn = document.getElementById("rota-publish-btn");
-    const canPublish = Boolean(weekMeta?.version && weekMeta.status !== "published" && shifts.length && !dirty);
+    const canPublish = Boolean(
+      weekMeta?.version && weekMeta.status !== "published" && shifts.length && !dirty && !isWeekReadOnly(),
+    );
     if (publishBtn) {
       publishBtn.disabled = !canPublish;
-      publishBtn.title = canPublish
-        ? "Publish so staff see shifts in Time Clock"
-        : dirty
-          ? "Save the rota before publishing"
-          : !shifts.length
-            ? "Add shifts before publishing"
-            : weekMeta?.status === "published"
-              ? "Already published"
-              : "Save the rota before publishing";
+      publishBtn.title = isWeekReadOnly()
+        ? readonlyMessage()
+        : canPublish
+          ? "Publish so staff see shifts in Time Clock"
+          : dirty
+            ? "Save the rota before publishing"
+            : !shifts.length
+              ? "Add shifts before publishing"
+              : weekMeta?.status === "published"
+                ? "Already published"
+                : "Save the rota before publishing";
     }
+    updateReadOnlyUi();
   }
 
   function renderWeekSummary() {
@@ -677,12 +769,17 @@
       host.innerHTML = '<p class="muted">No active employees — open the Employees section to add team members.</p>';
       return;
     }
+    const readonly = isWeekReadOnly();
     if (!shifts.length) {
-      host.innerHTML = `<div class="rota-list-empty">
+      host.innerHTML = readonly
+        ? '<p class="muted">No shifts this week.</p>'
+        : `<div class="rota-list-empty">
         <p class="muted">No shifts this week.</p>
         <button type="button" class="btn primary" id="rota-empty-add-shift">+ Add shift</button>
       </div>`;
-      document.getElementById("rota-empty-add-shift")?.addEventListener("click", () => openShiftPanel());
+      if (!readonly) {
+        document.getElementById("rota-empty-add-shift")?.addEventListener("click", () => openShiftPanel());
+      }
       return;
     }
 
@@ -704,8 +801,12 @@
               <span class="rota-shift-card__role muted">${role}</span>
             </div>
             <div class="rota-shift-card__actions">
-              <button type="button" class="btn ghost btn-sm" data-rota-edit="${index}">Edit</button>
-              <button type="button" class="btn ghost btn-sm" data-rota-remove="${index}">Remove</button>
+              ${
+                readonly
+                  ? ""
+                  : `<button type="button" class="btn ghost btn-sm" data-rota-edit="${index}">Edit</button>
+              <button type="button" class="btn ghost btn-sm" data-rota-remove="${index}">Remove</button>`
+              }
             </div>
           </article>`;
       })
@@ -729,37 +830,43 @@
     renderShiftCards();
     const tbody = document.getElementById("rota-shifts-body");
     if (!tbody || window.matchMedia("(max-width: 860px)").matches) return;
+    const readonly = isWeekReadOnly();
+    const columns = [
+      {
+        key: "shift_date",
+        render: (r) =>
+          new Date(`${r.shift_date}T12:00:00`).toLocaleDateString("en-GB", {
+            weekday: "short",
+            day: "numeric",
+            month: "short",
+          }),
+      },
+      { key: "employee_name", render: (r) => escapeHtml(r.employee_name || employeeName(r.employee_id)) },
+      { key: "start_time", render: (r) => escapeHtml(r.start_time) },
+      { key: "end_time", render: (r) => escapeHtml(r.end_time) },
+      { key: "role_label", render: (r) => escapeHtml(r.role_label || "—") },
+      {
+        key: "punch",
+        render: (r) => {
+          const a = attendanceForShift(r);
+          return a ? statusPill(ATTENDANCE_LABELS[a.attendance_status] || a.attendance_status) : "—";
+        },
+      },
+    ];
+    if (!readonly) {
+      columns.push({
+        key: "actions",
+        render: (r, index) =>
+          `<button type="button" class="btn ghost btn-sm" data-rota-edit="${index}">Edit</button> <button type="button" class="btn ghost btn-sm" data-rota-remove="${index}">Remove</button>`,
+      });
+    }
     renderTableBody(tbody, {
       emptyMessage: hasActiveEmployees()
-        ? "No shifts this week — click + in the grid to add one."
+        ? readonly
+          ? "No shifts this week."
+          : "No shifts this week — click + in the grid to add one."
         : "No active employees — open the Employees section to add team members.",
-      columns: [
-        {
-          key: "shift_date",
-          render: (r) =>
-            new Date(`${r.shift_date}T12:00:00`).toLocaleDateString("en-GB", {
-              weekday: "short",
-              day: "numeric",
-              month: "short",
-            }),
-        },
-        { key: "employee_name", render: (r) => escapeHtml(r.employee_name || employeeName(r.employee_id)) },
-        { key: "start_time", render: (r) => escapeHtml(r.start_time) },
-        { key: "end_time", render: (r) => escapeHtml(r.end_time) },
-        { key: "role_label", render: (r) => escapeHtml(r.role_label || "—") },
-        {
-          key: "punch",
-          render: (r) => {
-            const a = attendanceForShift(r);
-            return a ? statusPill(ATTENDANCE_LABELS[a.attendance_status] || a.attendance_status) : "—";
-          },
-        },
-        {
-          key: "actions",
-          render: (r, index) =>
-            `<button type="button" class="btn ghost btn-sm" data-rota-edit="${index}">Edit</button> <button type="button" class="btn ghost btn-sm" data-rota-remove="${index}">Remove</button>`,
-        },
-      ],
+      columns,
       rows: shifts,
     });
     tbody.querySelectorAll("[data-rota-remove]").forEach((btn) => {
@@ -785,6 +892,9 @@
     if (!grid) return;
     renderEmptyState();
     if (!hasActiveEmployees()) return;
+
+    const readonly = isWeekReadOnly();
+    grid.classList.toggle("rota-grid--readonly", readonly);
 
     const days = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
     const todayIso = new Date().toISOString().slice(0, 10);
@@ -830,14 +940,21 @@
             ? "Day off"
             : `${escapeHtml(s.start_time)}–${escapeHtml(s.end_time)}<span class="rota-shift-block-role">${roleText}</span>`;
           html += `<div class="rota-shift-wrap">
-            <button type="button" class="rota-shift-block ${blockClass}${attendClass}" draggable="true" data-shift-index="${index}" title="Drag to move · Alt+drag to copy">${blockBody}</button>
-            <div class="rota-shift-actions">
+            <button type="button" class="rota-shift-block ${blockClass}${attendClass}" draggable="${readonly ? "false" : "true"}" data-shift-index="${index}" title="${readonly ? "View only" : "Drag to move · Alt+drag to copy"}">${blockBody}</button>
+            ${
+              readonly
+                ? ""
+                : `<div class="rota-shift-actions">
               <button type="button" class="rota-shift-action" data-copy-shift="${index}" title="Copy to days" aria-label="Copy to days">⧉</button>
               <button type="button" class="rota-shift-action rota-shift-action--danger" data-delete-shift="${index}" title="Delete shift" aria-label="Delete shift">×</button>
-            </div>
+            </div>`
+            }
           </div>`;
         });
-        html += `<span class="rota-add-cell-hint">+ add</span></div>`;
+        if (!readonly) {
+          html += `<span class="rota-add-cell-hint">+ add</span>`;
+        }
+        html += "</div>";
       });
       html += "</div>";
     });
@@ -950,6 +1067,8 @@
   }
 
   function openShiftPanel({ employeeId = null, shiftDate = null, shiftIndex = null } = {}) {
+    if (shiftIndex == null && !guardWeekEditable("add shifts")) return;
+    if (shiftIndex != null && !guardWeekEditable("edit shifts")) return;
     if (!hasActiveEmployees()) {
       setMessage("Add active employees before building a rota.", "error");
       return;
@@ -1118,6 +1237,7 @@
         return;
       }
       weekMeta = data.week || { status: "draft", version: 1 };
+      rotaPolicy = data.policy || null;
       shifts = (data.shifts || []).map((s) => ({ ...s }));
       attendanceByShiftId = new Map();
       (data.attendance?.items || []).forEach((item) => {
@@ -1127,7 +1247,9 @@
       renderAttendanceTable(data.attendance?.items || []);
       renderAll();
       populateDaySelect();
-      if (weekMeta.status === "published") {
+      if (isWeekReadOnly()) {
+        setMessage(readonlyMessage(), "info");
+      } else if (weekMeta.status === "published") {
         setMessage("Published — punch vs rota flags update live.");
       } else if (!hasActiveEmployees()) {
         setMessage("Add active employees before building a rota.");
@@ -1155,6 +1277,7 @@
   }
 
   function addShiftFromForm() {
+    if (!guardWeekEditable("save shifts")) return;
     const overlap = findFormOverlap();
     if (overlap) {
       setMessage(overlap, "error");
@@ -1191,6 +1314,7 @@
   }
 
   function clearRota() {
+    if (!guardWeekEditable("clear this rota")) return;
     if (!shifts.length) return;
     if (
       !window.confirm(
@@ -1207,6 +1331,7 @@
   }
 
   async function saveRota() {
+    if (!guardWeekEditable("save this rota")) return;
     const btn = document.getElementById("rota-save-btn");
     if (btn) btn.disabled = true;
     setMessage("Saving…");
@@ -1248,6 +1373,7 @@
   }
 
   async function copyPreviousWeek() {
+    if (!guardWeekCopy()) return;
     if (!window.confirm("Copy all shifts from last week into this week? Unsaved changes will be lost.")) return;
     setMessage("Copying…");
     try {
@@ -1271,6 +1397,7 @@
   }
 
   async function publishRota() {
+    if (!guardWeekEditable("publish this rota")) return;
     if (!weekMeta?.version) {
       setMessage("Save the rota before publishing.", "error");
       return;

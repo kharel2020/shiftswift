@@ -13,7 +13,12 @@ sys.path.insert(0, str(BACKEND))
 
 from modules.rota.service import (
     RotaValidationError,
+    assert_week_copy_allowed,
+    assert_week_publish_allowed,
+    assert_week_save_allowed,
+    is_week_fully_past,
     parse_week_start,
+    rota_week_policy,
     shift_window,
     shifts_overlap,
     validate_no_overlaps,
@@ -89,3 +94,40 @@ def test_validate_no_overlaps_raises() -> None:
     ]
     with pytest.raises(RotaValidationError):
         validate_no_overlaps(shifts)
+
+
+def test_past_published_week_is_readonly() -> None:
+    week_start = date(2026, 6, 1)
+    today = date(2026, 6, 10)
+    assert is_week_fully_past(week_start, today=today)
+    policy = rota_week_policy(week_start, {"status": "published", "version": 2})
+    assert policy["readonly"] is True
+    assert policy["copy_blocked"] is True
+    with pytest.raises(RotaValidationError):
+        assert_week_save_allowed(week_start=week_start, status="published")
+    with pytest.raises(RotaValidationError):
+        assert_week_copy_allowed(week_start=week_start)
+    with pytest.raises(RotaValidationError):
+        assert_week_publish_allowed(week_start=week_start)
+
+
+def test_past_draft_week_allows_save_not_copy() -> None:
+    week_start = date(2026, 6, 1)
+    today = date(2026, 6, 10)
+    policy = rota_week_policy(week_start, {"status": "draft", "version": 1})
+    assert policy["readonly"] is False
+    assert policy["copy_blocked"] is True
+    assert_week_save_allowed(week_start=week_start, status="draft")
+    with pytest.raises(RotaValidationError):
+        assert_week_copy_allowed(week_start=week_start)
+
+
+def test_current_week_is_editable() -> None:
+    week_start = date(2026, 6, 8)
+    today = date(2026, 6, 10)
+    assert not is_week_fully_past(week_start, today=today)
+    policy = rota_week_policy(week_start, {"status": "published", "version": 3})
+    assert policy["readonly"] is False
+    assert policy["copy_blocked"] is False
+    assert_week_save_allowed(week_start=week_start, status="published")
+    assert_week_copy_allowed(week_start=week_start)
