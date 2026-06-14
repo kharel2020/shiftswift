@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en" data-app-icon="clock">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Premises clock-in QR card</title>
+    <script src="./app-icons.js?v=brandkit-v5"></script>
+    <link rel="stylesheet" href="./theme.css?v=brand-v1" />
+    <style>
+      :root {
+        --card-w: 85mm;
+        --card-h: 55mm;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: var(--font-body);
+        color: var(--ink-900);
+        background: #e8ecef;
+      }
+
+      .toolbar {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 1rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .toolbar p {
+        margin: 0;
+        font-size: 0.9rem;
+        color: var(--gray-700);
+      }
+
+      .toolbar-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      .btn {
+        border: 0;
+        border-radius: 999px;
+        padding: 0.55rem 1rem;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .btn--primary {
+        background: var(--green-700);
+        color: #fff;
+      }
+
+      .btn--ghost {
+        background: #fff;
+        color: var(--green-800);
+        border: 1px solid var(--green-300);
+      }
+
+      .preview-wrap {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+        justify-content: center;
+        padding: 0 1rem 2rem;
+      }
+
+      .punch-card {
+        width: var(--card-w);
+        height: var(--card-h);
+        background: #fff;
+        border-radius: 4mm;
+        box-shadow: 0 8px 28px rgba(15, 23, 42, 0.12);
+        padding: 4mm;
+        display: grid;
+        grid-template-columns: 28mm 1fr;
+        gap: 3mm;
+        align-items: center;
+        overflow: hidden;
+      }
+
+      .punch-card__qr img {
+        width: 28mm;
+        height: 28mm;
+        display: block;
+        border-radius: 2mm;
+      }
+
+      .punch-card__brand {
+        display: flex;
+        align-items: center;
+        gap: 2mm;
+        margin-bottom: 1.5mm;
+      }
+
+      .punch-card__brand img {
+        width: 6mm;
+        height: 6mm;
+        border-radius: 1mm;
+      }
+
+      .punch-card__brand span {
+        font-size: 2.6mm;
+        font-weight: 700;
+        color: var(--green-800);
+        letter-spacing: 0.02em;
+      }
+
+      .punch-card__site {
+        margin: 0 0 1mm;
+        font-size: 4.2mm;
+        line-height: 1.15;
+        color: var(--ink-900);
+      }
+
+      .punch-card__lead {
+        margin: 0 0 1.5mm;
+        font-size: 2.8mm;
+        line-height: 1.35;
+        color: var(--gray-700);
+      }
+
+      .punch-card__steps {
+        margin: 0;
+        padding-left: 3.5mm;
+        font-size: 2.5mm;
+        line-height: 1.35;
+        color: var(--gray-700);
+      }
+
+      .punch-card__steps li + li {
+        margin-top: 0.6mm;
+      }
+
+      .sheet-note {
+        max-width: 85mm;
+        font-size: 0.82rem;
+        color: var(--gray-600);
+        line-height: 1.45;
+      }
+
+      .empty-state {
+        max-width: 520px;
+        margin: 2rem auto;
+        padding: 1.25rem;
+        background: #fff;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--card-border);
+      }
+
+      @media print {
+        body {
+          background: #fff;
+        }
+
+        .toolbar,
+        .sheet-note {
+          display: none !important;
+        }
+
+        .preview-wrap {
+          padding: 0;
+          display: block;
+        }
+
+        .punch-card {
+          box-shadow: none;
+          page-break-after: always;
+          margin: 0 auto;
+        }
+
+        @page {
+          size: var(--card-w) var(--card-h);
+          margin: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="toolbar">
+      <p>Print on thick paper or laminate. Staff scan with the Time Clock app — not a separate hardware scanner.</p>
+      <div class="toolbar-actions">
+        <button type="button" class="btn btn--ghost" id="card-size-pocket">Pocket card</button>
+        <button type="button" class="btn btn--ghost" id="card-size-desk">Desk card</button>
+        <button type="button" class="btn btn--primary" id="card-print-btn">Print card</button>
+      </div>
+    </div>
+
+    <div id="card-empty" class="empty-state" hidden>
+      <h1>Missing QR link</h1>
+      <p>Open this page from <strong>Admin → Time punch → select a site → Print QR card</strong>, or add <code>?url=…&amp;site=…</code> to the address bar.</p>
+    </div>
+
+    <div class="preview-wrap" id="card-preview" hidden>
+      <div>
+        <article class="punch-card" id="punch-card">
+          <div class="punch-card__qr">
+            <img id="card-qr-image" alt="" />
+          </div>
+          <div class="punch-card__body">
+            <div class="punch-card__brand">
+              <img src="./assets/shiftswift-clock-app-icon-192.png?v=brandkit-v5" alt="" />
+              <span>ShiftSwift Time Clock</span>
+            </div>
+            <h1 class="punch-card__site" id="card-site-name">Main site</h1>
+            <p class="punch-card__lead">Scan to verify you are on premises, then clock in or out in the app.</p>
+            <ol class="punch-card__steps">
+              <li>Open <strong>Time Clock</strong> on your phone</li>
+              <li>Tap <strong>Scan premises QR</strong></li>
+              <li>Clock in or out</li>
+            </ol>
+          </div>
+        </article>
+        <p class="sheet-note">
+          Tip: print several copies for entrances, tills, and back-of-house. Rotate the QR in admin if a card is lost.
+        </p>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        const params = new URLSearchParams(window.location.search);
+        const clockUrl = params.get("url") || "";
+        const siteName = params.get("site") || "Work site";
+        const preview = document.getElementById("card-preview");
+        const empty = document.getElementById("card-empty");
+        const qrImg = document.getElementById("card-qr-image");
+        const siteEl = document.getElementById("card-site-name");
+        const printBtn = document.getElementById("card-print-btn");
+        const pocketBtn = document.getElementById("card-size-pocket");
+        const deskBtn = document.getElementById("card-size-desk");
+
+        function setSize(mode) {
+          const root = document.documentElement;
+          if (mode === "desk") {
+            root.style.setProperty("--card-w", "105mm");
+            root.style.setProperty("--card-h", "74mm");
+          } else {
+            root.style.setProperty("--card-w", "85mm");
+            root.style.setProperty("--card-h", "55mm");
+          }
+        }
+
+        if (!clockUrl) {
+          empty.hidden = false;
+          return;
+        }
+
+        preview.hidden = false;
+        siteEl.textContent = siteName;
+        qrImg.src =
+          "https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=8&data=" +
+          encodeURIComponent(clockUrl);
+        qrImg.alt = "Premises clock-in QR for " + siteName;
+
+        printBtn?.addEventListener("click", () => window.print());
+        pocketBtn?.addEventListener("click", () => setSize("pocket"));
+        deskBtn?.addEventListener("click", () => setSize("desk"));
+      })();
+    </script>
+  </body>
+</html>

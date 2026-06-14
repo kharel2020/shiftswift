@@ -7656,6 +7656,44 @@ body.rota-week-readonly .rota-builder-hint {
   font-weight: 600;
 }
 
+.punch-clock-qr-card {
+  margin: 0 0 1rem;
+}
+
+.punch-clock-qr-body {
+  margin-top: 0.5rem;
+}
+
+.punch-clock-qr-layout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.punch-clock-qr-image {
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  background: #fff;
+}
+
+.punch-clock-qr-meta {
+  flex: 1;
+  min-width: 180px;
+}
+
+.punch-clock-qr-url {
+  margin: 0 0 0.75rem;
+  font-size: 0.82rem;
+  word-break: break-all;
+}
+
+.punch-clock-qr-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .punch-type-badge {
   display: inline-block;
   padding: 2px 8px;

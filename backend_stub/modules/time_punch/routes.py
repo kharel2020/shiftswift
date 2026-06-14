@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from typing import Annotated, Any, Literal
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import Response
@@ -36,6 +37,15 @@ class GeofencePreviewRequest(BaseModel):
     latitude: float = Field(ge=-90, le=90)
     longitude: float = Field(ge=-180, le=180)
     accuracy_meters: float | None = Field(default=None, ge=0)
+
+
+class SiteScanRequest(BaseModel):
+    clock_token: str = Field(min_length=8, max_length=200)
+
+
+class SiteTokenPunchRequest(BaseModel):
+    punch_type: Literal["in", "out"]
+    clock_token: str = Field(min_length=8, max_length=200)
 
 
 class PunchSiteUpdate(BaseModel):
@@ -173,6 +183,62 @@ def punch(
         conn.close()
 
 
+@employee_router.post("/scan")
+def punch_scan_site(
+    payload: SiteScanRequest,
+    current_user: Annotated[AuthUser, Depends(get_employee_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, object]:
+    """Validate a premises QR token so the employee can punch without GPS."""
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = get_connection()
+    try:
+        employee = _employee_for_user(tenant_id=tenant_id, user=current_user, conn=conn)
+        return punch_service.scan_site_token(
+            tenant_id=tenant_id,
+            employee_id=employee["id"],
+            clock_token=payload.clock_token,
+            conn=conn,
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    finally:
+        conn.close()
+
+
+@employee_router.post("/punch-site")
+def punch_via_site_token(
+    payload: SiteTokenPunchRequest,
+    request: Request,
+    current_user: Annotated[AuthUser, Depends(get_employee_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, object]:
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = get_connection()
+    try:
+        employee = _employee_for_user(tenant_id=tenant_id, user=current_user, conn=conn)
+        return punch_service.record_punch_via_site_token(
+            tenant_id=tenant_id,
+            employee_id=employee["id"],
+            username=current_user.username,
+            punch_type=payload.punch_type,
+            clock_token=payload.clock_token,
+            ip_address=client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+            conn=conn,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    finally:
+        conn.close()
+
+
 @admin_router.get("/sites")
 def list_sites(
     current_user: Annotated[AuthUser, Depends(get_hr_user)],
@@ -262,6 +328,67 @@ def patch_site(
             raise HTTPException(status_code=404, detail="Punch site not found")
         conn.commit()
         return punch_service._site_row(row)
+    finally:
+        conn.close()
+
+
+@admin_router.get("/sites/{site_id}/clock-qr")
+def site_clock_qr(
+    site_id: int,
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, object]:
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = get_connection()
+    try:
+        token = punch_service.ensure_site_clock_token(tenant_id=tenant_id, site_id=site_id, conn=conn)
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, tenant_id, name, address, latitude, longitude, radius_meters, is_primary, is_active, updated_at,
+                       COALESCE(permitted_roles, 'all')
+                FROM punch_sites
+                WHERE id = %s AND tenant_id = %s
+                """,
+                (site_id, tenant_id),
+            )
+            row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Punch site not found")
+        site = punch_service._site_row(row)
+        clock_url = punch_service.site_clock_url(clock_token=token)
+        return {
+            "site_id": site_id,
+            "site_name": site["name"],
+            "clock_token": token,
+            "clock_url": clock_url,
+            "qr_image_url": f"https://api.qrserver.com/v1/create-qr-code/?size=240x240&data={quote(clock_url, safe='')}",
+        }
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    finally:
+        conn.close()
+
+
+@admin_router.post("/sites/{site_id}/rotate-clock-token")
+def rotate_site_clock_token(
+    site_id: int,
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, object]:
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = get_connection()
+    try:
+        token = punch_service.rotate_site_clock_token(tenant_id=tenant_id, site_id=site_id, conn=conn)
+        clock_url = punch_service.site_clock_url(clock_token=token)
+        return {
+            "site_id": site_id,
+            "clock_token": token,
+            "clock_url": clock_url,
+            "qr_image_url": f"https://api.qrserver.com/v1/create-qr-code/?size=240x240&data={quote(clock_url, safe='')}",
+        }
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     finally:
         conn.close()
 

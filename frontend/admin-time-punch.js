@@ -137,8 +137,11 @@
   }
 
   function renderDistanceCell(punch) {
-    if (punch.admin_override) {
+    if (punch.admin_override || punch.punch_method === "admin") {
       return '<span class="punch-distance punch-distance--admin" title="Admin override">Admin</span>';
+    }
+    if (punch.punch_method === "site_qr") {
+      return '<span class="punch-distance punch-distance--ok" title="Premises QR">QR</span>';
     }
     if (punch.distance_meters == null) return '<span class="muted">—</span>';
     const within = punchWithinGeofence(punch);
@@ -317,6 +320,11 @@
         <div><dt>Last synced</dt><dd>${escapeHtml(formatSyncShort(site.updated_at || lastSyncIso()))}</dd></div>
         <div><dt>Today's punches</dt><dd>${stats.total} punch${stats.total === 1 ? "" : "es"}${stats.outside ? ` · <span class="punch-outside-count">${stats.outside} outside geofence</span>` : ""}</dd></div>
       </dl>
+      <article class="card punch-clock-qr-card" id="punch-clock-qr-card">
+        <h4 class="hr-section-title">Premises QR clock-in</h4>
+        <p class="muted punch-tab-intro">Print this QR indoors where GPS is weak. Staff scan it in the Time Clock app, then clock in or out without GPS for 10 minutes.</p>
+        <div id="punch-clock-qr-body" class="punch-clock-qr-body muted">Loading QR…</div>
+      </article>
       ${geofenceVizSvg(site.radius_meters)}
       ${alertsHtml}
       <div id="punch-edit-form-wrap" hidden></div>
@@ -328,7 +336,62 @@
 
     content.querySelector("#punch-test-geofence-btn")?.addEventListener("click", () => testGeofence(site));
     content.querySelector("#punch-edit-site-btn")?.addEventListener("click", () => showEditSiteForm(site));
+    loadSiteClockQr(site.id);
     updateSetupUi();
+  }
+
+  async function loadSiteClockQr(siteId) {
+    const host = $("punch-clock-qr-body");
+    if (!host) return;
+    host.textContent = "Loading QR…";
+    try {
+      const res = await apiFetch(`/admin/time-punch/sites/${siteId}/clock-qr`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || "Could not load QR");
+      host.innerHTML = `
+        <div class="punch-clock-qr-layout">
+          <img src="${escapeHtml(data.qr_image_url)}" width="200" height="200" alt="Premises clock-in QR for ${escapeHtml(data.site_name)}" class="punch-clock-qr-image" />
+          <div class="punch-clock-qr-meta">
+            <p class="punch-clock-qr-url"><a href="${escapeHtml(data.clock_url)}" target="_blank" rel="noopener">${escapeHtml(data.clock_url)}</a></p>
+            <div class="punch-clock-qr-actions">
+              <button type="button" class="btn outline" id="punch-copy-clock-url">Copy link</button>
+              <button type="button" class="btn outline" id="punch-print-clock-card">Print QR card</button>
+              <button type="button" class="btn ghost" id="punch-rotate-clock-token">Rotate QR</button>
+            </div>
+          </div>
+        </div>`;
+      host.querySelector("#punch-copy-clock-url")?.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(data.clock_url);
+          showMessage("Premises clock link copied.", "ok");
+        } catch {
+          showMessage("Could not copy link.");
+        }
+      });
+      host.querySelector("#punch-print-clock-card")?.addEventListener("click", () => {
+        const cardUrl = new URL("./punch-site-card.html", window.location.href);
+        cardUrl.searchParams.set("url", data.clock_url);
+        cardUrl.searchParams.set("site", data.site_name || "Work site");
+        window.open(cardUrl.toString(), "_blank", "noopener");
+      });
+      host.querySelector("#punch-rotate-clock-token")?.addEventListener("click", async () => {
+        if (!window.confirm("Rotate this QR code? Old printed codes will stop working.")) return;
+        showMessage("Rotating premises QR…");
+        try {
+          const rotateRes = await apiFetch(`/admin/time-punch/sites/${siteId}/rotate-clock-token`, {
+            method: "POST",
+          });
+          const rotateData = await rotateRes.json().catch(() => ({}));
+          if (!rotateRes.ok) throw new Error(rotateData.detail || "Rotate failed");
+          showMessage("Premises QR rotated. Reprint the code at this site.", "ok");
+          await loadSiteClockQr(siteId);
+        } catch (error) {
+          showMessage(error.message || "Could not rotate QR.");
+        }
+      });
+    } catch (error) {
+      host.textContent = error.message || "Could not load premises QR.";
+    }
   }
 
   function showEditSiteForm(site) {

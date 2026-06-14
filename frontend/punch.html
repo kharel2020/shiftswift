@@ -9,11 +9,11 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Time Clock" />
-    <meta name="description" content="Clock in and out at your assigned work sites with GPS verification." />
+    <meta name="description" content="Clock in and out at your assigned work sites with GPS or premises QR." />
     <title>ShiftSwift Time Clock</title>
     <link rel="manifest" href="./punch-manifest.webmanifest?v=4" />
     <link rel="stylesheet" href="./theme.css?v=brand-v1" />
-    <link rel="stylesheet" href="./punch.css?v=3" />
+    <link rel="stylesheet" href="./punch.css?v=4" />
   </head>
   <body class="punch-app">
     <div class="punch-shell">
@@ -50,7 +50,7 @@
       <section id="punch-login-view" class="punch-view">
         <article class="punch-card">
           <h1>Employee sign in</h1>
-          <p class="punch-lead">Sign in to clock in or out at your assigned work site. Location access is required when you punch.</p>
+          <p class="punch-lead">Sign in to clock in or out at your assigned work site. Use GPS outdoors or scan the premises QR indoors.</p>
 
           <form id="punch-login-form" class="punch-form">
             <label>
@@ -102,7 +102,7 @@
               </div>
             </div>
             <p class="punch-install-help__note">
-              When you clock in or out, allow <strong>location</strong> when your phone asks — GPS is required at your work site.
+              When you clock in or out outdoors, allow <strong>location</strong> when your phone asks. Indoors, scan the premises QR code instead.
             </p>
           </div>
         </details>
@@ -134,6 +134,11 @@
 
           <div id="punch-geofence-status" class="punch-geofence-status punch-geofence-status--loading" aria-live="polite">
             Getting your location…
+          </div>
+
+          <div class="punch-scan-row">
+            <button type="button" class="punch-btn punch-btn--ghost" id="punch-scan-btn">Scan premises QR</button>
+            <p id="punch-site-scan-status" class="punch-site-scan-status" hidden aria-live="polite"></p>
           </div>
 
           <div class="punch-clock-actions">
@@ -183,9 +188,26 @@
       </section>
     </div>
 
+    <dialog id="punch-scan-dialog" class="punch-scan-dialog">
+      <form method="dialog" class="punch-scan-dialog__inner">
+        <header class="punch-scan-dialog__head">
+          <h2>Scan premises QR</h2>
+          <button type="button" class="punch-link-btn" id="punch-scan-close" aria-label="Close">Close</button>
+        </header>
+        <p class="punch-scan-dialog__lead">Point your camera at the QR code displayed at your work site.</p>
+        <video id="punch-scan-video" class="punch-scan-video" playsinline muted></video>
+        <p id="punch-scan-message" class="punch-scan-message" aria-live="polite"></p>
+        <label class="punch-scan-fallback">
+          Or paste the code from the QR link
+          <input type="text" id="punch-scan-manual" placeholder="Paste QR link or code" autocomplete="off" />
+        </label>
+        <button type="button" class="punch-btn punch-btn--primary" id="punch-scan-manual-btn">Verify code</button>
+      </form>
+    </dialog>
+
     <script src="./brand-config.js?v=brand-v4"></script>
     <script src="./push-notifications.js?v=1"></script>
-    <script src="./punch.js?v=5"></script>
+    <script src="./punch.js?v=6"></script>
     <script src="./cookie-consent.js?v=1"></script>
   </body>
 </html>

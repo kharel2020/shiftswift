@@ -6,12 +6,15 @@ import csv
 import io
 import math
 import os
+import secrets
 from datetime import date, datetime, timezone
 from typing import Any, Literal
 
 from modules.time_punch.geocode import geocode_address
 
 PunchType = Literal["in", "out"]
+PunchMethod = Literal["gps", "site_qr", "admin"]
+SITE_SCAN_VALID_MINUTES = 10
 DEFAULT_RADIUS_M = int(os.getenv("PUNCH_GEOFENCE_RADIUS_M", "150"))
 
 
@@ -62,6 +65,122 @@ def _site_row(row: tuple[Any, ...]) -> dict[str, Any]:
         "is_active": bool(row[8]),
         "updated_at": updated_at.isoformat() if hasattr(updated_at, "isoformat") else updated_at,
         "permitted_roles": permitted_roles or "all",
+    }
+
+
+def _new_site_clock_token() -> str:
+    return secrets.token_urlsafe(24)
+
+
+def ensure_site_clock_token(*, tenant_id: int, site_id: int, conn: Any) -> str:
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT site_clock_token FROM punch_sites WHERE id = %s AND tenant_id = %s",
+            (site_id, tenant_id),
+        )
+        row = cur.fetchone()
+        if not row:
+            raise LookupError("Punch site not found")
+        if row[0]:
+            return str(row[0])
+        token = _new_site_clock_token()
+        cur.execute(
+            """
+            UPDATE punch_sites
+            SET site_clock_token = %s, updated_at = NOW()
+            WHERE id = %s AND tenant_id = %s
+            """,
+            (token, site_id, tenant_id),
+        )
+    conn.commit()
+    return token
+
+
+def rotate_site_clock_token(*, tenant_id: int, site_id: int, conn: Any) -> str:
+    token = _new_site_clock_token()
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE punch_sites
+            SET site_clock_token = %s, updated_at = NOW()
+            WHERE id = %s AND tenant_id = %s
+            RETURNING id
+            """,
+            (token, site_id, tenant_id),
+        )
+        if not cur.fetchone():
+            raise LookupError("Punch site not found")
+    conn.commit()
+    return token
+
+
+def site_clock_url(*, clock_token: str) -> str:
+    base = os.getenv("APP_URL", "https://app.shiftswifthr.co.uk").rstrip("/")
+    return f"{base}/punch.html?clock={clock_token}"
+
+
+def resolve_site_by_clock_token(*, clock_token: str, conn: Any) -> dict[str, Any] | None:
+    clean = (clock_token or "").strip()
+    if not clean:
+        return None
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT id, tenant_id, name, address, latitude, longitude, radius_meters, is_primary, is_active, updated_at,
+                   COALESCE(permitted_roles, 'all')
+            FROM punch_sites
+            WHERE site_clock_token = %s AND is_active = TRUE
+            LIMIT 1
+            """,
+            (clean,),
+        )
+        row = cur.fetchone()
+    if not row:
+        return None
+    return _site_row(row)
+
+
+def employee_can_punch_at_site(*, tenant_id: int, employee_id: int, site_id: int, conn: Any) -> bool:
+    sites = eligible_sites_for_employee(tenant_id=tenant_id, employee_id=employee_id, conn=conn)
+    return any(site["id"] == site_id for site in sites)
+
+
+def _validate_punch_transition(*, tenant_id: int, employee_id: int, punch_type: PunchType, conn: Any) -> None:
+    last = last_punch(tenant_id=tenant_id, employee_id=employee_id, conn=conn)
+    if punch_type == "in" and last and last["punch_type"] == "in":
+        raise ValueError("Already clocked in — clock out first")
+    if punch_type == "out" and (not last or last["punch_type"] != "in"):
+        raise ValueError("Not clocked in")
+
+
+def scan_site_token(
+    *,
+    tenant_id: int,
+    employee_id: int,
+    clock_token: str,
+    conn: Any,
+) -> dict[str, Any]:
+    """Validate a premises QR token for the logged-in employee (no punch recorded)."""
+    site = resolve_site_by_clock_token(clock_token=clock_token, conn=conn)
+    if not site:
+        raise LookupError("Invalid or expired premises code")
+    if site["tenant_id"] != tenant_id:
+        raise PermissionError("This premises code belongs to another business")
+    if not employee_can_punch_at_site(
+        tenant_id=tenant_id,
+        employee_id=employee_id,
+        site_id=site["id"],
+        conn=conn,
+    ):
+        raise PermissionError(f"You are not assigned to punch at {site['name']}")
+    return {
+        "site_id": site["id"],
+        "site_name": site["name"],
+        "valid_until_minutes": SITE_SCAN_VALID_MINUTES,
+        "message": (
+            f"Premises verified — {site['name']}. "
+            f"You can clock in or out without GPS for the next {SITE_SCAN_VALID_MINUTES} minutes."
+        ),
     }
 
 
@@ -390,11 +509,12 @@ def record_punch(
     if employee["status"] not in {"active", "onboarding"}:
         raise PermissionError("employee is not active")
 
-    last = last_punch(tenant_id=tenant_id, employee_id=employee_id, conn=conn)
-    if punch_type == "in" and last and last["punch_type"] == "in":
-        raise ValueError("Already clocked in — clock out first")
-    if punch_type == "out" and (not last or last["punch_type"] != "in"):
-        raise ValueError("Not clocked in")
+    _validate_punch_transition(
+        tenant_id=tenant_id,
+        employee_id=employee_id,
+        punch_type=punch_type,
+        conn=conn,
+    )
 
     sites = eligible_sites_for_employee(tenant_id=tenant_id, employee_id=employee_id, conn=conn)
     if not sites:
@@ -414,9 +534,9 @@ def record_punch(
             INSERT INTO time_punches (
               tenant_id, employee_id, punch_site_id, punch_type, punched_at,
               latitude, longitude, accuracy_meters, distance_meters, within_geofence,
-              app_username, ip_address, user_agent
+              app_username, ip_address, user_agent, punch_method
             )
-            VALUES (%s, %s, %s, %s, NOW(), %s, %s, %s, %s, TRUE, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, NOW(), %s, %s, %s, %s, TRUE, %s, %s, %s, 'gps')
             RETURNING id, punched_at
             """,
             (
@@ -443,6 +563,81 @@ def record_punch(
         "site_name": best_site["name"],
         "distance_meters": round(best_distance, 1),
         "clocked_in": punch_type == "in",
+        "punch_method": "gps",
+    }
+
+
+def record_punch_via_site_token(
+    *,
+    tenant_id: int,
+    employee_id: int,
+    username: str,
+    punch_type: PunchType,
+    clock_token: str,
+    ip_address: str | None,
+    user_agent: str | None,
+    conn: Any,
+) -> dict[str, Any]:
+    employee = resolve_employee(tenant_id=tenant_id, username=username, conn=conn)
+    if not employee or employee["id"] != employee_id:
+        raise LookupError("employee not found")
+    if employee["status"] not in {"active", "onboarding"}:
+        raise PermissionError("employee is not active")
+
+    _validate_punch_transition(
+        tenant_id=tenant_id,
+        employee_id=employee_id,
+        punch_type=punch_type,
+        conn=conn,
+    )
+
+    site = resolve_site_by_clock_token(clock_token=clock_token, conn=conn)
+    if not site:
+        raise LookupError("Invalid or expired premises code")
+    if site["tenant_id"] != tenant_id:
+        raise PermissionError("This premises code belongs to another business")
+    if not employee_can_punch_at_site(
+        tenant_id=tenant_id,
+        employee_id=employee_id,
+        site_id=site["id"],
+        conn=conn,
+    ):
+        raise PermissionError(f"You are not assigned to punch at {site['name']}")
+
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO time_punches (
+              tenant_id, employee_id, punch_site_id, punch_type, punched_at,
+              latitude, longitude, accuracy_meters, distance_meters, within_geofence,
+              app_username, ip_address, user_agent, punch_method
+            )
+            VALUES (%s, %s, %s, %s, NOW(), %s, %s, NULL, 0, TRUE, %s, %s, %s, 'site_qr')
+            RETURNING id, punched_at
+            """,
+            (
+                tenant_id,
+                employee_id,
+                site["id"],
+                punch_type,
+                site["latitude"],
+                site["longitude"],
+                username,
+                ip_address,
+                user_agent,
+            ),
+        )
+        row = cur.fetchone()
+    conn.commit()
+    punched_at = row[1]
+    return {
+        "id": row[0],
+        "punch_type": punch_type,
+        "punched_at": punched_at.isoformat() if isinstance(punched_at, datetime) else punched_at,
+        "site_name": site["name"],
+        "distance_meters": 0.0,
+        "clocked_in": punch_type == "in",
+        "punch_method": "site_qr",
     }
 
 
@@ -493,9 +688,9 @@ def record_admin_punch(
             INSERT INTO time_punches (
               tenant_id, employee_id, punch_site_id, punch_type, punched_at,
               latitude, longitude, accuracy_meters, distance_meters, within_geofence,
-              app_username, admin_override, admin_note, recorded_by
+              app_username, admin_override, admin_note, recorded_by, punch_method
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, NULL, 0, TRUE, %s, TRUE, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, NULL, 0, TRUE, %s, TRUE, %s, %s, 'admin')
             RETURNING id, punched_at
             """,
             (
@@ -521,6 +716,7 @@ def record_admin_punch(
         "site_name": site["name"],
         "employee_name": f"{employee[1]} {employee[2]}".strip(),
         "admin_override": True,
+        "punch_method": "admin",
     }
 
 
@@ -545,6 +741,7 @@ def _punch_row(row: tuple[Any, ...]) -> dict[str, Any]:
         "radius_meters": radius_meters,
         "within_geofence": within_geofence,
         "accuracy_meters": float(row[13]) if len(row) > 13 and row[13] is not None else None,
+        "punch_method": row[14] if len(row) > 14 and row[14] else "gps",
     }
 
 
@@ -584,7 +781,8 @@ def list_recent_punches(
             SELECT tp.id, tp.punch_type, tp.punched_at, tp.distance_meters,
                    e.first_name, e.last_name, e.email, ps.name,
                    COALESCE(tp.admin_override, FALSE), tp.admin_note,
-                   tp.punch_site_id, ps.radius_meters, tp.within_geofence, tp.accuracy_meters
+                   tp.punch_site_id, ps.radius_meters, tp.within_geofence, tp.accuracy_meters,
+                   COALESCE(tp.punch_method, 'gps')
             FROM time_punches tp
             JOIN employees e ON e.id = tp.employee_id
             JOIN punch_sites ps ON ps.id = tp.punch_site_id
@@ -630,11 +828,18 @@ def export_punches_csv(
             "Site",
             "Distance (m)",
             "GPS accuracy (m)",
+            "Method",
             "Admin override",
             "Admin note",
         ]
     )
     for item in items:
+        method = item.get("punch_method") or "gps"
+        method_label = {
+            "gps": "GPS",
+            "site_qr": "Premises QR",
+            "admin": "Admin",
+        }.get(method, method)
         writer.writerow(
             [
                 item.get("punched_at") or "",
@@ -644,6 +849,7 @@ def export_punches_csv(
                 item.get("site_name") or "",
                 item.get("distance_meters") if item.get("distance_meters") is not None else "",
                 item.get("accuracy_meters") if item.get("accuracy_meters") is not None else "",
+                method_label,
                 "Yes" if item.get("admin_override") else "No",
                 item.get("admin_note") or "",
             ]

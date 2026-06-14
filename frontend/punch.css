@@ -222,6 +222,122 @@ body.punch-app {
   margin-bottom: 0.75rem;
 }
 
+.punch-geofence-status {
+  margin: 0 0 0.75rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: var(--radius-lg);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.punch-geofence-status--loading {
+  background: var(--sand-100);
+  color: var(--gray-700);
+}
+
+.punch-geofence-status--ok {
+  background: #dff5ea;
+  border: 1px solid var(--green-300);
+  color: var(--green-900);
+}
+
+.punch-geofence-status--warn {
+  background: #fff4e5;
+  border: 1px solid #f5c26b;
+  color: #8a4b00;
+}
+
+.punch-geofence-status--error {
+  background: #fdecea;
+  border: 1px solid #f5a8a0;
+  color: #8a1c1c;
+}
+
+.punch-scan-row {
+  display: grid;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.punch-site-scan-status {
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-lg);
+  background: #eef8f3;
+  border: 1px solid var(--green-300);
+  color: var(--green-900);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.punch-site-scan-status[hidden] {
+  display: none !important;
+}
+
+.punch-scan-dialog {
+  width: min(92vw, 420px);
+  border: 0;
+  border-radius: var(--radius-lg);
+  padding: 0;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.18);
+}
+
+.punch-scan-dialog::backdrop {
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.punch-scan-dialog__inner {
+  padding: 1rem;
+}
+
+.punch-scan-dialog__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.punch-scan-dialog__head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.punch-scan-dialog__lead {
+  margin: 0 0 0.75rem;
+  font-size: 0.88rem;
+  color: var(--gray-600);
+}
+
+.punch-scan-video {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: var(--radius-lg);
+  background: #111;
+  object-fit: cover;
+}
+
+.punch-scan-message {
+  min-height: 1.25rem;
+  margin: 0.65rem 0 0;
+  font-size: 0.85rem;
+  color: var(--gray-700);
+}
+
+.punch-scan-fallback {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.85rem 0;
+  font-size: 0.85rem;
+}
+
+.punch-scan-fallback input {
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+}
+
 .punch-message {
   min-height: 1.25rem;
   margin: 0 0 0.75rem;

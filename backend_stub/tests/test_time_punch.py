@@ -9,7 +9,13 @@ from unittest.mock import MagicMock
 BACKEND = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BACKEND))
 
-from modules.time_punch.service import haversine_meters, preview_geofence, record_punch
+from modules.time_punch.service import (
+    haversine_meters,
+    preview_geofence,
+    record_punch,
+    record_punch_via_site_token,
+    scan_site_token,
+)
 
 
 def test_haversine_same_point_is_zero() -> None:
@@ -94,3 +100,78 @@ def test_preview_geofence_inside() -> None:
     )
     assert result["within_geofence"] is True
     assert result["distance_meters"] == 0.0
+
+
+def test_scan_site_token_rejects_other_tenant() -> None:
+    conn = MagicMock()
+    cursor = MagicMock()
+    conn.cursor.return_value.__enter__.return_value = cursor
+    cursor.fetchone.return_value = (
+        1,
+        99,
+        "Main site",
+        "1 High St",
+        53.4794,
+        -2.2451,
+        150,
+        True,
+        True,
+        None,
+        "all",
+    )
+
+    try:
+        scan_site_token(
+            tenant_id=1,
+            employee_id=1,
+            clock_token="valid-token",
+            conn=conn,
+        )
+        assert False, "expected PermissionError"
+    except PermissionError as exc:
+        assert "another business" in str(exc)
+
+
+def test_record_punch_via_site_token_inserts_qr_punch() -> None:
+    conn = MagicMock()
+    cursor = MagicMock()
+    conn.cursor.return_value.__enter__.return_value = cursor
+
+    cursor.fetchone.side_effect = [
+        (1, "Demo", "Employee", "employee@shiftswifthr.co.uk", "active"),
+        None,
+        (
+            1,
+            1,
+            "Main site",
+            "1 High St",
+            53.4794,
+            -2.2451,
+            150,
+            True,
+            True,
+            None,
+            "all",
+        ),
+        (42, "2026-06-08T09:00:00+00:00"),
+    ]
+    cursor.fetchall.side_effect = [
+        [(1, 1, "Main site", "1 High St", 53.4794, -2.2451, 150, True, True)],
+    ]
+
+    result = record_punch_via_site_token(
+        tenant_id=1,
+        employee_id=1,
+        username="employee@shiftswifthr.co.uk",
+        punch_type="in",
+        clock_token="valid-token",
+        ip_address="127.0.0.1",
+        user_agent="test",
+        conn=conn,
+    )
+
+    assert result["punch_method"] == "site_qr"
+    assert result["site_name"] == "Main site"
+    assert result["clocked_in"] is True
+    insert_sql = cursor.execute.call_args_list[-1][0][0]
+    assert "site_qr" in insert_sql
