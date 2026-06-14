@@ -13,7 +13,7 @@
     <title>ShiftSwift HR | Admin Console</title>
     <link rel="manifest" href="./admin-manifest.webmanifest?v=3" />
     <title>ShiftSwift HR | Admin Console</title>
-    <link rel="stylesheet" href="./styles.css?v=admin-v34" />
+    <link rel="stylesheet" href="./styles.css?v=admin-v35" />
   </head>
   <body>
     <script src="./admin-impersonation.js?v=1"></script>
@@ -1567,12 +1567,16 @@
             <button type="button" class="btn ghost" id="rota-clear-btn">Clear rota</button>
           </div>
           </article>
+          <div id="rota-panel-portal-home">
           <div id="rota-shift-backdrop" class="rota-shift-backdrop mobile-editor-backdrop" hidden aria-hidden="true"></div>
           <aside id="rota-shift-panel" class="rota-shift-panel mobile-editor-sheet" hidden role="dialog" aria-modal="true" aria-labelledby="rota-shift-popover-title">
             <div class="mobile-editor-sheet__grabber" aria-hidden="true"></div>
             <div class="rota-shift-panel__head mobile-editor-sheet__head">
               <h3 id="rota-shift-popover-title">Add shift</h3>
-              <button type="button" class="rota-shift-panel__close mobile-editor-sheet__close" id="rota-shift-popover-close" aria-label="Close panel">×</button>
+              <div class="rota-shift-panel__head-actions">
+                <button type="button" class="btn primary rota-shift-head-save" id="rota-shift-head-save">Save shift</button>
+                <button type="button" class="rota-shift-panel__close mobile-editor-sheet__close" id="rota-shift-popover-close" aria-label="Close panel">×</button>
+              </div>
             </div>
             <p id="rota-shift-popover-context" class="muted rota-shift-panel__context mobile-editor-sheet__context"></p>
             <div class="rota-shift-panel__body mobile-editor-sheet__body">
@@ -1612,6 +1616,7 @@
               <button type="button" class="btn primary" id="rota-add-btn">Add to rota</button>
             </div>
           </aside>
+          </div>
         </section>
 
         <section id="leave" class="admin-section" hidden>
@@ -1920,7 +1925,7 @@
     <script src="./admin-offboarding.js?v=admin-v5"></script>
     <script src="./admin-templates.js?v=admin-v8"></script>
     <script src="./admin-time-punch.js?v=6"></script>
-    <script src="./admin-rota.js?v=9"></script>
+    <script src="./admin-rota.js?v=10"></script>
     <script src="./admin-leave.js?v=1"></script>
     <script src="./app.js?v=admin-v6"></script>
     <script src="./contracts.js?v=5"></script>

@@ -34,17 +34,33 @@
   ];
   let panelOpen = false;
 
+  function isMobileViewport() {
+    return window.matchMedia("(max-width: 860px)").matches;
+  }
+
   function isMobileRotaUi() {
-    return (
-      window.matchMedia("(max-width: 860px)").matches &&
-      (document.body.dataset.mobileTab === "rota" || activeView === "list")
-    );
+    return isMobileViewport() && (document.body.dataset.mobileTab === "rota" || activeView === "list");
+  }
+
+  function ensureShiftPanelPlacement() {
+    const panel = document.getElementById("rota-shift-panel");
+    const backdrop = document.getElementById("rota-shift-backdrop");
+    const home = document.getElementById("rota-panel-portal-home");
+    if (!panel || !backdrop) return;
+    const target = isMobileViewport() ? document.body : home;
+    if (!target) return;
+    if (backdrop.parentElement !== target) {
+      target.appendChild(backdrop);
+    }
+    if (panel.parentElement !== target) {
+      target.appendChild(panel);
+    }
   }
 
   function syncPanelOverlay(open) {
     const backdrop = document.getElementById("rota-shift-backdrop");
     if (!backdrop) return;
-    if (open && isMobileRotaUi()) {
+    if (open && isMobileViewport()) {
       backdrop.removeAttribute("hidden");
       backdrop.setAttribute("aria-hidden", "false");
       document.body.classList.add("rota-shift-panel-open");
@@ -190,22 +206,26 @@
   function updateOverlapStatus() {
     const el = document.getElementById("rota-overlap-status");
     const addBtn = document.getElementById("rota-add-btn");
+    const headSave = document.getElementById("rota-shift-head-save");
     if (!el) return;
     const overlap = findFormOverlap();
     if (!getFormShiftCandidate()) {
       el.textContent = "";
       el.className = "rota-overlap-status";
       if (addBtn) addBtn.disabled = false;
+      if (headSave) headSave.disabled = false;
       return;
     }
     if (overlap) {
       el.textContent = overlap;
       el.className = "rota-overlap-status rota-overlap-status--error";
       if (addBtn) addBtn.disabled = true;
+      if (headSave) headSave.disabled = true;
     } else {
       el.textContent = "No overlap detected for this slot";
       el.className = "rota-overlap-status rota-overlap-status--ok";
       if (addBtn) addBtn.disabled = false;
+      if (headSave) headSave.disabled = false;
     }
   }
 
@@ -269,12 +289,22 @@
     list.innerHTML = roleSuggestions().map((value) => `<option value="${escapeHtml(value)}"></option>`).join("");
   }
 
+  function roleFromEmployee(employeeId) {
+    const emp = employeeById(employeeId);
+    if (!emp) return "";
+    return emp.job_title || emp.department || "";
+  }
+
+  function applyRoleFromEmployee(employeeId) {
+    const roleInput = document.getElementById("rota-add-role");
+    if (!roleInput) return;
+    roleInput.value = roleFromEmployee(employeeId);
+  }
+
   function prefillRoleFromEmployee(employeeId) {
     const roleInput = document.getElementById("rota-add-role");
     if (!roleInput || roleInput.value.trim()) return;
-    const emp = employeeById(employeeId);
-    if (!emp) return;
-    roleInput.value = emp.job_title || emp.department || "";
+    roleInput.value = roleFromEmployee(employeeId);
   }
 
   function setMessage(text, type = "info") {
@@ -563,13 +593,14 @@
     const panel = document.getElementById("rota-shift-panel");
     if (!panel) return;
     const showPanel =
-      hasActiveEmployees() && panelOpen && (activeView === "grid" || isMobileRotaUi());
+      hasActiveEmployees() && panelOpen && (activeView === "grid" || isMobileViewport());
     if (showPanel) {
       panel.removeAttribute("hidden");
     } else {
       panel.setAttribute("hidden", "");
     }
     syncPanelOverlay(showPanel);
+    ensureShiftPanelPlacement();
   }
 
   function renderEmptyState() {
@@ -954,7 +985,7 @@
       populateTimeSelects("09:00", "17:00");
       if (roleInput) roleInput.value = "";
       if (notesInput) notesInput.value = "";
-      if (employeeSelect?.value) prefillRoleFromEmployee(Number(employeeSelect.value));
+      if (employeeSelect?.value) applyRoleFromEmployee(Number(employeeSelect.value));
       if (title) title.textContent = "Add shift";
       if (addBtn) addBtn.textContent = "Add to rota";
     }
@@ -1052,11 +1083,13 @@
       select.disabled = true;
       hint?.removeAttribute("hidden");
       document.getElementById("rota-add-btn")?.setAttribute("disabled", "");
+      document.getElementById("rota-shift-head-save")?.setAttribute("disabled", "");
       return;
     }
     select.disabled = false;
     hint?.setAttribute("hidden", "");
     document.getElementById("rota-add-btn")?.removeAttribute("disabled");
+    document.getElementById("rota-shift-head-save")?.removeAttribute("disabled");
     select.innerHTML = staff
       .map(
         (e) =>
@@ -1146,9 +1179,15 @@
     }
     shifts.sort((a, b) => `${a.shift_date}${a.start_time}`.localeCompare(`${b.shift_date}${b.start_time}`));
     markDirty();
-    panelOpen = true;
+    editingShiftIndex = null;
     renderAll();
     updateOverlapStatus();
+    if (isMobileViewport()) {
+      closeShiftPanel();
+    } else {
+      panelOpen = true;
+      syncPanelVisibility();
+    }
   }
 
   function clearRota() {
@@ -1275,6 +1314,8 @@
   }
 
   async function initSection() {
+    ensureShiftPanelPlacement();
+    window.addEventListener("resize", ensureShiftPanelPlacement);
     populateTimeSelects("09:00", "17:00");
 
     document.getElementById("rota-prev-week")?.addEventListener("click", () => changeWeek(-1));
@@ -1286,6 +1327,7 @@
       loadWeek();
     });
     document.getElementById("rota-add-btn")?.addEventListener("click", addShiftFromForm);
+    document.getElementById("rota-shift-head-save")?.addEventListener("click", addShiftFromForm);
     document.getElementById("rota-save-btn")?.addEventListener("click", saveRota);
     document.getElementById("rota-copy-prev-btn")?.addEventListener("click", copyPreviousWeek);
     document.getElementById("rota-clear-btn")?.addEventListener("click", clearRota);
@@ -1302,7 +1344,7 @@
     document.getElementById("rota-shift-backdrop")?.addEventListener("click", closeShiftPanel);
     document.getElementById("rota-mobile-add-shift")?.addEventListener("click", () => openShiftPanel());
     document.getElementById("rota-add-employee")?.addEventListener("change", (event) => {
-      prefillRoleFromEmployee(Number(event.target.value));
+      applyRoleFromEmployee(Number(event.target.value));
       updatePanelContext();
       updateOverlapStatus();
     });
