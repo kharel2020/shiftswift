@@ -356,6 +356,7 @@
             <div class="punch-clock-qr-actions">
               <button type="button" class="btn outline" id="punch-copy-clock-url">Copy link</button>
               <button type="button" class="btn outline" id="punch-print-clock-card">Print QR card</button>
+              <button type="button" class="btn outline" id="punch-print-tent-card">Print tent card</button>
               <button type="button" class="btn ghost" id="punch-rotate-clock-token">Rotate QR</button>
             </div>
           </div>
@@ -372,6 +373,13 @@
         const cardUrl = new URL("./punch-site-card.html", window.location.href);
         cardUrl.searchParams.set("url", data.clock_url);
         cardUrl.searchParams.set("site", data.site_name || "Work site");
+        window.open(cardUrl.toString(), "_blank", "noopener");
+      });
+      host.querySelector("#punch-print-tent-card")?.addEventListener("click", () => {
+        const cardUrl = new URL("./punch-site-card.html", window.location.href);
+        cardUrl.searchParams.set("url", data.clock_url);
+        cardUrl.searchParams.set("site", data.site_name || "Work site");
+        cardUrl.searchParams.set("layout", "tent");
         window.open(cardUrl.toString(), "_blank", "noopener");
       });
       host.querySelector("#punch-rotate-clock-token")?.addEventListener("click", async () => {
@@ -781,6 +789,41 @@
     return preset;
   }
 
+  async function openAllSitesPoster() {
+    const activeSites = (sites || []).filter((site) => site.is_active);
+    if (!activeSites.length) {
+      showMessage("Add at least one active punch site first.");
+      return;
+    }
+    showMessage("Preparing A4 poster…");
+    try {
+      const qrItems = await Promise.all(
+        activeSites.map(async (site) => {
+          const res = await apiFetch(`/admin/time-punch/sites/${site.id}/clock-qr`);
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.detail || `Could not load QR for ${site.name}`);
+          return {
+            site_name: data.site_name || site.name,
+            clock_url: data.clock_url,
+          };
+        })
+      );
+      const businessName =
+        tenantProfile?.trading_name || tenantProfile?.name || tenantProfile?.business_name || "Your business";
+      sessionStorage.setItem(
+        "punchPosterPayload",
+        JSON.stringify({
+          businessName,
+          sites: qrItems,
+        })
+      );
+      window.open(new URL("./punch-site-poster.html", window.location.href).toString(), "_blank", "noopener");
+      showMessage("Poster opened in a new tab — click Print poster.", "ok");
+    } catch (error) {
+      showMessage(error.message || "Could not prepare poster.");
+    }
+  }
+
   async function submitManualSite(form) {
     const payload = {
       name: form.name.value.trim(),
@@ -934,6 +977,7 @@
       $("punch-manual-form").hidden = false;
       setActiveTab("sites");
     });
+    $("punch-print-all-poster-btn")?.addEventListener("click", () => openAllSitesPoster());
     $("punch-hide-manual-btn")?.addEventListener("click", () => {
       $("punch-manual-form").hidden = true;
     });

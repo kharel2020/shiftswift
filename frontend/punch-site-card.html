@@ -149,6 +149,101 @@
         line-height: 1.45;
       }
 
+      .tent-sheet {
+        width: 210mm;
+        height: 297mm;
+        background: #fff;
+        box-shadow: 0 8px 28px rgba(15, 23, 42, 0.12);
+        display: flex;
+        flex-direction: column;
+      }
+
+      .tent-panel {
+        flex: 1;
+        padding: 14mm 16mm;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        border: 1px dashed var(--green-300);
+      }
+
+      .tent-panel--bottom {
+        transform: rotate(180deg);
+        border-top: 2px dashed var(--green-500);
+      }
+
+      .tent-panel--top {
+        border-bottom: 2px dashed var(--green-500);
+      }
+
+      .tent-panel__brand {
+        display: flex;
+        align-items: center;
+        gap: 3mm;
+        margin-bottom: 5mm;
+      }
+
+      .tent-panel__brand img {
+        width: 10mm;
+        height: 10mm;
+        border-radius: 2mm;
+      }
+
+      .tent-panel__brand span {
+        font-size: 4mm;
+        font-weight: 700;
+        color: var(--green-800);
+      }
+
+      .tent-panel__site {
+        margin: 0 0 3mm;
+        font-size: 9mm;
+        line-height: 1.1;
+      }
+
+      .tent-panel__qr img {
+        width: 58mm;
+        height: 58mm;
+        display: block;
+        margin: 0 auto 4mm;
+      }
+
+      .tent-panel__lead {
+        margin: 0 0 4mm;
+        font-size: 4.2mm;
+        line-height: 1.4;
+        color: var(--gray-700);
+        max-width: 150mm;
+      }
+
+      .tent-panel__steps {
+        margin: 0;
+        padding-left: 5mm;
+        text-align: left;
+        font-size: 4mm;
+        line-height: 1.45;
+        color: var(--gray-700);
+        max-width: 150mm;
+      }
+
+      .tent-fold-note {
+        max-width: 210mm;
+        font-size: 0.82rem;
+        color: var(--gray-600);
+        line-height: 1.45;
+      }
+
+      .layout-tent .punch-card-wrap {
+        display: none;
+      }
+
+      .layout-pocket .tent-wrap,
+      .layout-desk .tent-wrap {
+        display: none;
+      }
+
       .empty-state {
         max-width: 520px;
         margin: 2rem auto;
@@ -164,7 +259,8 @@
         }
 
         .toolbar,
-        .sheet-note {
+        .sheet-note,
+        .tent-fold-note {
           display: none !important;
         }
 
@@ -179,8 +275,14 @@
           margin: 0 auto;
         }
 
+        .tent-sheet {
+          box-shadow: none;
+          page-break-after: always;
+          margin: 0 auto;
+        }
+
         @page {
-          size: var(--card-w) var(--card-h);
+          size: A4 portrait;
           margin: 0;
         }
       }
@@ -192,7 +294,8 @@
       <div class="toolbar-actions">
         <button type="button" class="btn btn--ghost" id="card-size-pocket">Pocket card</button>
         <button type="button" class="btn btn--ghost" id="card-size-desk">Desk card</button>
-        <button type="button" class="btn btn--primary" id="card-print-btn">Print card</button>
+        <button type="button" class="btn btn--ghost" id="card-size-tent">Tent card</button>
+        <button type="button" class="btn btn--primary" id="card-print-btn">Print</button>
       </div>
     </div>
 
@@ -202,7 +305,7 @@
     </div>
 
     <div class="preview-wrap" id="card-preview" hidden>
-      <div>
+      <div class="punch-card-wrap">
         <article class="punch-card" id="punch-card">
           <div class="punch-card__qr">
             <img id="card-qr-image" alt="" />
@@ -225,6 +328,34 @@
           Tip: print several copies for entrances, tills, and back-of-house. Rotate the QR in admin if a card is lost.
         </p>
       </div>
+
+      <div class="tent-wrap" hidden>
+        <article class="tent-sheet" id="tent-sheet">
+          <section class="tent-panel tent-panel--top">
+            <div class="tent-panel__brand">
+              <img src="./assets/shiftswift-clock-app-icon-192.png?v=brandkit-v5" alt="" />
+              <span>ShiftSwift Time Clock</span>
+            </div>
+            <h1 class="tent-panel__site" id="tent-site-name">Main site</h1>
+            <div class="tent-panel__qr">
+              <img id="tent-qr-image" alt="" />
+            </div>
+            <p class="tent-panel__lead">Scan this QR, then clock in or out in the Time Clock app.</p>
+          </section>
+          <section class="tent-panel tent-panel--bottom">
+            <ol class="tent-panel__steps">
+              <li>Open the <strong>Time Clock</strong> app on your phone</li>
+              <li>Tap <strong>Scan premises QR</strong></li>
+              <li>Point your camera at this code</li>
+              <li>Tap <strong>Clock in</strong> or <strong>Clock out</strong></li>
+            </ol>
+            <p class="tent-panel__lead">Outdoors with good GPS? You can clock in without scanning.</p>
+          </section>
+        </article>
+        <p class="tent-fold-note">
+          Fold along the dashed line, stand on a counter, and laminate for daily use. Both sides remain readable when folded into a tent.
+        </p>
+      </div>
     </div>
 
     <script>
@@ -236,16 +367,33 @@
         const empty = document.getElementById("card-empty");
         const qrImg = document.getElementById("card-qr-image");
         const siteEl = document.getElementById("card-site-name");
+        const tentSiteEl = document.getElementById("tent-site-name");
+        const tentQrImg = document.getElementById("tent-qr-image");
+        const cardWrap = document.querySelector(".punch-card-wrap");
+        const tentWrap = document.querySelector(".tent-wrap");
         const printBtn = document.getElementById("card-print-btn");
         const pocketBtn = document.getElementById("card-size-pocket");
         const deskBtn = document.getElementById("card-size-desk");
+        const tentBtn = document.getElementById("card-size-tent");
 
-        function setSize(mode) {
+        function qrSrc(url) {
+          return (
+            "https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=8&data=" +
+            encodeURIComponent(url)
+          );
+        }
+
+        function setLayout(mode) {
+          document.body.classList.remove("layout-pocket", "layout-desk", "layout-tent");
+          document.body.classList.add(`layout-${mode}`);
+          const isTent = mode === "tent";
+          if (cardWrap) cardWrap.hidden = isTent;
+          if (tentWrap) tentWrap.hidden = !isTent;
           const root = document.documentElement;
           if (mode === "desk") {
             root.style.setProperty("--card-w", "105mm");
             root.style.setProperty("--card-h", "74mm");
-          } else {
+          } else if (mode === "pocket") {
             root.style.setProperty("--card-w", "85mm");
             root.style.setProperty("--card-h", "55mm");
           }
@@ -258,14 +406,22 @@
 
         preview.hidden = false;
         siteEl.textContent = siteName;
-        qrImg.src =
-          "https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=8&data=" +
-          encodeURIComponent(clockUrl);
+        if (tentSiteEl) tentSiteEl.textContent = siteName;
+        const qr = qrSrc(clockUrl);
+        qrImg.src = qr;
         qrImg.alt = "Premises clock-in QR for " + siteName;
+        if (tentQrImg) {
+          tentQrImg.src = qr.replace("320x320", "480x480");
+          tentQrImg.alt = qrImg.alt;
+        }
+
+        const initialLayout = params.get("layout") === "tent" ? "tent" : "pocket";
+        setLayout(initialLayout);
 
         printBtn?.addEventListener("click", () => window.print());
-        pocketBtn?.addEventListener("click", () => setSize("pocket"));
-        deskBtn?.addEventListener("click", () => setSize("desk"));
+        pocketBtn?.addEventListener("click", () => setLayout("pocket"));
+        deskBtn?.addEventListener("click", () => setLayout("desk"));
+        tentBtn?.addEventListener("click", () => setLayout("tent"));
       })();
     </script>
   </body>
