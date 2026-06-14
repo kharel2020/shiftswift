@@ -63,6 +63,10 @@
     if (morePanel) morePanel.hidden = tab !== "more";
 
     document.querySelectorAll(".admin-mobile-home-only").forEach((el) => {
+      if (!isMobile()) {
+        el.hidden = false;
+        return;
+      }
       if (tab !== "home") {
         el.hidden = true;
         return;
@@ -75,7 +79,11 @@
 
     const modulesBlock = document.querySelector("#overview .overview-main");
     if (modulesBlock) {
-      modulesBlock.hidden = tab !== "modules";
+      if (isMobile()) {
+        modulesBlock.hidden = tab !== "modules";
+      } else {
+        modulesBlock.removeAttribute("hidden");
+      }
     }
 
     document.body.classList.toggle("admin-mobile-more-open", tab === "more");
@@ -313,7 +321,8 @@
       }
       syncComplianceDrill();
     } else {
-      syncTabUi(currentTab);
+      delete document.body.dataset.mobileTab;
+      document.querySelector("#overview .overview-main")?.removeAttribute("hidden");
     }
   }
 

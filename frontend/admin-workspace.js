@@ -451,6 +451,9 @@
             href: "#settings",
           }),
         ].join("");
+        if (!window.matchMedia("(max-width: 860px)").matches) {
+          modulesHost.closest(".overview-main")?.removeAttribute("hidden");
+        }
       }
 
       if (actionsHost) {
@@ -464,8 +467,9 @@
       window.dispatchEvent(new CustomEvent("admin:overview-loaded", { detail: { data } }));
       window.AdminMobile?.renderMobileCompliance?.(data);
     } catch (error) {
-      grid.innerHTML = `<p class="muted">${escapeHtml(error.message || "Could not load overview.")}</p>`;
-      if (modulesHost) modulesHost.innerHTML = "";
+      const message = escapeHtml(error.message || "Could not load overview.");
+      grid.innerHTML = `<p class="muted">${message}</p>`;
+      if (modulesHost) modulesHost.innerHTML = `<p class="muted">${message}</p>`;
       if (actionsHost) actionsHost.innerHTML = "";
     }
   }
