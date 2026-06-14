@@ -355,6 +355,123 @@
       <a href="#time-punch" class="btn ghost">Time punch</a>`;
   }
 
+  let kioskPinLoadRequest = 0;
+
+  function resetKioskPinForm() {
+    const form = $("employee-kiosk-pin-form");
+    if (!form) return;
+    form.reset();
+    const pinInput = form.querySelector('input[name="kiosk_pin"]');
+    if (pinInput) pinInput.disabled = false;
+    const saveStatus = $("employee-kiosk-pin-save-status");
+    if (saveStatus) saveStatus.textContent = "";
+  }
+
+  async function loadKioskPinStatus(employeeId) {
+    const panel = $("employee-kiosk-pin-panel");
+    const statusLine = $("employee-kiosk-pin-status-line");
+    if (!panel || !statusLine || !employeeId) return null;
+
+    const requestId = ++kioskPinLoadRequest;
+    statusLine.textContent = "Loading…";
+    panel.hidden = false;
+
+    try {
+      const res = await apiFetch(`/admin/time-punch/employees/${employeeId}/kiosk-pin`);
+      const data = await res.json().catch(() => ({}));
+      if (requestId !== kioskPinLoadRequest) return null;
+      if (!res.ok) throw new Error(typeof data.detail === "string" ? data.detail : "Could not load kiosk PIN status");
+      statusLine.textContent = data.kiosk_pin_set
+        ? "PIN is set — staff can sign in on the shared tablet kiosk using employee #"
+          + employeeId
+          + " and this PIN."
+        : "No PIN set — kiosk sign-in is disabled until you set one.";
+      return data;
+    } catch (error) {
+      if (requestId !== kioskPinLoadRequest) return null;
+      statusLine.textContent = error.message || "Could not load kiosk PIN status.";
+      return null;
+    }
+  }
+
+  function renderKioskPinPanel(employeeId) {
+    resetKioskPinForm();
+    const panel = $("employee-kiosk-pin-panel");
+    if (!employeeId) {
+      if (panel) panel.hidden = true;
+      return;
+    }
+    void loadKioskPinStatus(employeeId);
+  }
+
+  function mountKioskPinForm() {
+    const form = $("employee-kiosk-pin-form");
+    if (!form || form.dataset.bound) return;
+    form.dataset.bound = "1";
+
+    form.querySelector('input[name="clear_kiosk_pin"]')?.addEventListener("change", (event) => {
+      const pinInput = form.querySelector('input[name="kiosk_pin"]');
+      if (pinInput) pinInput.disabled = event.target.checked;
+    });
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!activeEmployeeId) return;
+
+      const saveStatus = $("employee-kiosk-pin-save-status");
+      const fd = new FormData(form);
+      const clear = fd.get("clear_kiosk_pin") === "on";
+      const pinValue = String(fd.get("kiosk_pin") || "").trim();
+
+      if (!clear) {
+        if (!pinValue) {
+          if (saveStatus) saveStatus.textContent = "Enter a new PIN or check Clear PIN.";
+          return;
+        }
+        if (!/^\d{4,6}$/.test(pinValue)) {
+          if (saveStatus) saveStatus.textContent = "PIN must be 4–6 digits.";
+          return;
+        }
+      }
+
+      const payload = clear ? { pin: null } : { pin: pinValue };
+
+      try {
+        if (saveStatus) saveStatus.textContent = "Saving…";
+        const res = await apiFetch(`/admin/time-punch/employees/${activeEmployeeId}/kiosk-pin`, {
+          method: "PUT",
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(typeof data.detail === "string" ? data.detail : "Save failed");
+        if (saveStatus) {
+          saveStatus.textContent = clear ? "Kiosk PIN cleared." : "Kiosk PIN saved.";
+        }
+        resetKioskPinForm();
+        await loadKioskPinStatus(activeEmployeeId);
+        if (selectedEmployeeId === activeEmployeeId) {
+          void refreshEmployeeSidePanelKioskPin(activeEmployeeId);
+        }
+      } catch (error) {
+        if (saveStatus) saveStatus.textContent = error.message || "Save failed.";
+      }
+    });
+  }
+
+  async function refreshEmployeeSidePanelKioskPin(employeeId) {
+    const cell = document.getElementById("employees-side-kiosk-pin");
+    if (!cell || !employeeId) return;
+    cell.textContent = "Loading…";
+    try {
+      const res = await apiFetch(`/admin/time-punch/employees/${employeeId}/kiosk-pin`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error();
+      cell.textContent = data.kiosk_pin_set ? "Set (kiosk ready)" : "Not set";
+    } catch {
+      cell.textContent = "Unknown";
+    }
+  }
+
   function normalizePayload(section, payload) {
     const body = { ...payload };
     if (section === "job_performance" && body.salary !== undefined && body.salary !== "") {
@@ -877,6 +994,7 @@
     workspaceCache = workspace;
     renderEmployeeHeader(workspace);
     renderAdvancedLinks(workspace.employee || {});
+    renderKioskPinPanel(workspace.employee?.id);
     renderProgress(workspace);
 
     const sectionKeys = (workspace.sections || []).map((s) => s.key);
@@ -983,6 +1101,7 @@
         <div><dt>Lifecycle progress</dt><dd>${escapeHtml(String(row.completion_pct ?? 0))}% · ${escapeHtml(next)}</dd></div>
         <div><dt>Email</dt><dd>${escapeHtml(row.email || "Not set")}</dd></div>
         <div><dt>Employee portal</dt><dd>${escapeHtml(portalStatusCopy(row))}</dd></div>
+        <div><dt>Kiosk PIN</dt><dd id="employees-side-kiosk-pin">Loading…</dd></div>
       </dl>
       <div class="hr-detail-foot">
         <button type="button" class="btn" id="employees-side-open-btn">Open lifecycle</button>
@@ -996,6 +1115,7 @@
         <button type="button" class="btn ghost" id="employees-side-delete-btn">Remove</button>
       </div>
       <p class="muted" id="employees-side-invite-status" aria-live="polite"></p>`;
+    void refreshEmployeeSidePanelKioskPin(row.id);
     content.querySelector("#employees-side-open-btn")?.addEventListener("click", () => openEmployee(row.id));
     content.querySelector("#employees-side-invite-btn")?.addEventListener("click", () => {
       void sendPortalInvite(row.id, "employees-side-invite-status");
@@ -1038,6 +1158,7 @@
       sectionLoaded = true;
       await loadFormOptions();
       mountQuickAddForm();
+      mountKioskPinForm();
       document.getElementById("employees-bulk-invite-btn")?.addEventListener("click", sendBulkPortalInvites);
     }
     await refreshEmployeesTable();

@@ -230,6 +230,25 @@
                 </div>
               </div>
               <div class="lifecycle-accordion" id="employee-lifecycle-accordion" aria-label="Employee lifecycle"></div>
+              <article class="card edit-panel" id="employee-kiosk-pin-panel" hidden>
+                <h4>Time clock kiosk PIN</h4>
+                <p class="muted employee-section-hint">For shared tablet clock-in at your premises. Staff enter their employee number and this PIN on the kiosk.</p>
+                <form id="employee-kiosk-pin-form" class="edit-form edit-form--cols-2">
+                  <p class="edit-form-status muted" id="employee-kiosk-pin-status-line" data-span="2">Loading…</p>
+                  <label class="edit-field">
+                    <span class="edit-label">New PIN (4–6 digits)</span>
+                    <input type="password" name="kiosk_pin" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="e.g. 1234" />
+                  </label>
+                  <label class="edit-field signup-check">
+                    <input type="checkbox" name="clear_kiosk_pin" />
+                    <span>Clear PIN (disable kiosk sign-in)</span>
+                  </label>
+                  <div class="edit-form-actions" data-span="2">
+                    <button type="submit" class="btn secondary">Save kiosk PIN</button>
+                    <p class="edit-form-status muted" id="employee-kiosk-pin-save-status" aria-live="polite"></p>
+                  </div>
+                </form>
+              </article>
               <article class="card edit-panel" id="employee-advanced-links" hidden>
                 <h4>Related workflows</h4>
                 <p class="link-row" id="employee-advanced-link-row">
@@ -1450,7 +1469,7 @@
                     </tbody>
                   </table>
                 </div>
-                <p class="muted punch-tab-intro">Set each employee&apos;s 4–6 digit kiosk PIN from their employee record (HR can use the API <code>/admin/time-punch/employees/{id}/kiosk-pin</code> until the register UI adds a field).</p>
+                <p class="muted punch-tab-intro">Set each employee&apos;s 4–6 digit kiosk PIN under Employees → open their record → Time clock kiosk PIN (below the lifecycle steps).</p>
               </div>
 
               <div id="punch-tab-summary" class="punch-tab-panel" data-punch-panel="summary" hidden>
@@ -1948,7 +1967,7 @@
     <script src="./admin-workspace.js?v=admin-v13"></script>
     <script src="./admin-settings.js?v=3"></script>
     <script src="./admin-documents.js?v=4"></script>
-    <script src="./admin-employees.js?v=13"></script>
+    <script src="./admin-employees.js?v=14"></script>
     <script src="./admin-recruitment.js?v=6"></script>
     <script src="./admin-promotions.js?v=admin-v5"></script>
     <script src="./admin-compliance.js?v=admin-v9"></script>

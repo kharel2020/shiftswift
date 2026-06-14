@@ -699,3 +699,29 @@ def set_kiosk_pin(
     finally:
         conn.close()
     return {"employee_id": employee_id, "kiosk_pin_set": bool(payload.pin)}
+
+
+@admin_router.get("/employees/{employee_id}/kiosk-pin")
+def get_kiosk_pin_status(
+    employee_id: int,
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, object]:
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT kiosk_pin_hash IS NOT NULL
+                FROM employees
+                WHERE id = %s AND tenant_id = %s
+                """,
+                (employee_id, tenant_id),
+            )
+            row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Employee not found")
+        return {"employee_id": employee_id, "kiosk_pin_set": bool(row[0])}
+    finally:
+        conn.close()
