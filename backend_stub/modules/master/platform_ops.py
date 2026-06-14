@@ -136,6 +136,15 @@ def soft_delete_tenant(
     return {"tenant_id": tenant_id, "deleted_at": now.isoformat()}
 
 
+def _duplicate_billing_groups(tenants: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for tenant in tenants:
+        email = (tenant.get("billing_email") or "").strip().lower()
+        if email:
+            groups.setdefault(email, []).append(tenant)
+    return {email: group for email, group in groups.items() if len(group) > 1}
+
+
 def cleanup_duplicate_tenants(
     *,
     conn: Any,
@@ -145,16 +154,11 @@ def cleanup_duplicate_tenants(
 ) -> dict[str, Any]:
     """Soft-delete orphan duplicate trials that share the same billing email."""
     tenants = list_tenants(conn=conn, master_tenant_id=master_tenant_id, include_deleted=False)
-    groups: dict[str, list[dict[str, Any]]] = {}
-    for tenant in tenants:
-        if not tenant.get("duplicate_billing_email"):
-            continue
-        email = (tenant.get("billing_email") or "").strip().lower()
-        if email:
-            groups.setdefault(email, []).append(tenant)
+    groups = _duplicate_billing_groups(tenants)
 
     removed: list[dict[str, Any]] = []
     kept: list[dict[str, Any]] = []
+    deleted_count = 0
     now = _utcnow()
 
     for email, group in groups.items():
@@ -168,7 +172,6 @@ def cleanup_duplicate_tenants(
                 "tenant_id": tenant["id"],
                 "billing_email": email,
                 "name": tenant.get("name"),
-                "action": "soft_delete",
             }
             if dry_run:
                 entry["action"] = "would_soft_delete"
@@ -192,10 +195,17 @@ def cleanup_duplicate_tenants(
                     """,
                     (now, master_username, now, master_username, tenant["id"]),
                 )
+                if cur.rowcount == 0:
+                    entry["action"] = "skipped"
+                    entry["reason"] = "already_deleted_or_not_found"
+                    removed.append(entry)
+                    continue
                 cur.execute(
                     "UPDATE app_users SET is_active = FALSE, updated_at = NOW() WHERE tenant_id = %s",
                     (tenant["id"],),
                 )
+            entry["action"] = "soft_delete"
+            deleted_count += 1
             removed.append(entry)
 
     return {
@@ -203,10 +213,11 @@ def cleanup_duplicate_tenants(
         "groups": len(groups),
         "kept": kept,
         "removed": removed,
+        "deleted_count": deleted_count,
         "message": (
             f"Found {len(removed)} duplicate trial workspace(s) across {len(groups)} billing email(s)."
             if dry_run
-            else f"Removed {len(removed)} duplicate trial workspace(s)."
+            else f"Removed {deleted_count} duplicate trial workspace(s)."
         ),
     }
 

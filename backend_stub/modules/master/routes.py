@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Body
 from pydantic import BaseModel, Field
 
 from auth_service import AuthUser
@@ -101,6 +101,10 @@ class ChangePasswordRequest(BaseModel):
 
 class DisableMfaRequest(BaseModel):
     current_password: str = Field(min_length=1, max_length=200)
+
+
+class CleanupDuplicatesRequest(BaseModel):
+    confirm: bool = False
 
 
 class CreateTenantRequest(BaseModel):
@@ -289,22 +293,30 @@ def master_update_tenant_billing(
 def master_cleanup_duplicate_tenants(
     request: Request,
     current_user: Annotated[AuthUser, Depends(get_master_user)],
-    dry_run: bool = Query(default=True),
+    payload: CleanupDuplicatesRequest = Body(default_factory=CleanupDuplicatesRequest),
+    dry_run: bool | None = Query(default=None),
 ) -> dict[str, object]:
+    confirm = payload.confirm
+    if dry_run is not None:
+        confirm = not dry_run
     conn = _db_conn()
     try:
         result = cleanup_duplicate_tenants(
             conn=conn,
             master_tenant_id=int(settings.master_customer_id),
             master_username=current_user.username,
-            dry_run=dry_run,
+            dry_run=not confirm,
         )
         _audit(
             request=request,
             current_user=current_user,
             action="CLEANUP_DUPLICATE_TENANTS",
             conn=conn,
-            detail={"dry_run": dry_run, "removed_count": len(result.get("removed") or [])},
+            detail={
+                "dry_run": not confirm,
+                "removed_count": len(result.get("removed") or []),
+                "deleted_count": result.get("deleted_count", 0),
+            },
         )
         conn.commit()
         return result

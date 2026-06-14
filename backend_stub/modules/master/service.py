@@ -144,18 +144,32 @@ def _avg_trial_days_left(rows: list[dict[str, Any]]) -> int | None:
     return int(round(sum(values) / len(values)))
 
 
+def _created_rank(value: str | datetime | None) -> float:
+    if value is None:
+        return 0.0
+    if isinstance(value, datetime):
+        dt = value
+    else:
+        try:
+            dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        except ValueError:
+            return 0.0
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.timestamp()
+
+
 def _pick_canonical_tenant_id(tenants: list[dict[str, Any]]) -> int:
     """Prefer the tenant whose HR login matches billing email, then any HR login, then newest."""
     if not tenants:
         raise ValueError("No tenants to pick from")
 
-    def sort_key(row: dict[str, Any]) -> tuple[int, int, str]:
+    def sort_key(row: dict[str, Any]) -> tuple[int, int, float]:
         billing = (row.get("billing_email") or "").strip().lower()
         login = (row.get("hr_login_email") or "").strip().lower()
-        created = row.get("created_at") or ""
         email_match = 0 if billing and login and billing == login else 1
         has_login = 0 if login else 1
-        return (email_match, has_login, created)
+        return (email_match, has_login, -_created_rank(row.get("created_at")))
 
     return sorted(tenants, key=sort_key)[0]["id"]
 

@@ -506,7 +506,13 @@
       window.alert("No duplicate trial workspaces found for the same billing email.");
       return;
     }
-    const preview = await apiPost("/master/tenants/cleanup-duplicates?dry_run=true");
+    let preview;
+    try {
+      preview = await apiPost("/master/tenants/cleanup-duplicates", { confirm: false });
+    } catch (error) {
+      window.alert(error.message || "Could not preview duplicate trials.");
+      return;
+    }
     const count = (preview.removed || []).length;
     if (!count) {
       window.alert("No duplicate trial workspaces to remove.");
@@ -520,10 +526,19 @@
       `Remove ${count} duplicate trial workspace(s)?\n\nKeeps the primary account for each billing email and soft-deletes the extras:\n${names}${count > 5 ? "\n…" : ""}`,
     );
     if (!ok) return;
-    await apiPost("/master/tenants/cleanup-duplicates?dry_run=false");
-    window.alert(`Removed ${count} duplicate trial workspace(s).`);
-    await loadTenants();
-    closeDetail();
+    try {
+      const result = await apiPost("/master/tenants/cleanup-duplicates", { confirm: true });
+      const deleted = result.deleted_count ?? (result.removed || []).filter((row) => row.action === "soft_delete").length;
+      if (!deleted) {
+        window.alert(result.message || "No workspaces were removed — they may already be deleted.");
+        return;
+      }
+      window.alert(result.message || `Removed ${deleted} duplicate trial workspace(s).`);
+      await loadTenants();
+      closeDetail();
+    } catch (error) {
+      window.alert(error.message || "Duplicate trial cleanup failed.");
+    }
   }
 
   async function loadTenants() {
