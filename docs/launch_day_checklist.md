@@ -31,7 +31,7 @@
   bash deploy/cloudpanel/pull-production.sh
   ```
   *(Or manually: `git pull --ff-only`, migrations, restart API, rsync frontend.)*
-- [ ] **All migrations applied through `066_tenant_billing_mode.sql`**
+- [ ] **All migrations applied through `067_tenants_updated_at.sql`**
   ```bash
   bash scripts/run_migrations.sh
   ```
@@ -43,6 +43,7 @@
   | `064` | Break punches, kiosk PIN, timesheet approvals |
   | `065` | Master tenant suspend / soft delete / internal notes |
   | `066` | Offline / manual billing mode for sales-led accounts |
+  | `067` | `tenants.updated_at` for master ops updates |
 - [ ] `sudo systemctl restart shiftswifthr-api` (if not done by pull script)
 - [ ] `curl -s https://api.shiftswifthr.co.uk/health` → `"status":"ok"`, `"environment":"production"`
 - [ ] GDPR deploy verify:

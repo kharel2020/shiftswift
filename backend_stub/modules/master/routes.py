@@ -366,7 +366,7 @@ def master_cleanup_duplicate_tenants(
             status_code=500,
             detail=(
                 f"Duplicate cleanup failed: {exc}. "
-                "Ensure migration 065_master_platform_ops.sql has been applied on the server."
+                "Ensure migrations 065_master_platform_ops.sql and 067_tenants_updated_at.sql have been applied on the server."
             ),
         ) from exc
     finally:
