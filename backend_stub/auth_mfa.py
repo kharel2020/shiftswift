@@ -117,7 +117,7 @@ def decode_mfa_enrollment_token(settings: Settings, token: str) -> dict[str, Any
         raise ValueError("Invalid or expired MFA enrollment session") from exc
     if payload.get("type") != "mfa_enrollment":
         raise ValueError("Invalid MFA enrollment token")
-    if payload.get("portal") != "master":
+    if payload.get("portal") not in {"master", "business"}:
         raise ValueError("Invalid MFA enrollment portal")
     required = ("sub", "role", "tenant_id", "portal")
     if not all(payload.get(key) for key in required):

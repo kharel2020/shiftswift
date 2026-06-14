@@ -572,6 +572,8 @@
         ["API health", escapeHtml(health.status || "unknown")],
         ["SMTP", settings.smtp?.configured ? "Configured" : "Not configured"],
         ["Master MFA required", settings.master_require_mfa ? "Yes" : "No"],
+        ["HR MFA required", settings.business_require_mfa ? "Yes" : "No"],
+        ["Employee MFA required", settings.employee_require_mfa ? "Yes" : "No"],
       ]);
     } catch (error) {
       host.innerHTML = `<p class="muted">${escapeHtml(error.message)}</p>`;

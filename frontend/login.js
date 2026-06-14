@@ -64,11 +64,17 @@ function setEnrollmentStatus(message) {
 
 async function startMfaEnrollment(data, redirectUrl) {
   pendingEnrollmentToken = data.enrollment_token;
-  pendingRedirect = redirectUrl;
+  pendingRedirect = data.redirect_url || redirectUrl;
 
   const loginShell = document.getElementById("login-shell");
   const enrollmentPanel = document.getElementById("mfa-enrollment-panel");
+  const mfaPanel = document.getElementById("mfa-panel");
+  const loginTabs = document.getElementById("login-tabs");
+  const loginFeatures = document.getElementById("login-features");
   if (loginShell) loginShell.hidden = true;
+  if (mfaPanel) mfaPanel.hidden = true;
+  if (loginTabs) loginTabs.hidden = true;
+  if (loginFeatures) loginFeatures.hidden = true;
   if (enrollmentPanel) enrollmentPanel.hidden = false;
 
   const userLabel = document.getElementById("mfa-enrollment-user");
@@ -111,7 +117,7 @@ function bindMfaEnrollmentSubmit() {
     try {
       const data = await postJsonAuth("/auth/mfa/enable", { code }, pendingEnrollmentToken);
       storeSession(data);
-      window.location.href = pendingRedirect || "./master.html";
+      window.location.href = data.redirect_url || pendingRedirect || "./admin.html";
     } catch (error) {
       setEnrollmentStatus(error.message || "Invalid code — try again");
       btn.disabled = false;
@@ -274,6 +280,11 @@ function bindPortalLogin() {
         showMfaStep(data.username || payload.username);
         return;
       }
+      if (data.mfa_enrollment_required && data.enrollment_token) {
+        setStatus("");
+        await startMfaEnrollment(data, redirectForRole(data, mode.redirect));
+        return;
+      }
       storeSession(data);
       window.location.href = redirectForRole(data, mode.redirect);
     } catch (error) {
@@ -325,6 +336,7 @@ function initBusinessLoginTabs() {
     employeeTab?.click();
   }
   bindPortalLogin();
+  bindMfaEnrollmentSubmit();
 }
 
 function bindSimpleLogin(formId, endpoint, redirectUrl) {

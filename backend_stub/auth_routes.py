@@ -134,6 +134,7 @@ def _login_response(
     portal: Literal["master", "business"],
     business_role: Literal["hr", "employee"] | None = None,
     enforce_master_mfa: bool = False,
+    require_mfa_enrollment: bool = False,
 ) -> dict[str, object]:
     ip = client_ip(request)
     user_agent = request.headers.get("User-Agent")
@@ -201,31 +202,42 @@ def _login_response(
         finally:
             conn.close()
 
+    enrollment_portal: Literal["master", "business"] = portal
+    must_enroll = False
     if portal == "master" and enforce_master_mfa and not mfa_enabled:
+        must_enroll = True
+        enrollment_portal = "master"
+    elif portal == "business" and require_mfa_enrollment and not mfa_enabled:
+        must_enroll = True
+        enrollment_portal = "business"
+
+    if must_enroll:
         clear_login_attempts(ip, payload.username)
         enrollment = create_mfa_enrollment_token(
             settings,
             username=user.username,
             role=user.role,
             tenant_id=tenant_id,
-            portal="master",
+            portal=enrollment_portal,
         )
+        event_type = "master_mfa_enrollment_started" if enrollment_portal == "master" else "business_mfa_enrollment_started"
         log_security_event(
             settings,
-            event_type="master_mfa_enrollment_started",
+            event_type=event_type,
             username=user.username,
             tenant_id=tenant_id,
             ip_address=ip,
             user_agent=user_agent,
             success=True,
-            detail="Master MFA enrollment required",
+            detail=f"MFA enrollment required ({enrollment_portal})",
         )
         return {
             "mfa_enrollment_required": True,
             "enrollment_token": enrollment,
-            "portal": portal,
+            "portal": enrollment_portal,
             "username": user.username,
             "tenant_id": tenant_id,
+            "role": user.role,
             "expires_in": MFA_ENROLLMENT_MINUTES * 60,
             "message": "Set up your authenticator app to continue.",
         }
@@ -274,25 +286,57 @@ def _login_response(
 
 @router.post("/login")
 def auth_login(request: Request, payload: LoginRequest) -> dict[str, object]:
-    return _login_response(request, payload, portal="business", business_role="hr")
+    from auth_policy import business_require_mfa_hr
+
+    return _login_response(
+        request,
+        payload,
+        portal="business",
+        business_role="hr",
+        require_mfa_enrollment=business_require_mfa_hr(settings),
+    )
 
 
 @router.post("/tenant-login")
 def tenant_login(request: Request, payload: LoginRequest) -> dict[str, object]:
     """Business HR login — legacy alias for /auth/business-login."""
-    return _login_response(request, payload, portal="business", business_role="hr")
+    from auth_policy import business_require_mfa_hr
+
+    return _login_response(
+        request,
+        payload,
+        portal="business",
+        business_role="hr",
+        require_mfa_enrollment=business_require_mfa_hr(settings),
+    )
 
 
 @router.post("/business-login")
 def business_login(request: Request, payload: LoginRequest) -> dict[str, object]:
     """Business HR login — same as tenant-login."""
-    return _login_response(request, payload, portal="business", business_role="hr")
+    from auth_policy import business_require_mfa_hr
+
+    return _login_response(
+        request,
+        payload,
+        portal="business",
+        business_role="hr",
+        require_mfa_enrollment=business_require_mfa_hr(settings),
+    )
 
 
 @router.post("/employee-login")
 def employee_login(request: Request, payload: LoginRequest) -> dict[str, object]:
     """Employee self-service login — not for HR or master admins."""
-    return _login_response(request, payload, portal="business", business_role="employee")
+    from auth_policy import employee_require_mfa
+
+    return _login_response(
+        request,
+        payload,
+        portal="business",
+        business_role="employee",
+        require_mfa_enrollment=employee_require_mfa(settings),
+    )
 
 
 @router.post("/master-login")
@@ -408,6 +452,7 @@ def mfa_enable(
         ip = client_ip(request)
         user_agent = request.headers.get("User-Agent")
         tokens = create_token_pair(settings, current_user)
+        portal = "master" if current_user.role == "admin" else "business"
         log_security_event(
             settings,
             event_type="login_success",
@@ -416,25 +461,45 @@ def mfa_enable(
             ip_address=ip,
             user_agent=user_agent,
             success=True,
-            detail="portal=master;mfa_enrollment=1",
+            detail=f"portal={portal};mfa_enrollment=1",
         )
-        log_security_event(
-            settings,
-            event_type="master_mfa_enrollment_completed",
-            username=current_user.username,
-            tenant_id=current_user.tenant_id,
-            ip_address=ip,
-            user_agent=user_agent,
-            success=True,
-            detail="Master MFA enabled",
-        )
+        if portal == "master":
+            log_security_event(
+                settings,
+                event_type="master_mfa_enrollment_completed",
+                username=current_user.username,
+                tenant_id=current_user.tenant_id,
+                ip_address=ip,
+                user_agent=user_agent,
+                success=True,
+                detail="Master MFA enabled",
+            )
+            message = "Two-factor authentication is active. Opening master console…"
+            redirect_hint = "./master.html"
+        elif current_user.role == "employee":
+            message = "Two-factor authentication is active. Opening employee portal…"
+            redirect_hint = "./employee.html"
+        else:
+            log_security_event(
+                settings,
+                event_type="business_mfa_enrollment_completed",
+                username=current_user.username,
+                tenant_id=current_user.tenant_id,
+                ip_address=ip,
+                user_agent=user_agent,
+                success=True,
+                detail="Business MFA enabled",
+            )
+            message = "Two-factor authentication is active. Opening HR dashboard…"
+            redirect_hint = "./admin.html"
         return {
             **tokens.__dict__,
-            "portal": "master",
+            "portal": portal,
             "role": current_user.role,
             "mfa_required": False,
             "status": "enabled",
-            "message": "Two-factor authentication is active. Opening master console…",
+            "message": message,
+            "redirect_url": redirect_hint,
         }
 
     return {"status": "enabled", "message": "Two-factor authentication is now active on your account."}
@@ -445,9 +510,20 @@ def mfa_disable(
     payload: MfaDisableRequest,
     current_user: Annotated[AuthUser, Depends(get_current_user)],
 ) -> dict[str, str]:
+    from auth_policy import business_require_mfa_hr, employee_require_mfa
+
     user = authenticate_user(settings, current_user.username, payload.password)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid password")
+    if current_user.role == "admin" and str(current_user.tenant_id) == str(settings.master_customer_id):
+        from modules.master.security import master_require_mfa
+
+        if master_require_mfa(settings):
+            raise HTTPException(status_code=400, detail="Master MFA is required and cannot be disabled here.")
+    elif current_user.role == "hr" and business_require_mfa_hr(settings):
+        raise HTTPException(status_code=400, detail="Two-factor authentication is required for HR accounts.")
+    elif current_user.role == "employee" and employee_require_mfa(settings):
+        raise HTTPException(status_code=400, detail="Two-factor authentication is required for employee accounts.")
     conn = _db_conn()
     try:
         if not verify_user_mfa_code(conn=conn, username=current_user.username, code=payload.code):
@@ -460,6 +536,8 @@ def mfa_disable(
 
 @router.get("/mfa/status")
 def mfa_status(current_user: Annotated[AuthUser, Depends(get_current_user)]) -> dict[str, object]:
+    from auth_policy import business_require_mfa_hr, employee_require_mfa
+
     conn = _db_conn()
     try:
         with conn.cursor() as cur:
@@ -468,11 +546,21 @@ def mfa_status(current_user: Annotated[AuthUser, Depends(get_current_user)]) -> 
         conn.close()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    policy_required = False
+    if user["role"] == "hr":
+        policy_required = business_require_mfa_hr(settings)
+    elif user["role"] == "employee":
+        policy_required = employee_require_mfa(settings)
+    elif user["role"] == "admin":
+        from modules.master.security import master_require_mfa
+
+        policy_required = master_require_mfa(settings)
     return {
         "username": user["username"],
         "portal": user.get("login_portal"),
         "mfa_enabled": bool(user.get("mfa_enabled")),
         "role": user["role"],
+        "policy_required": policy_required,
     }
 
 

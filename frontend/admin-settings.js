@@ -2,7 +2,7 @@
 (function initAdminSettings() {
   const { apiFetch, escapeHtml, isFeatureEnabled, parseHashPath, mountEditForm, FORM_SCHEMAS } = window.Admin;
 
-  const PANELS = ["business", "documents", "billing", "notifications", "users", "multisite", "api"];
+  const PANELS = ["business", "documents", "billing", "notifications", "users", "security", "multisite", "api"];
   const PANEL_COPY = {
     business: {
       title: "Business information",
@@ -23,6 +23,10 @@
     users: {
       title: "Users & access",
       subtitle: "People who can sign in to this ShiftSwift HR workspace.",
+    },
+    security: {
+      title: "Security",
+      subtitle: "Two-factor authentication for your HR admin sign-in.",
     },
     multisite: {
       title: "Multi-site",
@@ -97,6 +101,9 @@
     if (subtitleEl) subtitleEl.textContent = copy.subtitle;
     if (panelId === "business") {
       void loadBusinessPanel();
+    }
+    if (panelId === "security") {
+      void loadSecurityPanel();
     }
   }
 
@@ -355,6 +362,106 @@
     host.dataset.ready = "true";
   }
 
+  async function loadSecurityPanel() {
+    const host = document.getElementById("settings-security-content");
+    if (!host) return;
+
+    async function mfaAuthFetch(path, options = {}) {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${window.Admin.API_BASE}${path}`, {
+        ...options,
+        headers: {
+          Authorization: token ? `Bearer ${token}` : "",
+          "Content-Type": "application/json",
+          "X-Tenant-Id": window.Admin.TENANT_ID || "",
+          ...(options.headers || {}),
+        },
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(typeof data.detail === "string" ? data.detail : data.message || "Request failed");
+      return data;
+    }
+
+    let status;
+    try {
+      status = await mfaAuthFetch("/auth/mfa/status");
+    } catch (error) {
+      host.innerHTML = `<p class="muted">${escapeHtml(error.message || "Could not load MFA status.")}</p>`;
+      return;
+    }
+
+    const enabled = Boolean(status.mfa_enabled);
+    const required = Boolean(status.policy_required);
+    host.innerHTML = `
+      <div class="settings-security-summary">
+        <p><strong>Status:</strong> ${enabled ? "Two-factor authentication is ON" : "Not enabled yet"}</p>
+        <p class="muted">${required ? "Your organisation requires authenticator app codes at sign-in." : "You can optionally enable an authenticator app for extra security."}</p>
+      </div>
+      <div id="settings-mfa-setup-block" ${enabled ? "hidden" : ""}>
+        <h4>Set up authenticator</h4>
+        <p class="muted">Use Google Authenticator, Authy, or Microsoft Authenticator.</p>
+        <button type="button" class="btn outline" id="settings-mfa-start">Generate QR code</button>
+        <div id="settings-mfa-qr-area" hidden>
+          <div class="mfa-enrollment-qr-wrap"><img id="settings-mfa-qr" alt="Authenticator QR code" width="180" height="180" /></div>
+          <p class="muted">Manual key: <code id="settings-mfa-secret"></code></p>
+          <label class="edit-field">Verification code<input type="text" id="settings-mfa-code" inputmode="numeric" maxlength="8" autocomplete="one-time-code" placeholder="123456" /></label>
+          <button type="button" class="btn" id="settings-mfa-enable">Enable two-factor authentication</button>
+        </div>
+      </div>
+      <div id="settings-mfa-disable-block" ${enabled ? "" : "hidden"}>
+        <h4>Turn off two-factor authentication</h4>
+        ${required ? '<p class="muted">Required by policy — contact platform support if you need an exception.</p>' : ""}
+        <label class="edit-field">Password<input type="password" id="settings-mfa-disable-password" autocomplete="current-password" /></label>
+        <label class="edit-field">Authenticator code<input type="text" id="settings-mfa-disable-code" inputmode="numeric" maxlength="8" autocomplete="one-time-code" /></label>
+        <button type="button" class="btn ghost" id="settings-mfa-disable" ${required ? "disabled" : ""}>Disable two-factor authentication</button>
+      </div>
+      <p class="muted" id="settings-mfa-status-line" aria-live="polite"></p>`;
+
+    const statusLine = document.getElementById("settings-mfa-status-line");
+    document.getElementById("settings-mfa-start")?.addEventListener("click", async () => {
+      try {
+        const setup = await mfaAuthFetch("/auth/mfa/setup", { method: "POST", body: "{}" });
+        const qrArea = document.getElementById("settings-mfa-qr-area");
+        const qrImg = document.getElementById("settings-mfa-qr");
+        const secretEl = document.getElementById("settings-mfa-secret");
+        if (secretEl) secretEl.textContent = setup.manual_secret || "";
+        if (qrImg && setup.otpauth_uri) {
+          qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(setup.otpauth_uri)}`;
+        }
+        if (qrArea) qrArea.hidden = false;
+      } catch (error) {
+        if (statusLine) statusLine.textContent = error.message;
+      }
+    });
+
+    document.getElementById("settings-mfa-enable")?.addEventListener("click", async () => {
+      const code = document.getElementById("settings-mfa-code")?.value?.trim();
+      if (!code) return;
+      try {
+        await mfaAuthFetch("/auth/mfa/enable", { method: "POST", body: JSON.stringify({ code }) });
+        showSettingsToast("Two-factor authentication enabled.");
+        await loadSecurityPanel();
+      } catch (error) {
+        if (statusLine) statusLine.textContent = error.message;
+      }
+    });
+
+    document.getElementById("settings-mfa-disable")?.addEventListener("click", async () => {
+      const password = document.getElementById("settings-mfa-disable-password")?.value || "";
+      const code = document.getElementById("settings-mfa-disable-code")?.value?.trim() || "";
+      try {
+        await mfaAuthFetch("/auth/mfa/disable", {
+          method: "POST",
+          body: JSON.stringify({ password, code }),
+        });
+        showSettingsToast("Two-factor authentication disabled.");
+        await loadSecurityPanel();
+      } catch (error) {
+        if (statusLine) statusLine.textContent = error.message;
+      }
+    });
+  }
+
   async function initSettingsSection() {
     bindSettingsNav();
     bindUpgradeActions();
@@ -371,6 +478,7 @@
     await loadBillingPanel();
     loadNotificationsPanel();
     loadUsersPanel();
+    loadSecurityPanel();
     if (window.AdminDocuments?.loadSettingsDocuments) {
       await window.AdminDocuments.loadSettingsDocuments();
     }

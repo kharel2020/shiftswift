@@ -87,6 +87,48 @@ def test_mfa_enrollment_token_round_trip() -> None:
     assert payload["type"] == "mfa_enrollment"
 
 
+def test_business_mfa_enrollment_token_round_trip() -> None:
+    settings = _dev_settings()
+    token = create_mfa_enrollment_token(
+        settings,
+        username=TENANT_HR_USERNAME,
+        role="hr",
+        tenant_id="1",
+        portal="business",
+    )
+    payload = decode_mfa_enrollment_token(settings, token)
+    assert payload["sub"] == TENANT_HR_USERNAME
+    assert payload["portal"] == "business"
+    assert payload["role"] == "hr"
+    assert payload["tenant_id"] == "1"
+
+
+def test_auth_policy_defaults() -> None:
+    from auth_policy import business_require_mfa_hr, employee_require_mfa
+
+    dev = _dev_settings()
+    assert not business_require_mfa_hr(dev)
+    assert not employee_require_mfa(dev)
+
+    prod = Settings(
+        app_env="production",
+        jwt_secret="prod-secret-key-long-enough-for-tests-12345",
+        jwt_access_minutes=60,
+        jwt_refresh_days=7,
+        master_customer_id="999",
+        cors_allow_origins=["https://app.shiftswifthr.co.uk"],
+        trusted_hosts=["api.shiftswifthr.co.uk"],
+        force_https=True,
+        login_rate_limit=10,
+        login_rate_window_seconds=900,
+        max_upload_bytes=10485760,
+        database_url=None,
+        use_db=False,
+    )
+    assert business_require_mfa_hr(prod)
+    assert not employee_require_mfa(prod)
+
+
 def test_portal_allows_user() -> None:
     assert portal_allows_user(portal="master", role="admin", login_portal="master")
     assert not portal_allows_user(portal="master", role="hr", login_portal="business")
