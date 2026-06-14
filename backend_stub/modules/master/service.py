@@ -47,6 +47,34 @@ def display_status(
     return "trialing"
 
 
+def _is_test_tenant(name: str | None, billing_email: str | None) -> bool:
+    email = (billing_email or "").strip().lower()
+    if email.endswith("@example.com") or email.endswith("@test.com") or "+test@" in email:
+        return True
+    label = (name or "").strip().lower()
+    if not label:
+        return False
+    if label.startswith("test ") or label in {"test", "test co", "test co ltd", "test company"}:
+        return True
+    return "test co" in label or label.endswith(" (test)")
+
+
+def _staff_label(
+    *,
+    active_count: int,
+    staff_limit: int,
+    hr_login_email: str | None,
+    hr_last_login: datetime | None,
+) -> str:
+    if not (hr_login_email or "").strip():
+        return "no HR user yet"
+    if not hr_last_login:
+        return "no HR login yet"
+    if staff_limit:
+        return f"{active_count} of {staff_limit}"
+    return str(active_count)
+
+
 def _format_last_active(last_login: datetime | None, *, as_of: datetime | None = None) -> dict[str, Any]:
     if not last_login:
         return {"label": "Never", "tone": "muted", "days_ago": None}
@@ -182,6 +210,7 @@ def _serialize_tenant_row(row: tuple[Any, ...], *, as_of: datetime | None = None
         last_login,
         compliance_alerts,
         hr_login_email,
+        hr_last_login,
     ) = row
 
     now = as_of or _utcnow()
@@ -221,13 +250,21 @@ def _serialize_tenant_row(row: tuple[Any, ...], *, as_of: datetime | None = None
         "employees_active": active_count,
         "employees_limit": staff_limit,
         "employees_pending_portal": int(portal_pending or 0),
-        "staff_label": f"{active_count} of {staff_limit}" if staff_limit else str(active_count),
+        "staff_label": _staff_label(
+            active_count=active_count,
+            staff_limit=staff_limit,
+            hr_login_email=hr_login_email,
+            hr_last_login=hr_last_login,
+        ),
         "mrr_gbp": mrr,
         "mrr_label": f"£{mrr:.0f}" if mrr is not None else "—",
         "last_active": last_active,
         "compliance_alerts": int(compliance_alerts or 0),
         "billing_email": billing_email,
         "hr_login_email": hr_login_email,
+        "hr_last_login": hr_last_login.isoformat() if isinstance(hr_last_login, datetime) else hr_last_login,
+        "hr_never_logged_in": bool((hr_login_email or "").strip() and not hr_last_login),
+        "is_test_account": _is_test_tenant(name, billing_email),
         "company_number": company_number,
         "registered_address": registered_address,
         "phone": phone,
@@ -267,7 +304,8 @@ SELECT
   COALESCE(emp.portal_pending, 0) AS portal_pending,
   login.last_login,
   COALESCE(comp.alert_count, 0) AS compliance_alerts,
-  hr.hr_login_email
+  hr.hr_login_email,
+  hr_login.hr_last_login
 FROM tenants t
 LEFT JOIN LATERAL (
   SELECT
@@ -309,6 +347,19 @@ LEFT JOIN LATERAL (
     u.updated_at DESC NULLS LAST
   LIMIT 1
 ) hr ON TRUE
+LEFT JOIN LATERAL (
+  SELECT MAX(s.created_at) AS hr_last_login
+  FROM security_audit_events s
+  INNER JOIN app_users u
+    ON lower(u.username) = lower(s.username)
+   AND u.tenant_id = t.id
+   AND u.role = 'hr'
+   AND u.is_active = TRUE
+  WHERE s.tenant_id = t.id
+    AND s.event_type = 'login_success'
+    AND s.success = TRUE
+    AND s.detail LIKE '%%portal=business%%'
+) hr_login ON TRUE
 WHERE t.id != %s
 """
 
@@ -320,6 +371,7 @@ def list_tenants(
     status_filter: FilterStatus = "all",
     search: str | None = None,
     include_deleted: bool = False,
+    exclude_test: bool = False,
     as_of: datetime | None = None,
 ) -> list[dict[str, Any]]:
     sql = _TENANT_LIST_SQL
@@ -333,6 +385,9 @@ def list_tenants(
         rows = cur.fetchall()
 
     tenants = [_serialize_tenant_row(row, as_of=as_of) for row in rows]
+
+    if exclude_test:
+        tenants = [row for row in tenants if not row.get("is_test_account")]
 
     if status_filter != "all":
         tenants = [row for row in tenants if row["status"] == status_filter]
@@ -353,17 +408,27 @@ def list_tenants(
     return annotate_duplicate_billing_emails(tenants)
 
 
+def _trials_expiring_within(trialing: list[dict[str, Any]], days: int) -> int:
+    return sum(
+        1
+        for tenant in trialing
+        if tenant.get("trial_days_remaining") is not None and tenant["trial_days_remaining"] <= days
+    )
+
+
 def overview_stats(
     *,
     conn: Any,
     master_tenant_id: int,
     include_deleted: bool = False,
+    exclude_test: bool = False,
     as_of: datetime | None = None,
 ) -> dict[str, Any]:
     tenants = list_tenants(
         conn=conn,
         master_tenant_id=master_tenant_id,
         include_deleted=include_deleted,
+        exclude_test=exclude_test,
         as_of=as_of,
     )
     now = as_of or _utcnow()
@@ -380,6 +445,11 @@ def overview_stats(
     churned_this_month = 0
 
     compliance_tenants = sum(1 for t in tenants if t["compliance_alerts"] > 0)
+    never_logged_hr = sum(1 for t in tenants if t.get("hr_never_logged_in"))
+    duplicate_trials = sum(
+        1 for t in tenants if t.get("duplicate_billing_email") and not t.get("is_canonical_tenant")
+    )
+    test_accounts = sum(1 for t in tenants if t.get("is_test_account"))
 
     plan_breakdown: dict[str, dict[str, Any]] = {}
     for tenant in active + overdue:
@@ -400,12 +470,28 @@ def overview_stats(
         "suspended": len(suspended),
         "deleted": len(deleted),
         "mrr_gbp": mrr,
+        "arr_gbp": round(mrr * 12, 2),
         "mrr_added_this_month_gbp": None,
         "churned_this_month": churned_this_month,
         "compliance_alert_tenants": compliance_tenants,
+        "payment_failures": len(overdue),
         "avg_trial_days_remaining": _avg_trial_days_left(trialing),
         "conversion_rate_pct": round(len(active) / len(tenants) * 100) if tenants else 0,
         "plan_breakdown": list(plan_breakdown.values()),
+        "trials_expiring": {
+            "7d": _trials_expiring_within(trialing, 7),
+            "14d": _trials_expiring_within(trialing, 14),
+            "30d": _trials_expiring_within(trialing, 30),
+        },
+        "trial_funnel": {
+            "trialing": len(trialing),
+            "active_paying": len(active),
+            "never_logged_in_hr": never_logged_hr,
+            "duplicate_trials": duplicate_trials,
+        },
+        "test_accounts": test_accounts,
+        "reporting_month": now.strftime("%B %Y"),
+        "mrr_note": "Estimated ex-VAT MRR (base + per active employee, plan cap applied). Not Stripe invoice totals.",
         "counts": {
             "all": len(tenants),
             "trialing": len(trialing),

@@ -8,6 +8,7 @@
     selectedId: null,
     selectedTenant: null,
     includeDeleted: false,
+    excludeTest: false,
     section: "tenants",
     loading: true,
   };
@@ -32,6 +33,7 @@
     menuBtn: document.getElementById("master-menu-btn"),
     sidebarClose: document.getElementById("master-sidebar-close"),
     includeDeleted: document.getElementById("master-include-deleted"),
+    excludeTest: document.getElementById("master-exclude-test"),
   };
 
   function apiBase() {
@@ -168,7 +170,7 @@
       { label: "Active (paying)", value: stats.active_paying ?? "0", sub: `${stats.conversion_rate_pct ?? 0}% conversion`, valueStyle: "color: var(--master-green)" },
       { label: "Trialing", value: stats.trialing ?? "0", sub: stats.avg_trial_days_remaining != null ? `Avg ${stats.avg_trial_days_remaining} days left` : "" },
       { label: "Suspended", value: stats.suspended ?? "0", sub: "Platform disabled" },
-      { label: "Overdue", value: stats.overdue ?? "0", sub: `${stats.compliance_alert_tenants ?? 0} compliance alerts`, valueStyle: stats.overdue ? "color: var(--master-red)" : "" },
+      { label: "Overdue", value: stats.overdue ?? "0", sub: `${stats.payment_failures ?? stats.overdue ?? 0} payment failures`, valueStyle: stats.overdue ? "color: var(--master-red)" : "" },
     ];
     if (!els.metrics) return;
     els.metrics.innerHTML = cards
@@ -222,13 +224,17 @@
   }
 
   function tenantIdentityBadge(tenant) {
+    const tags = [];
+    if (tenant.is_test_account) {
+      tags.push(`<span class="master-tag master-tag--test">Test account</span>`);
+    }
     if (tenant.duplicate_billing_email && tenant.is_canonical_tenant) {
-      return `<span class="master-tag master-tag--primary">Primary account</span>`;
+      tags.push(`<span class="master-tag master-tag--primary">Primary account</span>`);
     }
     if (tenant.duplicate_billing_email && !tenant.is_canonical_tenant) {
-      return `<span class="master-tag master-tag--warn">Duplicate trial</span>`;
+      tags.push(`<span class="master-tag master-tag--warn">Duplicate trial</span>`);
     }
-    return "";
+    return tags.join(" ");
   }
 
   function renderTable() {
@@ -315,7 +321,8 @@
     const pct = staffLimit ? Math.min(100, Math.round((active / staffLimit) * 100)) : 0;
 
     document.getElementById("detail-grid").innerHTML = `
-      <div><dt>Tenant ID</dt><dd>#${tenant.id}${tenant.is_canonical_tenant === false ? " · duplicate trial" : tenant.duplicate_billing_email ? " · primary account for this email" : ""}</dd></div>
+      ${tenant.hr_never_logged_in ? `<div class="master-detail-alert">HR account exists but has never signed in — check welcome email delivery and share the sign-up password.</div>` : ""}
+      <div><dt>Tenant ID</dt><dd>#${tenant.id}${tenant.is_canonical_tenant === false ? " · duplicate trial" : tenant.duplicate_billing_email ? " · primary account for this email" : ""}${tenant.is_test_account ? " · test account" : ""}</dd></div>
       <div><dt>Location</dt><dd>${escapeHtml(tenant.location)}</dd></div>
       <div><dt>Billing email</dt><dd>${escapeHtml(tenant.billing_email || "—")}</dd></div>
       <div><dt>HR login</dt><dd>${escapeHtml(tenant.hr_login_email || "—")}</dd></div>
@@ -525,6 +532,7 @@
     if (state.filter && state.filter !== "all") params.set("status", state.filter);
     if (state.search.trim()) params.set("q", state.search.trim());
     if (state.includeDeleted) params.set("include_deleted", "true");
+    if (state.excludeTest) params.set("exclude_test", "true");
     try {
       const data = await apiGet(`/master/tenants?${params.toString()}`);
       state.tenants = data.tenants || [];
@@ -568,14 +576,74 @@
     const host = document.getElementById("master-revenue-content");
     if (!host) return;
     try {
-      if (!state.overview) {
-        const overview = await apiGet("/master/overview");
-        state.overview = overview.stats;
-      }
-      const breakdown = state.overview?.plan_breakdown || [];
+      const overview = await apiGet("/master/overview");
+      state.overview = overview.stats;
+      const stats = state.overview || {};
+      const breakdown = stats.plan_breakdown || [];
+      const funnel = stats.trial_funnel || {};
+      const expiring = stats.trials_expiring || {};
+      const maxPlanMrr = breakdown.reduce((max, row) => Math.max(max, row.mrr_gbp || 0), 1) || 1;
+      const funnelMax = Math.max(funnel.trialing || 0, funnel.active_paying || 0, 1);
+
+      const planBars = breakdown.length
+        ? breakdown
+            .map((row) => {
+              const pct = Math.round(((row.mrr_gbp || 0) / maxPlanMrr) * 100);
+              return `<div class="master-revenue-bar-row">
+                <div class="master-revenue-bar-row__label">${escapeHtml(row.plan_label)} <span class="muted">${row.tenant_count} tenant${row.tenant_count === 1 ? "" : "s"}</span></div>
+                <div class="master-revenue-bar"><span style="width:${pct}%"></span></div>
+                <div class="master-revenue-bar-row__value">${formatMoney(row.mrr_gbp)}</div>
+              </div>`;
+            })
+            .join("")
+        : `<p class="muted">No paying tenants yet — MRR will appear when trials convert.</p>`;
+
+      const funnelBars = [
+        ["Trialing", funnel.trialing || 0, "var(--master-gold)"],
+        ["Paying (active)", funnel.active_paying || 0, "var(--master-green)"],
+        ["HR never logged in", funnel.never_logged_in_hr || 0, "var(--master-red)"],
+        ["Duplicate trials", funnel.duplicate_trials || 0, "#b45309"],
+      ]
+        .map(([label, count, color]) => {
+          const pct = Math.round((Number(count) / funnelMax) * 100);
+          return `<div class="master-revenue-bar-row">
+            <div class="master-revenue-bar-row__label">${escapeHtml(label)}</div>
+            <div class="master-revenue-bar"><span style="width:${pct}%;background:${color}"></span></div>
+            <div class="master-revenue-bar-row__value">${count}</div>
+          </div>`;
+        })
+        .join("");
+
       host.innerHTML = `
-        <p><strong>Total MRR:</strong> ${formatMoney(state.overview?.mrr_gbp)}</p>
-        <table class="master-data-table"><thead><tr><th>Plan</th><th>Tenants</th><th>MRR</th></tr></thead>
+        <div class="master-revenue-summary">
+          <article class="master-metric master-metric--hero">
+            <div class="master-metric__label">Total MRR (est.)</div>
+            <div class="master-metric__value master-metric__value--gold">${formatMoney(stats.mrr_gbp)}</div>
+            <div class="master-metric__sub">ARR projection ${formatMoney(stats.arr_gbp)} · ${escapeHtml(stats.reporting_month || "Current month")}</div>
+          </article>
+          <article class="master-metric">
+            <div class="master-metric__label">Conversion</div>
+            <div class="master-metric__value">${stats.conversion_rate_pct ?? 0}%</div>
+            <div class="master-metric__sub">${stats.active_paying ?? 0} paying · ${stats.trialing ?? 0} trialing</div>
+          </article>
+          <article class="master-metric">
+            <div class="master-metric__label">Trials expiring</div>
+            <div class="master-metric__value">${expiring["7d"] ?? 0}</div>
+            <div class="master-metric__sub">7d · ${expiring["14d"] ?? 0} in 14d · ${expiring["30d"] ?? 0} in 30d</div>
+          </article>
+        </div>
+        <p class="master-panel-note muted">${escapeHtml(stats.mrr_note || "")}</p>
+        <div class="master-revenue-grid">
+          <section class="master-revenue-card">
+            <h3>Plan breakdown</h3>
+            ${planBars}
+          </section>
+          <section class="master-revenue-card">
+            <h3>Trial conversion funnel</h3>
+            ${funnelBars}
+          </section>
+        </div>
+        <table class="master-data-table master-revenue-table"><thead><tr><th>Plan</th><th>Tenants</th><th>MRR (est.)</th></tr></thead>
         <tbody>${breakdown.map((row) => `<tr><td>${escapeHtml(row.plan_label)}</td><td>${row.tenant_count}</td><td>${formatMoney(row.mrr_gbp)}</td></tr>`).join("") || '<tr><td colspan="3" class="muted">No paying tenants yet</td></tr>'}</tbody></table>`;
     } catch (error) {
       host.innerHTML = `<p class="muted">${escapeHtml(error.message)}</p>`;
@@ -593,7 +661,11 @@
         ["Webhook secret", stripe.webhook_secret?.configured ? escapeHtml(stripe.webhook_secret.preview) : "Not configured"],
         ["Currency", escapeHtml(stripe.currency || "gbp")],
         ["Tax enabled", stripe.tax_enabled ? "Yes" : "No"],
-      ]) + `<p class="muted master-panel-note">Update Stripe keys in server <code>.env</code> and restart the API.</p>`;
+      ]) + `${
+        stripe.tax_enabled
+          ? ""
+          : `<p class="master-panel-note master-panel-note--warn">Stripe Tax is off — enable <code>STRIPE_TAX_ENABLED=1</code> in server <code>.env</code> before charging UK VAT on SaaS subscriptions.</p>`
+      }<p class="muted master-panel-note">Update Stripe keys in server <code>.env</code> and restart the API. This panel is for platform operators only.</p>`;
     } catch (error) {
       host.innerHTML = `<p class="muted">${escapeHtml(error.message)}</p>`;
     }
@@ -719,10 +791,11 @@
     if (!host) return;
     try {
       const profile = await apiGet("/master/account");
+      const mfaEnabled = Boolean(profile.mfa_enabled);
       host.innerHTML = `
         ${renderKeyValueGrid([
           ["Username", escapeHtml(profile.username)],
-          ["MFA", profile.mfa_enabled ? "Enabled" : "Not enabled"],
+          ["MFA", mfaEnabled ? "Enabled" : "Not enabled"],
           ["MFA enabled at", escapeHtml(formatDate(profile.mfa_enabled_at))],
         ])}
         <form id="master-change-password-form" class="master-form">
@@ -732,9 +805,21 @@
           <button type="submit" class="master-btn master-btn--gold">Update password</button>
           <p class="master-inline-status muted" id="master-password-status" aria-live="polite"></p>
         </form>
-        <form id="master-disable-mfa-form" class="master-form">
-          <h3>Reset MFA</h3>
-          <p class="muted">Disables authenticator — you will set it up again on next sign-in.</p>
+        <section id="master-enable-mfa-section" class="master-form"${mfaEnabled ? " hidden" : ""}>
+          <h3>Enable two-factor authentication</h3>
+          <p class="muted">Required before launch — scan a QR code with Google Authenticator, Authy, or Microsoft Authenticator.</p>
+          <button type="button" class="master-btn master-btn--gold" id="master-mfa-start">Generate QR code</button>
+          <div id="master-mfa-qr-area" hidden>
+            <div class="master-mfa-qr-wrap"><img id="master-mfa-qr" alt="Authenticator QR code" width="180" height="180" /></div>
+            <p class="muted">Manual key: <code id="master-mfa-secret"></code></p>
+            <label>Verification code<input type="text" id="master-mfa-code" inputmode="numeric" maxlength="8" autocomplete="one-time-code" placeholder="123456" /></label>
+            <button type="button" class="master-btn master-btn--gold" id="master-mfa-enable">Enable MFA</button>
+          </div>
+          <p class="master-inline-status muted" id="master-mfa-setup-status" aria-live="polite"></p>
+        </section>
+        <form id="master-disable-mfa-form" class="master-form"${mfaEnabled ? "" : " hidden"}>
+          <h3>Disable MFA</h3>
+          <p class="muted">Turns off authenticator codes on this master account.</p>
           <label>Current password<input type="password" name="current_password" required autocomplete="current-password" /></label>
           <button type="submit" class="master-btn master-btn--ghost">Disable MFA</button>
           <p class="master-inline-status muted" id="master-mfa-status" aria-live="polite"></p>
@@ -751,6 +836,37 @@
           });
           if (statusEl) statusEl.textContent = result.message || "Password updated.";
           event.target.reset();
+        } catch (error) {
+          if (statusEl) statusEl.textContent = error.message;
+        }
+      });
+
+      document.getElementById("master-mfa-start")?.addEventListener("click", async () => {
+        const statusEl = document.getElementById("master-mfa-setup-status");
+        try {
+          const setup = await apiPost("/auth/mfa/setup");
+          const qrArea = document.getElementById("master-mfa-qr-area");
+          const qrImg = document.getElementById("master-mfa-qr");
+          const secretEl = document.getElementById("master-mfa-secret");
+          if (secretEl) secretEl.textContent = setup.manual_secret || "";
+          if (qrImg && setup.otpauth_uri) {
+            qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(setup.otpauth_uri)}`;
+          }
+          if (qrArea) qrArea.hidden = false;
+          if (statusEl) statusEl.textContent = "";
+        } catch (error) {
+          if (statusEl) statusEl.textContent = error.message;
+        }
+      });
+
+      document.getElementById("master-mfa-enable")?.addEventListener("click", async () => {
+        const code = document.getElementById("master-mfa-code")?.value?.trim();
+        const statusEl = document.getElementById("master-mfa-setup-status");
+        if (!code) return;
+        try {
+          await apiPost("/auth/mfa/enable", { code });
+          if (statusEl) statusEl.textContent = "Two-factor authentication enabled.";
+          loadAccountPanel();
         } catch (error) {
           if (statusEl) statusEl.textContent = error.message;
         }
@@ -902,6 +1018,10 @@
   });
   els.includeDeleted?.addEventListener("change", () => {
     state.includeDeleted = els.includeDeleted.checked;
+    loadTenants();
+  });
+  els.excludeTest?.addEventListener("change", () => {
+    state.excludeTest = els.excludeTest.checked;
     loadTenants();
   });
 

@@ -9,7 +9,12 @@ from pathlib import Path
 BACKEND = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BACKEND))
 
-from modules.master.service import _format_last_active, display_status
+from modules.master.service import (
+    _format_last_active,
+    _is_test_tenant,
+    _staff_label,
+    display_status,
+)
 
 
 def test_display_status_trialing() -> None:
@@ -34,3 +39,19 @@ def test_format_last_active_today() -> None:
     result = _format_last_active(last, as_of=now)
     assert result["tone"] == "good"
     assert "Today" in result["label"]
+
+
+def test_is_test_tenant_example_email() -> None:
+    assert _is_test_tenant("Acme Ltd", "test1781083937@example.com")
+
+
+def test_staff_label_no_hr_login() -> None:
+    assert (
+        _staff_label(
+            active_count=0,
+            staff_limit=40,
+            hr_login_email="owner@acme.co.uk",
+            hr_last_login=None,
+        )
+        == "no HR login yet"
+    )

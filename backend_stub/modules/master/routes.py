@@ -151,6 +151,7 @@ def master_tenant_list(
     status: FilterStatus = Query(default="all"),
     q: str | None = Query(default=None, max_length=120),
     include_deleted: bool = Query(default=False),
+    exclude_test: bool = Query(default=False),
 ) -> dict[str, object]:
     conn = _db_conn()
     try:
@@ -160,11 +161,13 @@ def master_tenant_list(
             status_filter=status,
             search=q,
             include_deleted=include_deleted,
+            exclude_test=exclude_test,
         )
         stats = overview_stats(
             conn=conn,
             master_tenant_id=int(settings.master_customer_id),
             include_deleted=include_deleted,
+            exclude_test=exclude_test,
         )
         _audit(
             request=request,

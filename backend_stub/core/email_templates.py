@@ -176,6 +176,7 @@ def welcome_trial_email(
         f"- Geofenced time clock for staff\n\n"
         f"Sign in: {login_url}\n"
         f"Username: {billing_email}\n"
+        f"Password: use the password you chose when signing up (not sent by email for security)\n"
         f"Plan: {plan_name}\n"
         f"Trial: {trial_days} days\n\n"
         f"Open your admin dashboard: {dashboard_url}\n\n"
@@ -196,6 +197,7 @@ def welcome_trial_email(
         ],
         details=[
             ("Username", billing_email),
+            ("Password", "Use the password you chose at sign-up"),
             ("Plan", plan_name),
             ("Trial", f"{trial_days} days"),
         ],
