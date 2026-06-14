@@ -67,7 +67,7 @@ rsync -a --delete "${API_ROOT}/frontend/" "${APP_ROOT}/"
 
 # WWW: marketing + legal only — HR app (login, admin, OPS) lives on app.shiftswifthr.co.uk
 echo "==> sync marketing frontend to WWW (excluding HR app pages)"
-rsync -a --delete \
+rsync -a --delete --delete-excluded \
   --include='/' \
   --include='index.html' \
   --include='landing.html' \
@@ -94,6 +94,7 @@ rsync -a --delete \
   --exclude='*' \
   "${API_ROOT}/frontend/" "${WWW_ROOT}/"
 
+# rsync --delete alone keeps stale HR pages on www (they still exist in source but are filtered out)
 WWW_FORBIDDEN=(
   business-login.html
   admin.html
@@ -103,6 +104,9 @@ WWW_FORBIDDEN=(
   master.html
   punch.html
 )
+for page in "${WWW_FORBIDDEN[@]}"; do
+  rm -f "${WWW_ROOT}/${page}"
+done
 for page in "${WWW_FORBIDDEN[@]}"; do
   if [ -f "${WWW_ROOT}/${page}" ]; then
     echo "ERROR: ${WWW_ROOT}/${page} must not exist on www — check WWW rsync filters"
