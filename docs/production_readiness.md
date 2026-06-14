@@ -19,10 +19,11 @@ Checklist for going live on **shiftswifthr.co.uk** with real customer data. Use 
 
 ## 1. Blockers (must be green before launch)
 
-- [ ] **All migrations applied** (through `035_time_punch.sql`)
+- [ ] **All migrations applied** (through `065_master_platform_ops.sql`)
   ```bash
   DATABASE_URL=postgresql://... bash scripts/run_migrations.sh
   ```
+  Includes time punch QR/kiosk (`063`–`064`), employee GDPR consent (`055`), master platform ops (`065`).
 - [ ] **Strong secrets** — `JWT_SECRET` ≥ 32 characters, `ENCRYPTION_KEY` set (64 hex chars for grievance module)
   ```bash
   bash scripts/generate_secrets.sh
@@ -59,7 +60,7 @@ curl -s http://127.0.0.1:8000/health
 | Bcrypt password hashing | ✅ | `auth_service.py` |
 | JWT access + refresh tokens | ✅ | Default 60 min / 7 days |
 | Login rate limiting | ✅ | 10 attempts / 15 min per IP + username |
-| TOTP 2FA (in-app) | ✅ | Migration `034_auth_mfa.sql` |
+| TOTP 2FA (in-app) | ✅ | Migration `034`; HR required in production (`BUSINESS_REQUIRE_MFA`); master OPS at `/ops-9x7k2.html` |
 | Separate Master / Business / Employee login | ✅ | Portal isolation |
 | Tenant isolation (`X-Tenant-Id` + JWT) | ✅ | All admin routes |
 | Security headers (HSTS, nosniff, frame deny) | ✅ | `security_middleware.py` |
@@ -146,10 +147,12 @@ See [server_installation.md](./server_installation.md) for step-by-step staging 
 ## 6. Testing before launch
 
 - [ ] `cd backend_stub && python -m pytest tests/ -q`
-- [ ] Business HR login + MFA enrollment
-- [ ] Employee login → time punch (in range / out of range)
+- [ ] Business HR login + MFA enrollment (Settings → Security after login)
+- [ ] Employee login → time punch (GPS, premises QR, or kiosk if enabled)
+- [ ] Master OPS login at `/ops-9x7k2.html` — tenant list, duplicate trial cleanup
 - [ ] Master login blocked on business portal (and vice versa)
 - [ ] Tenant isolation — forged `X-Tenant-Id` returns 403
+- [ ] Signup blocks duplicate billing email; OPS shows Primary vs Duplicate trial
 - [ ] RTW PDF upload + audit entry
 - [ ] Stripe webhook (test mode) updates subscription
 - [ ] `APP_ENV=production` rejects weak `JWT_SECRET` on startup
@@ -197,11 +200,11 @@ See [server_installation.md](./server_installation.md) for step-by-step staging 
 
 1. Provision **staging VPS** and run `sudo bash scripts/install_server.sh`
 2. Point **DNS** and run **certbot**
-3. Apply **all migrations** including `034` (MFA) and `035` (time punch)
+3. Apply **all migrations** through **`065`** (MFA `034`, time punch `035`–`064`, master ops `065`)
 4. **Rotate secrets** and change seeded passwords
-5. Configure **daily Postgres backup** and test restore
+5. Configure **daily Postgres backup** (DB + document/RTW upload dirs) and test restore
 6. Add **uptime monitor** on `https://api.shiftswifthr.co.uk/health`
-7. **Pilot one real business** — HR login, employee login, on-site time punch
+7. **Pilot one real business** — HR login + 2FA, employee invite, time punch; tidy duplicate trials in OPS if needed
 
 ---
 
