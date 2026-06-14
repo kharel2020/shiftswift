@@ -34,6 +34,7 @@
     sidebarClose: document.getElementById("master-sidebar-close"),
     includeDeleted: document.getElementById("master-include-deleted"),
     excludeTest: document.getElementById("master-exclude-test"),
+    deleteSelectedBtn: document.getElementById("master-delete-selected-btn"),
   };
 
   function apiBase() {
@@ -160,6 +161,50 @@
     return `<dl class="master-kv-grid">${rows
       .map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${value}</dd></div>`)
       .join("")}</dl>`;
+  }
+
+  function tenantDeleteGuard(tenant) {
+    if (!tenant) return { allowed: false, reason: "Select a tenant first" };
+    if (tenant.deleted_at) return { allowed: false, reason: "Tenant is already deleted" };
+    if (tenant.can_delete === false) {
+      return {
+        allowed: false,
+        reason: tenant.delete_blocked_reason || "Suspend this account before deleting it",
+      };
+    }
+    return { allowed: true, reason: null };
+  }
+
+  function syncDeleteSelectedButton() {
+    if (!els.deleteSelectedBtn) return;
+    const tenant = state.selectedTenant || state.tenants.find((row) => row.id === state.selectedId);
+    if (!tenant) {
+      els.deleteSelectedBtn.disabled = true;
+      els.deleteSelectedBtn.title = "Select a tenant to delete";
+      return;
+    }
+    const guard = tenantDeleteGuard(tenant);
+    els.deleteSelectedBtn.disabled = !guard.allowed;
+    els.deleteSelectedBtn.title = guard.reason || `Delete ${tenant.name}`;
+  }
+
+  async function deleteTenantWithConfirm(tenant) {
+    const guard = tenantDeleteGuard(tenant);
+    if (!guard.allowed) {
+      window.alert(guard.reason);
+      return;
+    }
+    const typed = window.prompt(
+      `Type the business name to confirm delete:\n${tenant.name}\n\nPaying accounts must be suspended before deletion.`,
+    );
+    if (typed === null) return;
+    try {
+      await apiPost(`/master/tenants/${tenant.id}/delete`, { confirm_name: typed });
+      closeDetail();
+      await loadTenants();
+    } catch (error) {
+      window.alert(error.message);
+    }
   }
 
   function renderMetrics() {
@@ -301,6 +346,7 @@
       renderDetail(state.selectedTenant);
       console.error(error);
     }
+    syncDeleteSelectedButton();
   }
 
   async function refreshSelectedTenant() {
@@ -386,17 +432,17 @@
     const deleteBtn = document.getElementById("detail-delete-tenant");
     if (deleteBtn) {
       deleteBtn.hidden = isDeleted;
-      deleteBtn.onclick = async () => {
-        const typed = window.prompt(`Type the business name to confirm delete:\n${tenant.name}`);
-        if (typed === null) return;
-        try {
-          await apiPost(`/master/tenants/${tenant.id}/delete`, { confirm_name: typed });
-          closeDetail();
-          await loadTenants();
-        } catch (error) {
-          alert(error.message);
-        }
-      };
+      const deleteGuard = tenantDeleteGuard(tenant);
+      deleteBtn.disabled = !deleteGuard.allowed;
+      deleteBtn.title = deleteGuard.reason || "";
+      deleteBtn.onclick = () => deleteTenantWithConfirm(tenant);
+    }
+
+    const deleteHint = document.getElementById("detail-delete-hint");
+    if (deleteHint) {
+      const deleteGuard = tenantDeleteGuard(tenant);
+      deleteHint.hidden = isDeleted || deleteGuard.allowed;
+      deleteHint.textContent = deleteGuard.reason || "";
     }
 
     document.getElementById("detail-extend-trial").onclick = async () => {
@@ -465,6 +511,7 @@
     syncLayoutSplit();
     renderTable();
     renderCards();
+    syncDeleteSelectedButton();
   }
 
   function renderPageSub() {
@@ -559,6 +606,7 @@
       renderCards();
       renderPageSub();
       if (els.exportBtn) els.exportBtn.disabled = state.tenants.length === 0;
+      syncDeleteSelectedButton();
     } catch (error) {
       if (els.pageSub) els.pageSub.textContent = error.message || "Failed to load tenants";
     } finally {
@@ -1044,6 +1092,10 @@
   els.exportBtn?.addEventListener("click", exportCsv);
   document.getElementById("master-cleanup-duplicates-btn")?.addEventListener("click", () => {
     void cleanupDuplicateTrials();
+  });
+  els.deleteSelectedBtn?.addEventListener("click", () => {
+    const tenant = state.selectedTenant || state.tenants.find((row) => row.id === state.selectedId);
+    if (tenant) void deleteTenantWithConfirm(tenant);
   });
 
   function closeSidebar() {

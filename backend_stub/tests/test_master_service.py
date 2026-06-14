@@ -13,6 +13,7 @@ from modules.master.service import (
     _format_last_active,
     _is_test_tenant,
     _staff_label,
+    delete_eligibility,
     display_status,
 )
 
@@ -55,3 +56,30 @@ def test_staff_label_no_hr_login() -> None:
         )
         == "no HR login yet"
     )
+
+
+def test_delete_eligibility_blocks_paying_active_tenant() -> None:
+    allowed, reason = delete_eligibility(
+        subscription_status="active",
+        platform_status="active",
+    )
+    assert allowed is False
+    assert reason is not None
+
+
+def test_delete_eligibility_allows_after_suspend() -> None:
+    allowed, reason = delete_eligibility(
+        subscription_status="active",
+        platform_status="suspended",
+    )
+    assert allowed is True
+    assert reason is None
+
+
+def test_delete_eligibility_allows_trialing_tenant() -> None:
+    allowed, reason = delete_eligibility(
+        subscription_status="trialing",
+        platform_status="active",
+    )
+    assert allowed is True
+    assert reason is None

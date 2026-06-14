@@ -7,7 +7,7 @@ from typing import Any
 
 from auth_service import hash_password, verify_password
 from core.notifications import send_email_notification, smtp_configured
-from modules.master.service import _pick_canonical_tenant_id, list_tenants
+from modules.master.service import _pick_canonical_tenant_id, delete_eligibility, list_tenants
 from trial_service import TRIALING_STATUSES
 
 ACTIVE_EMPLOYEE_STATUSES = ("active", "onboarding", "suspended")
@@ -110,6 +110,15 @@ def soft_delete_tenant(
     row = _get_tenant_row(conn, tenant_id, master_tenant_id)
     if not row:
         raise LookupError("Tenant not found")
+    if row[4]:
+        raise ValueError("Tenant is already deleted")
+    can_delete, block_reason = delete_eligibility(
+        subscription_status=row[6],
+        platform_status=row[3],
+        deleted_at=row[4],
+    )
+    if not can_delete:
+        raise ValueError(block_reason or "Cannot delete this tenant")
     tenant_name = row[1] or ""
     if confirm_name.strip().lower() != tenant_name.strip().lower():
         raise ValueError("Confirmation name does not match tenant business name")

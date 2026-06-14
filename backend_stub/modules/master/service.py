@@ -47,6 +47,32 @@ def display_status(
     return "trialing"
 
 
+def delete_eligibility(
+    *,
+    subscription_status: str | None,
+    platform_status: str | None,
+    deleted_at: datetime | None = None,
+    license_state: str | None = None,
+    payment_failed_at: datetime | None = None,
+) -> tuple[bool, str | None]:
+    """Paying tenants must be platform-suspended before soft delete."""
+    if deleted_at:
+        return False, "Tenant is already deleted"
+    platform = (platform_status or "active").strip().lower()
+    if platform == "suspended":
+        return True, None
+    billing_status = display_status(
+        subscription_status=subscription_status,
+        license_state=license_state,
+        payment_failed_at=payment_failed_at,
+        platform_status=platform_status,
+        deleted_at=deleted_at,
+    )
+    if billing_status in ("active", "overdue"):
+        return False, "Suspend this paying account before deleting it."
+    return True, None
+
+
 def _is_test_tenant(name: str | None, billing_email: str | None) -> bool:
     email = (billing_email or "").strip().lower()
     if email.endswith("@example.com") or email.endswith("@test.com") or "+test@" in email:
@@ -244,6 +270,13 @@ def _serialize_tenant_row(row: tuple[Any, ...], *, as_of: datetime | None = None
         active_employees=active_count,
     )
     last_active = _format_last_active(last_login, as_of=now)
+    can_delete, delete_blocked_reason = delete_eligibility(
+        subscription_status=subscription_status,
+        platform_status=platform_status,
+        deleted_at=deleted_at,
+        license_state=license_state,
+        payment_failed_at=payment_failed_at,
+    )
 
     return {
         "id": int(tenant_id),
@@ -289,6 +322,8 @@ def _serialize_tenant_row(row: tuple[Any, ...], *, as_of: datetime | None = None
         "billing_mode": billing_mode or "stripe",
         "billing_notes": billing_notes or "",
         "can_impersonate": deleted_at is None and (platform_status or "active") == "active",
+        "can_delete": can_delete,
+        "delete_blocked_reason": delete_blocked_reason,
     }
 
 

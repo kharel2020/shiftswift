@@ -298,6 +298,16 @@ body.master-app {
   border-color: rgba(197, 48, 48, 0.35);
 }
 
+.master-btn--danger:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.master-detail-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+}
+
 .master-detail-actions .master-btn--danger {
   width: 100%;
 }

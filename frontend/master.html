@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#142033" />
     <script src="./app-icons.js?v=brandkit-v5"></script>
     <title>ShiftSwift OPS | Master Admin</title>
-    <link rel="stylesheet" href="./master.css?v=8" />
+    <link rel="stylesheet" href="./master.css?v=10" />
   </head>
   <body class="master-app">
     <div id="master-overlay" class="master-overlay" hidden aria-hidden="true"></div>
@@ -73,6 +73,7 @@
             <button type="button" class="master-btn master-btn--ghost" id="master-export-btn" disabled>Export CSV</button>
             <button type="button" class="master-btn master-btn--ghost" id="master-cleanup-duplicates-btn">Remove duplicate trials</button>
             <button type="button" class="master-btn master-btn--ghost" id="master-create-tenant-btn">Create account</button>
+            <button type="button" class="master-btn master-btn--danger" id="master-delete-selected-btn" disabled title="Select a tenant to delete">Delete selected</button>
             <label class="master-check master-page-actions__check">
               <input type="checkbox" id="master-exclude-test" />
               <span>Hide test accounts</span>
@@ -194,6 +195,7 @@
                   <button type="button" class="master-btn master-btn--ghost" id="detail-email-tenant">Email tenant</button>
                 </div>
                 <button type="button" class="master-btn master-btn--ghost" id="detail-suspend-toggle">Suspend account</button>
+                <p class="master-detail-hint muted" id="detail-delete-hint" hidden></p>
                 <button type="button" class="master-btn master-btn--ghost" id="detail-restore-tenant" hidden>Restore deleted tenant</button>
                 <button type="button" class="master-btn master-btn--danger" id="detail-delete-tenant">Delete tenant</button>
               </div>
@@ -256,6 +258,6 @@
 
     <script src="./brand-config.js?v=brand-v4"></script>
     <script src="./master-auth-guard.js?v=2"></script>
-    <script src="./master.js?v=9"></script>
+    <script src="./master.js?v=10"></script>
   </body>
 </html>
