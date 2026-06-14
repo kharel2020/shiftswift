@@ -75,32 +75,45 @@ def render_icon(*, bottom_label: str, maskable: bool, size: int) -> Image.Image:
     pad = int(size * (0.14 if maskable else 0.06))
     draw.rounded_rectangle((pad, pad, size - pad, size - pad), radius=int(size * 0.21), fill=WHITE)
 
+    inner_top = pad
+    inner_bottom = size - pad
+    inner_height = inner_bottom - inner_top
     cx = size // 2
-    mark_top = int(size * (0.11 if maskable else 0.09))
-    mark_scale = (0.98 if maskable else 1.08) * (size / 512)
-    _draw_mark(draw, cx, mark_top, scale=mark_scale)
 
+    mark_scale = (0.98 if maskable else 1.08) * (size / 512)
     mark_height = int(96 * mark_scale)
-    mark_bottom = mark_top + mark_height
 
     word_size = int(size * 0.098)
     label_size = int(size * (0.052 if bottom_label == "HR" else 0.044))
     word_font = _font(word_size)
     label_font = _font(label_size)
 
+    word_box = draw.textbbox((0, 0), "ShiftSwift", font=word_font)
+    word_h = word_box[3] - word_box[1]
+    label_box = draw.textbbox((0, 0), bottom_label, font=label_font)
+    label_h = label_box[3] - label_box[1]
+
+    gap_after_mark = int(size * 0.028)
+    gap_after_word = int(size * 0.045)
+    content_height = mark_height + gap_after_mark + word_h + gap_after_word + label_h
+    block_top = inner_top + max(0, (inner_height - content_height) // 2)
+
+    mark_top = block_top
+    _draw_mark(draw, cx, mark_top, scale=mark_scale)
+    mark_bottom = mark_top + mark_height
+
     shift = "Shift"
     swift = "Swift"
     shift_w = _text_width(draw, shift, word_font)
     swift_w = _text_width(draw, swift, word_font)
     total_w = shift_w + swift_w
-    word_y = mark_bottom + int(size * 0.028)
+    word_y = mark_bottom + gap_after_mark
     x = cx - total_w // 2
     draw.text((x, word_y), shift, fill=INK, font=word_font)
     draw.text((x + shift_w, word_y), swift, fill=GREEN, font=word_font)
 
-    word_box = draw.textbbox((x, word_y), shift + swift, font=word_font)
-    word_bottom = word_box[3]
-    label_y = word_bottom + int(size * 0.045)
+    word_bottom = draw.textbbox((x, word_y), shift + swift, font=word_font)[3]
+    label_y = word_bottom + gap_after_word
     label_w = _text_width(draw, bottom_label, label_font)
     draw.text((cx - label_w // 2, label_y), bottom_label, fill=GREEN, font=label_font)
 
