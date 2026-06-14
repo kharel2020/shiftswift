@@ -43,29 +43,50 @@
     return localStorage.getItem("apiBaseUrl") || "http://localhost:3000";
   }
 
-  function authHeaders() {
-    return {
+  function authHeaders(includeJsonBody = false) {
+    const headers = {
       Authorization: `Bearer ${localStorage.getItem("token")}`,
-      "Content-Type": "application/json",
     };
+    if (includeJsonBody) headers["Content-Type"] = "application/json";
+    return headers;
+  }
+
+  function parseApiError(data, fallback = "Request failed") {
+    if (typeof data.detail === "string") return data.detail;
+    if (Array.isArray(data.detail)) {
+      return data.detail
+        .map((item) => (typeof item === "string" ? item : item.msg || item.message || String(item)))
+        .join("; ");
+    }
+    if (typeof data.message === "string") return data.message;
+    return fallback;
   }
 
   async function apiRequest(path, options = {}) {
-    const response = await fetch(`${apiBase()}${path}`, {
-      ...options,
-      headers: { ...authHeaders(), ...(options.headers || {}) },
-    });
+    const hasBody = options.body !== undefined && options.body !== null;
+    let response;
+    try {
+      response = await fetch(`${apiBase()}${path}`, {
+        ...options,
+        headers: { ...authHeaders(hasBody), ...(options.headers || {}) },
+      });
+    } catch (error) {
+      const message = error?.message || "Network request failed";
+      if (message === "Load failed" || message === "Failed to fetch") {
+        throw new Error("Could not reach the API — check your connection, refresh the page, and try again.");
+      }
+      throw error;
+    }
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      const detail = typeof data.detail === "string" ? data.detail : "Request failed";
-      throw new Error(detail);
+      throw new Error(parseApiError(data));
     }
     return data;
   }
 
   const apiGet = (path) => apiRequest(path);
-  const apiPost = (path, body) =>
-    apiRequest(path, { method: "POST", body: body ? JSON.stringify(body) : undefined });
+  const apiPost = (path, body = {}) =>
+    apiRequest(path, { method: "POST", body: JSON.stringify(body) });
   const apiPut = (path, body) => apiRequest(path, { method: "PUT", body: JSON.stringify(body) });
 
   function saveMasterReturnSession() {
@@ -555,7 +576,7 @@
     }
     let preview;
     try {
-      preview = await apiPost("/master/tenants/cleanup-duplicates", { confirm: false });
+      preview = await apiGet("/master/tenants/duplicate-trials/preview");
     } catch (error) {
       window.alert(error.message || "Could not preview duplicate trials.");
       return;

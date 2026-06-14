@@ -5,6 +5,8 @@ from __future__ import annotations
 import os
 from typing import Annotated, Any
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Body
 from pydantic import BaseModel, Field
 
@@ -41,6 +43,7 @@ from modules.master.service import FilterStatus, get_tenant_detail, list_tenants
 
 router = APIRouter(prefix="/master", tags=["Platform Master"])
 settings = load_settings()
+logger = logging.getLogger(__name__)
 
 
 def _db_conn() -> Any:
@@ -289,6 +292,39 @@ def master_update_tenant_billing(
         conn.close()
 
 
+@router.get("/tenants/duplicate-trials/preview")
+def master_preview_duplicate_tenants(
+    request: Request,
+    current_user: Annotated[AuthUser, Depends(get_master_user)],
+) -> dict[str, object]:
+    conn = _db_conn()
+    try:
+        result = cleanup_duplicate_tenants(
+            conn=conn,
+            master_tenant_id=int(settings.master_customer_id),
+            master_username=current_user.username,
+            dry_run=True,
+        )
+        _audit(
+            request=request,
+            current_user=current_user,
+            action="PREVIEW_DUPLICATE_TENANTS",
+            conn=conn,
+            detail={"removed_count": len(result.get("removed") or [])},
+        )
+        conn.commit()
+        return result
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as exc:
+        conn.rollback()
+        logger.exception("Duplicate trial preview failed")
+        raise HTTPException(status_code=500, detail=f"Could not preview duplicates: {exc}") from exc
+    finally:
+        conn.close()
+
+
 @router.post("/tenants/cleanup-duplicates")
 def master_cleanup_duplicate_tenants(
     request: Request,
@@ -320,6 +356,19 @@ def master_cleanup_duplicate_tenants(
         )
         conn.commit()
         return result
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as exc:
+        conn.rollback()
+        logger.exception("Duplicate trial cleanup failed")
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                f"Duplicate cleanup failed: {exc}. "
+                "Ensure migration 065_master_platform_ops.sql has been applied on the server."
+            ),
+        ) from exc
     finally:
         conn.close()
 
