@@ -18,6 +18,7 @@
     search: document.getElementById("master-search"),
     tableBody: document.getElementById("master-table-body"),
     cardList: document.getElementById("master-card-list"),
+    layout: document.getElementById("master-layout"),
     empty: document.getElementById("master-empty"),
     detail: document.getElementById("master-detail"),
     detailClose: document.getElementById("master-detail-close"),
@@ -209,10 +210,15 @@
   function tenantSubline(tenant) {
     const bits = [`#${tenant.id}`];
     if (tenant.billing_email) bits.push(tenant.billing_email);
-    if (tenant.billing_mode === "offline") bits.push("offline billing");
+    if (tenant.billing_mode === "offline") bits.push("offline");
     if (tenant.hr_login_email) bits.push(`login: ${tenant.hr_login_email}`);
-    else bits.push("no HR login yet");
     return bits.join(" · ");
+  }
+
+  function syncLayoutSplit() {
+    if (els.layout) {
+      els.layout.classList.toggle("master-layout--split", Boolean(state.selectedId && els.detail && !els.detail.hidden));
+    }
   }
 
   function tenantIdentityBadge(tenant) {
@@ -232,8 +238,10 @@
     els.tableBody.innerHTML = rows
       .map((tenant) => {
         const selected = tenant.id === state.selectedId ? " is-selected" : "";
-        return `<tr data-tenant-id="${tenant.id}" class="${selected.trim()}">
-          <td><div class="master-business"><strong>${escapeHtml(tenant.name)}</strong> ${tenantIdentityBadge(tenant)}<span>${escapeHtml(tenantSubline(tenant))}</span><span>${escapeHtml(tenant.location)}</span></div></td>
+        const pickerClass = tenant.id === state.selectedId ? "master-row-picker is-checked" : "master-row-picker";
+        return `<tr data-tenant-id="${tenant.id}" class="${selected.trim()}" aria-selected="${tenant.id === state.selectedId ? "true" : "false"}">
+          <td class="master-col-select"><span class="${pickerClass}" aria-hidden="true"></span></td>
+          <td><div class="master-business"><strong>${escapeHtml(tenant.name)}</strong> ${tenantIdentityBadge(tenant)}<span>${escapeHtml(tenantSubline(tenant))}</span></div></td>
           <td><span class="${planBadgeClass(tenant.plan_tier)}">${escapeHtml(tenant.plan_label)}</span></td>
           <td><span class="${statusClass(tenant.status)}">${escapeHtml(tenant.status)}</span></td>
           <td>${escapeHtml(formatDate(tenant.renewal_or_trial_date || tenant.trial_ends_at))}</td>
@@ -277,6 +285,7 @@
     renderTable();
     renderCards();
     if (els.detail) els.detail.hidden = false;
+    syncLayoutSplit();
     try {
       const data = await apiGet(`/master/tenants/${id}`);
       state.selectedTenant = data.tenant;
@@ -446,6 +455,7 @@
     state.selectedId = null;
     state.selectedTenant = null;
     if (els.detail) els.detail.hidden = true;
+    syncLayoutSplit();
     renderTable();
     renderCards();
   }

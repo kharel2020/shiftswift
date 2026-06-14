@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#142033" />
     <script src="./app-icons.js?v=brandkit-v5"></script>
     <title>ShiftSwift OPS | Master Admin</title>
-    <link rel="stylesheet" href="./master.css?v=5" />
+    <link rel="stylesheet" href="./master.css?v=6" />
   </head>
   <body class="master-app">
     <div id="master-overlay" class="master-overlay" hidden aria-hidden="true"></div>
@@ -129,12 +129,14 @@
           </form>
         </div>
 
-        <div class="master-layout">
+        <div class="master-layout" id="master-layout">
           <section class="master-table-panel" aria-label="Tenant register">
+            <p class="master-table-hint">Select a business row to open actions on the right.</p>
             <div class="master-table-wrap">
               <table class="master-table master-table--desktop">
                 <thead>
                   <tr>
+                    <th scope="col" class="master-col-select" aria-label="Select"></th>
                     <th>Business</th>
                     <th>Plan</th>
                     <th>Status</th>
@@ -250,6 +252,6 @@
 
     <script src="./brand-config.js?v=brand-v4"></script>
     <script src="./master-auth-guard.js?v=2"></script>
-    <script src="./master.js?v=6"></script>
+    <script src="./master.js?v=7"></script>
   </body>
 </html>
