@@ -13,7 +13,7 @@
     <title>ShiftSwift HR | Admin Console</title>
     <link rel="manifest" href="./admin-manifest.webmanifest?v=3" />
     <title>ShiftSwift HR | Admin Console</title>
-    <link rel="stylesheet" href="./styles.css?v=admin-v33" />
+    <link rel="stylesheet" href="./styles.css?v=admin-v34" />
   </head>
   <body>
     <script src="./admin-impersonation.js?v=1"></script>
@@ -1497,51 +1497,7 @@
             </article>
           </div>
           </div>
-          <aside id="rota-shift-panel" class="rota-shift-panel" hidden>
-              <div class="rota-shift-panel__head">
-                <h3 id="rota-shift-popover-title">Add shift</h3>
-                <button type="button" class="rota-shift-panel__close" id="rota-shift-popover-close" aria-label="Close panel">×</button>
-              </div>
-              <p id="rota-shift-popover-context" class="muted rota-shift-panel__context"></p>
-              <div class="rota-shift-panel__body">
-                <label class="rota-field">
-                  <span class="rota-field-label">Employee</span>
-                  <select id="rota-add-employee"></select>
-                  <span id="rota-employee-empty-hint" class="rota-inline-hint" hidden>
-                    No active employees. <a href="#employees">Add employees →</a>
-                  </span>
-                </label>
-                <label class="rota-field">
-                  <span class="rota-field-label">Day</span>
-                  <select id="rota-add-day"></select>
-                </label>
-                <label class="rota-field">
-                  <span class="rota-field-label">Start time</span>
-                  <select id="rota-add-start"></select>
-                </label>
-                <label class="rota-field">
-                  <span class="rota-field-label">End time</span>
-                  <select id="rota-add-end"></select>
-                </label>
-                <p id="rota-shift-duration" class="rota-duration-badge"></p>
-                <label class="rota-field">
-                  <span class="rota-field-label">Role <span class="muted">(from profile)</span></span>
-                  <input id="rota-add-role" type="text" maxlength="80" list="rota-role-suggestions" placeholder="e.g. Kitchen, Floor, Bar" />
-                </label>
-                <label class="rota-field">
-                  <span class="rota-field-label">Note <span class="muted">(optional)</span></span>
-                  <input id="rota-add-notes" type="text" maxlength="500" placeholder="e.g. cover for absence" />
-                </label>
-                <datalist id="rota-role-suggestions"></datalist>
-                <p id="rota-overlap-status" class="rota-overlap-status rota-overlap-status--ok"></p>
-              </div>
-              <div class="rota-shift-panel__foot">
-                <button type="button" class="btn ghost" id="rota-shift-cancel-btn">Cancel</button>
-                <button type="button" class="btn" id="rota-add-btn">Add to rota</button>
-              </div>
-          </aside>
           </div>
-          <div id="rota-shift-backdrop" class="rota-shift-backdrop" hidden aria-hidden="true"></div>
           <article class="card" id="rota-list-panel" hidden>
             <div class="rota-list-panel__head">
               <h3>Shifts this week</h3>
@@ -1611,6 +1567,51 @@
             <button type="button" class="btn ghost" id="rota-clear-btn">Clear rota</button>
           </div>
           </article>
+          <div id="rota-shift-backdrop" class="rota-shift-backdrop mobile-editor-backdrop" hidden aria-hidden="true"></div>
+          <aside id="rota-shift-panel" class="rota-shift-panel mobile-editor-sheet" hidden role="dialog" aria-modal="true" aria-labelledby="rota-shift-popover-title">
+            <div class="mobile-editor-sheet__grabber" aria-hidden="true"></div>
+            <div class="rota-shift-panel__head mobile-editor-sheet__head">
+              <h3 id="rota-shift-popover-title">Add shift</h3>
+              <button type="button" class="rota-shift-panel__close mobile-editor-sheet__close" id="rota-shift-popover-close" aria-label="Close panel">×</button>
+            </div>
+            <p id="rota-shift-popover-context" class="muted rota-shift-panel__context mobile-editor-sheet__context"></p>
+            <div class="rota-shift-panel__body mobile-editor-sheet__body">
+              <label class="rota-field">
+                <span class="rota-field-label">Employee</span>
+                <select id="rota-add-employee"></select>
+                <span id="rota-employee-empty-hint" class="rota-inline-hint" hidden>
+                  No active employees. <a href="#employees">Add employees →</a>
+                </span>
+              </label>
+              <label class="rota-field">
+                <span class="rota-field-label">Day</span>
+                <select id="rota-add-day"></select>
+              </label>
+              <label class="rota-field">
+                <span class="rota-field-label">Start time</span>
+                <select id="rota-add-start"></select>
+              </label>
+              <label class="rota-field">
+                <span class="rota-field-label">End time</span>
+                <select id="rota-add-end"></select>
+              </label>
+              <p id="rota-shift-duration" class="rota-duration-badge"></p>
+              <label class="rota-field">
+                <span class="rota-field-label">Role <span class="muted">(from profile)</span></span>
+                <input id="rota-add-role" type="text" maxlength="80" list="rota-role-suggestions" placeholder="e.g. Kitchen, Floor, Bar" />
+              </label>
+              <label class="rota-field">
+                <span class="rota-field-label">Note <span class="muted">(optional)</span></span>
+                <input id="rota-add-notes" type="text" maxlength="500" placeholder="e.g. cover for absence" />
+              </label>
+              <datalist id="rota-role-suggestions"></datalist>
+              <p id="rota-overlap-status" class="rota-overlap-status rota-overlap-status--ok"></p>
+            </div>
+            <div class="rota-shift-panel__foot mobile-editor-sheet__foot">
+              <button type="button" class="btn ghost" id="rota-shift-cancel-btn">Cancel</button>
+              <button type="button" class="btn primary" id="rota-add-btn">Add to rota</button>
+            </div>
+          </aside>
         </section>
 
         <section id="leave" class="admin-section" hidden>
@@ -1919,7 +1920,7 @@
     <script src="./admin-offboarding.js?v=admin-v5"></script>
     <script src="./admin-templates.js?v=admin-v8"></script>
     <script src="./admin-time-punch.js?v=6"></script>
-    <script src="./admin-rota.js?v=8"></script>
+    <script src="./admin-rota.js?v=9"></script>
     <script src="./admin-leave.js?v=1"></script>
     <script src="./app.js?v=admin-v6"></script>
     <script src="./contracts.js?v=5"></script>

@@ -17,6 +17,7 @@ from core.crypto import decrypt_text, encrypt_text, encryption_configured
 Portal = Literal["master", "business"]
 MFA_ISSUER = os.getenv("MFA_ISSUER_NAME", "ShiftSwift HR")
 MFA_CHALLENGE_MINUTES = int(os.getenv("MFA_CHALLENGE_MINUTES", "5"))
+MFA_ENROLLMENT_MINUTES = int(os.getenv("MFA_ENROLLMENT_MINUTES", "15"))
 
 
 def _store_secret(raw_secret: str) -> str:
@@ -83,6 +84,44 @@ def decode_mfa_challenge_token(settings: Settings, token: str) -> dict[str, Any]
     required = ("sub", "role", "tenant_id", "portal")
     if not all(payload.get(key) for key in required):
         raise ValueError("Malformed MFA challenge")
+    return payload
+
+
+def create_mfa_enrollment_token(
+    settings: Settings,
+    *,
+    username: str,
+    role: str,
+    tenant_id: str,
+    portal: Portal = "master",
+) -> str:
+    now = datetime.now(timezone.utc)
+    exp = now + timedelta(minutes=MFA_ENROLLMENT_MINUTES)
+    payload = {
+        "sub": username,
+        "role": role,
+        "tenant_id": tenant_id,
+        "portal": portal,
+        "type": "mfa_enrollment",
+        "iat": int(now.timestamp()),
+        "exp": int(exp.timestamp()),
+        "jti": secrets.token_urlsafe(16),
+    }
+    return jwt.encode(payload, settings.jwt_secret, algorithm="HS256")
+
+
+def decode_mfa_enrollment_token(settings: Settings, token: str) -> dict[str, Any]:
+    try:
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=["HS256"])
+    except jwt.PyJWTError as exc:
+        raise ValueError("Invalid or expired MFA enrollment session") from exc
+    if payload.get("type") != "mfa_enrollment":
+        raise ValueError("Invalid MFA enrollment token")
+    if payload.get("portal") != "master":
+        raise ValueError("Invalid MFA enrollment portal")
+    required = ("sub", "role", "tenant_id", "portal")
+    if not all(payload.get(key) for key in required):
+        raise ValueError("Malformed MFA enrollment token")
     return payload
 
 

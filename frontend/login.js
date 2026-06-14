@@ -25,7 +25,99 @@ const LOGIN_MODES = {
   },
 };
 
+let pendingEnrollmentToken = null;
 let pendingChallenge = null;
+
+async function postJsonAuth(path, body, bearerToken) {
+  const headers = { "Content-Type": "application/json" };
+  if (bearerToken) headers.Authorization = `Bearer ${bearerToken}`;
+  let response;
+  try {
+    response = await fetch(`${getApiBase()}${path}`, {
+      method: "POST",
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    throw new Error("Failed to fetch");
+  }
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const detail = data.detail;
+    const message = typeof detail === "string" ? detail : Array.isArray(detail) ? detail[0]?.msg : null;
+    throw new Error(message || data.message || "Request failed");
+  }
+  return data;
+}
+
+function setEnrollmentStatus(message) {
+  const status = document.getElementById("mfa-enrollment-status");
+  if (!status) return;
+  if (message) {
+    status.textContent = message;
+    status.hidden = false;
+  } else {
+    status.textContent = "";
+    status.hidden = true;
+  }
+}
+
+async function startMfaEnrollment(data, redirectUrl) {
+  pendingEnrollmentToken = data.enrollment_token;
+  pendingRedirect = redirectUrl;
+
+  const loginShell = document.getElementById("login-shell");
+  const enrollmentPanel = document.getElementById("mfa-enrollment-panel");
+  if (loginShell) loginShell.hidden = true;
+  if (enrollmentPanel) enrollmentPanel.hidden = false;
+
+  const userLabel = document.getElementById("mfa-enrollment-user");
+  if (userLabel) userLabel.textContent = `Account: ${data.username || "master admin"}`;
+
+  setEnrollmentStatus("Preparing authenticator…");
+  try {
+    const setup = await postJsonAuth("/auth/mfa/setup", null, pendingEnrollmentToken);
+    const secretEl = document.getElementById("mfa-enrollment-secret");
+    const qrImg = document.getElementById("mfa-enrollment-qr");
+    const qrWrap = document.getElementById("mfa-enrollment-qr-wrap");
+    if (secretEl) secretEl.textContent = setup.manual_secret || "";
+    if (qrImg && setup.otpauth_uri) {
+      qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(setup.otpauth_uri)}`;
+    }
+    if (qrWrap) qrWrap.hidden = !setup.otpauth_uri;
+    setEnrollmentStatus("");
+    document.getElementById("mfa-enrollment-code")?.focus();
+  } catch (error) {
+    setEnrollmentStatus(error.message || "Could not start MFA setup");
+  }
+}
+
+function bindMfaEnrollmentSubmit() {
+  const btn = document.getElementById("mfa-enrollment-submit");
+  if (!btn || btn.dataset.bound) return;
+  btn.dataset.bound = "1";
+  btn.addEventListener("click", async () => {
+    if (!pendingEnrollmentToken) {
+      setEnrollmentStatus("Session expired. Sign in again.");
+      return;
+    }
+    const code = document.getElementById("mfa-enrollment-code")?.value?.trim();
+    if (!code) {
+      setEnrollmentStatus("Enter the 6-digit code from your authenticator app.");
+      return;
+    }
+    setEnrollmentStatus("Enabling MFA…");
+    btn.disabled = true;
+    try {
+      const data = await postJsonAuth("/auth/mfa/enable", { code }, pendingEnrollmentToken);
+      storeSession(data);
+      window.location.href = pendingRedirect || "./master.html";
+    } catch (error) {
+      setEnrollmentStatus(error.message || "Invalid code — try again");
+      btn.disabled = false;
+    }
+  });
+}
 let pendingRedirect = "./admin.html";
 let activeLoginMode = "business";
 
@@ -244,6 +336,7 @@ function bindSimpleLogin(formId, endpoint, redirectUrl) {
   if (!form) return;
 
   bindMfaForm();
+  bindMfaEnrollmentSubmit();
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -257,6 +350,11 @@ function bindSimpleLogin(formId, endpoint, redirectUrl) {
         pendingRedirect = redirectUrl;
         setStatus("");
         showMfaStep(data.username || payload.username);
+        return;
+      }
+      if (data.mfa_enrollment_required && data.enrollment_token) {
+        setStatus("");
+        await startMfaEnrollment(data, redirectUrl);
         return;
       }
       storeSession(data);

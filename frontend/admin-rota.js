@@ -961,6 +961,13 @@
 
     updatePanelContext();
     updateShiftDurationLabel();
+    updateOverlapStatus();
+
+    const panelBody = document.querySelector("#rota-shift-panel .rota-shift-panel__body");
+    if (panelBody) panelBody.scrollTop = 0;
+    if (isMobileRotaUi()) {
+      document.getElementById("rota-add-employee")?.focus();
+    }
   }
 
   function updatePanelContext() {

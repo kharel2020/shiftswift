@@ -4,14 +4,17 @@ from __future__ import annotations
 
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from auth_mfa import (
+    MFA_ENROLLMENT_MINUTES,
     begin_mfa_setup,
     confirm_mfa_setup,
     create_mfa_challenge_token,
+    create_mfa_enrollment_token,
     decode_mfa_challenge_token,
+    decode_mfa_enrollment_token,
     disable_mfa,
     fetch_user_mfa,
     portal_allows_user,
@@ -84,6 +87,44 @@ def _db_conn():
     if not url:
         raise HTTPException(status_code=503, detail="DATABASE_URL not configured")
     return psycopg2.connect(url)
+
+
+def _extract_bearer(authorization: str | None) -> str:
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not token:
+        raise HTTPException(status_code=401, detail="Invalid authorization header")
+    return token
+
+
+def _resolve_mfa_setup_user(
+    authorization: str | None,
+) -> tuple[AuthUser, Literal["session", "enrollment"]]:
+    token = _extract_bearer(authorization)
+    try:
+        enrollment = decode_mfa_enrollment_token(settings, token)
+        return (
+            AuthUser(
+                username=str(enrollment["sub"]),
+                role=str(enrollment["role"]),
+                tenant_id=str(enrollment["tenant_id"]),
+            ),
+            "enrollment",
+        )
+    except ValueError:
+        pass
+    try:
+        user = decode_token(settings, token, expected_type="access")
+    except ValueError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+    return user, "session"
+
+
+def get_mfa_setup_user(
+    authorization: str | None = Header(default=None, alias="Authorization"),
+) -> tuple[AuthUser, Literal["session", "enrollment"]]:
+    return _resolve_mfa_setup_user(authorization)
 
 
 def _login_response(
@@ -161,20 +202,33 @@ def _login_response(
             conn.close()
 
     if portal == "master" and enforce_master_mfa and not mfa_enabled:
+        clear_login_attempts(ip, payload.username)
+        enrollment = create_mfa_enrollment_token(
+            settings,
+            username=user.username,
+            role=user.role,
+            tenant_id=tenant_id,
+            portal="master",
+        )
         log_security_event(
             settings,
-            event_type="master_login_mfa_required",
+            event_type="master_mfa_enrollment_started",
             username=user.username,
             tenant_id=tenant_id,
             ip_address=ip,
             user_agent=user_agent,
-            success=False,
-            detail="Master MFA must be enabled before sign-in",
+            success=True,
+            detail="Master MFA enrollment required",
         )
-        raise HTTPException(
-            status_code=403,
-            detail="Master admin MFA must be enabled. Set up TOTP on your account before signing in.",
-        )
+        return {
+            "mfa_enrollment_required": True,
+            "enrollment_token": enrollment,
+            "portal": portal,
+            "username": user.username,
+            "tenant_id": tenant_id,
+            "expires_in": MFA_ENROLLMENT_MINUTES * 60,
+            "message": "Set up your authenticator app to continue.",
+        }
 
     if mfa_required:
         challenge = create_mfa_challenge_token(
@@ -308,9 +362,20 @@ def verify_mfa_login(request: Request, payload: MfaVerifyRequest) -> dict[str, o
 
 
 @router.post("/mfa/setup")
-def mfa_setup(current_user: Annotated[AuthUser, Depends(get_current_user)]) -> dict[str, object]:
+def mfa_setup(
+    identity: Annotated[tuple[AuthUser, Literal["session", "enrollment"]], Depends(get_mfa_setup_user)],
+) -> dict[str, object]:
+    current_user, mode = identity
     conn = _db_conn()
     try:
+        with conn.cursor() as cur:
+            user = fetch_user_mfa(cur, current_user.username)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        if mode == "enrollment" and not user.get("mfa_enabled"):
+            pass
+        elif user.get("mfa_enabled"):
+            raise HTTPException(status_code=400, detail="MFA is already enabled")
         result = begin_mfa_setup(conn=conn, username=current_user.username)
     finally:
         conn.close()
@@ -325,8 +390,10 @@ def mfa_setup(current_user: Annotated[AuthUser, Depends(get_current_user)]) -> d
 @router.post("/mfa/enable")
 def mfa_enable(
     payload: MfaEnableRequest,
-    current_user: Annotated[AuthUser, Depends(get_current_user)],
-) -> dict[str, str]:
+    request: Request,
+    identity: Annotated[tuple[AuthUser, Literal["session", "enrollment"]], Depends(get_mfa_setup_user)],
+) -> dict[str, object]:
+    current_user, mode = identity
     conn = _db_conn()
     try:
         confirm_mfa_setup(conn=conn, username=current_user.username, code=payload.code)
@@ -336,6 +403,40 @@ def mfa_enable(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     finally:
         conn.close()
+
+    if mode == "enrollment":
+        ip = client_ip(request)
+        user_agent = request.headers.get("User-Agent")
+        tokens = create_token_pair(settings, current_user)
+        log_security_event(
+            settings,
+            event_type="login_success",
+            username=current_user.username,
+            tenant_id=current_user.tenant_id,
+            ip_address=ip,
+            user_agent=user_agent,
+            success=True,
+            detail="portal=master;mfa_enrollment=1",
+        )
+        log_security_event(
+            settings,
+            event_type="master_mfa_enrollment_completed",
+            username=current_user.username,
+            tenant_id=current_user.tenant_id,
+            ip_address=ip,
+            user_agent=user_agent,
+            success=True,
+            detail="Master MFA enabled",
+        )
+        return {
+            **tokens.__dict__,
+            "portal": "master",
+            "role": current_user.role,
+            "mfa_required": False,
+            "status": "enabled",
+            "message": "Two-factor authentication is active. Opening master console…",
+        }
+
     return {"status": "enabled", "message": "Two-factor authentication is now active on your account."}
 
 

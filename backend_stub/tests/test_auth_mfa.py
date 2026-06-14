@@ -12,7 +12,9 @@ import pyotp
 
 from auth_mfa import (
     create_mfa_challenge_token,
+    create_mfa_enrollment_token,
     decode_mfa_challenge_token,
+    decode_mfa_enrollment_token,
     portal_allows_user,
     verify_totp_code,
 )
@@ -66,6 +68,23 @@ def test_mfa_challenge_token_round_trip() -> None:
     assert payload["sub"] == TENANT_HR_USERNAME
     assert payload["portal"] == "business"
     assert payload["tenant_id"] == "1"
+
+
+def test_mfa_enrollment_token_round_trip() -> None:
+    settings = _dev_settings()
+    token = create_mfa_enrollment_token(
+        settings,
+        username=MASTER_USERNAME,
+        role="admin",
+        tenant_id="999",
+        portal="master",
+    )
+    payload = decode_mfa_enrollment_token(settings, token)
+    assert payload["sub"] == MASTER_USERNAME
+    assert payload["portal"] == "master"
+    assert payload["role"] == "admin"
+    assert payload["tenant_id"] == "999"
+    assert payload["type"] == "mfa_enrollment"
 
 
 def test_portal_allows_user() -> None:
