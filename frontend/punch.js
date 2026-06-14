@@ -17,6 +17,8 @@
   const userLine = document.getElementById("punch-user-line");
   const clockInBtn = document.getElementById("punch-in-btn");
   const clockOutBtn = document.getElementById("punch-out-btn");
+  const breakStartBtn = document.getElementById("punch-break-start-btn");
+  const breakEndBtn = document.getElementById("punch-break-end-btn");
   const geofenceEl = document.getElementById("punch-geofence-status");
   const installBanner = document.getElementById("pwa-install-banner");
   const installBtn = document.getElementById("pwa-install-btn");
@@ -44,6 +46,7 @@
   let punchInFlight = false;
   let refreshInFlight = null;
   let clockedInState = false;
+  let workState = "off";
   let geofenceWithin = false;
   let siteScanReady = false;
   let siteScanToken = null;
@@ -147,13 +150,22 @@
     const online = navigator.onLine;
     const ready = clockReady();
     if (clockInBtn) {
-      clockInBtn.disabled =
-        punchInFlight || !online || clockedInState || !ready || geofenceCheckInFlight;
-      clockInBtn.classList.toggle("is-ready", ready && !clockedInState && online && !punchInFlight);
+      clockInBtn.disabled = punchInFlight || !online || workState !== "off" || !ready || geofenceCheckInFlight;
+      clockInBtn.classList.toggle("is-ready", ready && workState === "off" && online && !punchInFlight);
     }
     if (clockOutBtn) {
       clockOutBtn.disabled =
-        punchInFlight || !online || !clockedInState || !ready || geofenceCheckInFlight;
+        punchInFlight || !online || workState !== "clocked_in" || !ready || geofenceCheckInFlight;
+    }
+    if (breakStartBtn) {
+      breakStartBtn.disabled =
+        punchInFlight || !online || workState !== "clocked_in" || !ready || geofenceCheckInFlight;
+      breakStartBtn.hidden = workState === "on_break";
+    }
+    if (breakEndBtn) {
+      breakEndBtn.hidden = workState !== "on_break";
+      breakEndBtn.disabled =
+        punchInFlight || !online || workState !== "on_break" || !ready || geofenceCheckInFlight;
     }
   }
 
@@ -550,8 +562,12 @@
       }
       const data = await response.json();
       const last = data.last_punch;
-      clockedInState = Boolean(data.clocked_in);
-      if (data.clocked_in) {
+      workState = data.work_state || (data.clocked_in ? "clocked_in" : "off");
+      clockedInState = workState !== "off";
+      if (workState === "on_break") {
+        statusEl.innerHTML = `<strong>On break</strong> since ${formatTime(last?.punched_at)}.`;
+        statusEl.className = "punch-clock-status is-in";
+      } else if (workState === "clocked_in") {
         statusEl.innerHTML = `<strong>Clocked in</strong> since ${formatTime(last?.punched_at)}${last?.site_name ? ` at ${last.site_name}` : ""}.`;
         statusEl.className = "punch-clock-status is-in";
       } else if (last) {
@@ -686,6 +702,17 @@
     }
   }
 
+  function punchLabel(type) {
+    return (
+      {
+        in: "Clocked in",
+        out: "Clocked out",
+        break_start: "Break started",
+        break_end: "Break ended",
+      }[type] || "Recorded"
+    );
+  }
+
   async function submitPunch(punchType) {
     if (punchInFlight) return;
     if (!navigator.onLine) {
@@ -731,8 +758,10 @@
       }
       const detail =
         data.punch_method === "site_qr"
-          ? `${punchType === "in" ? "Clocked in" : "Clocked out"} at ${data.site_name} (premises QR).`
-          : `${punchType === "in" ? "Clocked in" : "Clocked out"} at ${data.site_name} (${Math.round(data.distance_meters)}m from site).`;
+          ? `${punchLabel(punchType)} at ${data.site_name} (premises QR).`
+          : `${punchLabel(punchType)} at ${data.site_name}${data.distance_meters != null ? ` (${Math.round(data.distance_meters)}m from site)` : ""}.`;
+      workState = data.work_state || workState;
+      clockedInState = workState !== "off";
       setMessage(detail, "success");
       await loadStatus();
     } catch (error) {
@@ -983,6 +1012,8 @@
 
   clockInBtn?.addEventListener("click", () => submitPunch("in"));
   clockOutBtn?.addEventListener("click", () => submitPunch("out"));
+  breakStartBtn?.addEventListener("click", () => submitPunch("break_start"));
+  breakEndBtn?.addEventListener("click", () => submitPunch("break_end"));
 
   window.addEventListener("online", () => {
     setOnlineState(true);

@@ -7712,6 +7712,33 @@ body.rota-week-readonly .rota-builder-hint {
   color: #4338ca;
 }
 
+.punch-timesheet-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.punch-timesheet-cell--warn {
+  background: #fff4e5;
+  color: #8a4b00;
+  font-weight: 700;
+}
+
+.punch-timesheet-actions {
+  white-space: nowrap;
+}
+
+.punch-timesheet-table th,
+.punch-timesheet-table td {
+  text-align: center;
+}
+
+.punch-timesheet-table th:first-child,
+.punch-timesheet-table td:first-child {
+  text-align: left;
+}
+
 .punch-activity-chart {
   padding: 18px 12px 8px;
   border: 1px solid var(--card-border);

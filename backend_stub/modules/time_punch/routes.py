@@ -15,6 +15,10 @@ from config import load_settings
 from core.database import get_connection
 from deps import client_ip, get_employee_user, get_hr_user, require_tenant_subscription, resolve_tenant_id
 from modules.time_punch import service as punch_service
+from modules.time_punch import kiosk as kiosk_service
+from modules.time_punch import timesheet as timesheet_service
+
+PunchAction = Literal["in", "out", "break_start", "break_end"]
 
 settings = load_settings()
 
@@ -27,7 +31,7 @@ admin_router = APIRouter(
 
 
 class PunchRequest(BaseModel):
-    punch_type: Literal["in", "out"]
+    punch_type: PunchAction
     latitude: float = Field(ge=-90, le=90)
     longitude: float = Field(ge=-180, le=180)
     accuracy_meters: float | None = Field(default=None, ge=0)
@@ -44,7 +48,7 @@ class SiteScanRequest(BaseModel):
 
 
 class SiteTokenPunchRequest(BaseModel):
-    punch_type: Literal["in", "out"]
+    punch_type: PunchAction
     clock_token: str = Field(min_length=8, max_length=200)
 
 
@@ -66,9 +70,36 @@ class PunchSiteCreate(BaseModel):
 class AdminPunchRequest(BaseModel):
     employee_id: int
     punch_site_id: int
-    punch_type: Literal["in", "out"]
+    punch_type: PunchAction
     punched_at: str | None = None
     admin_note: str | None = Field(default=None, max_length=500)
+
+
+class TimesheetApprovalRequest(BaseModel):
+    week_start: str
+    employee_id: int
+    status: Literal["pending", "approved", "rejected"]
+    note: str | None = Field(default=None, max_length=500)
+
+
+class TimesheetBulkApprovalRequest(BaseModel):
+    week_start: str
+    status: Literal["approved", "rejected"]
+
+
+class KioskPinRequest(BaseModel):
+    pin: str | None = Field(default=None, max_length=6)
+
+
+class KioskSessionRequest(BaseModel):
+    clock_token: str = Field(min_length=8, max_length=200)
+    employee_id: int
+    pin: str = Field(min_length=4, max_length=6)
+
+
+class KioskPunchRequest(BaseModel):
+    session_token: str = Field(min_length=8, max_length=200)
+    punch_type: PunchAction
 
 
 def _parse_optional_date(value: str | None, field_name: str) -> date | None:
@@ -86,7 +117,7 @@ def _punch_filters(
     site_id: int | None = None,
     date_from: str | None = None,
     date_to: str | None = None,
-    punch_type: Literal["in", "out"] | None = None,
+    punch_type: PunchAction | None = None,
 ) -> dict[str, Any]:
     return {
         "employee_id": employee_id,
@@ -362,6 +393,7 @@ def site_clock_qr(
             "site_name": site["name"],
             "clock_token": token,
             "clock_url": clock_url,
+            "kiosk_url": punch_service.site_kiosk_url(clock_token=token),
             "qr_image_url": f"https://api.qrserver.com/v1/create-qr-code/?size=240x240&data={quote(clock_url, safe='')}",
         }
     except LookupError as exc:
@@ -385,6 +417,7 @@ def rotate_site_clock_token(
             "site_id": site_id,
             "clock_token": token,
             "clock_url": clock_url,
+            "kiosk_url": punch_service.site_kiosk_url(clock_token=token),
             "qr_image_url": f"https://api.qrserver.com/v1/create-qr-code/?size=240x240&data={quote(clock_url, safe='')}",
         }
     except LookupError as exc:
@@ -402,7 +435,7 @@ def list_punches(
     site_id: int | None = None,
     date_from: str | None = None,
     date_to: str | None = None,
-    punch_type: Literal["in", "out"] | None = None,
+    punch_type: PunchAction | None = None,
 ) -> dict[str, object]:
     tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
     filters = _punch_filters(
@@ -433,7 +466,7 @@ def export_punches_csv(
     site_id: int | None = None,
     date_from: str | None = None,
     date_to: str | None = None,
-    punch_type: Literal["in", "out"] | None = None,
+    punch_type: PunchAction | None = None,
 ) -> Response:
     tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
     filters = _punch_filters(
@@ -519,3 +552,150 @@ def admin_punch(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     finally:
         conn.close()
+
+
+kiosk_router = APIRouter(prefix="/time-punch/kiosk", tags=["Time punch kiosk"])
+
+
+@kiosk_router.get("/site")
+def kiosk_site(clock: str) -> dict[str, object]:
+    conn = get_connection()
+    try:
+        return kiosk_service.kiosk_site_bootstrap(clock_token=clock, conn=conn)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    finally:
+        conn.close()
+
+
+@kiosk_router.post("/session")
+def kiosk_session(payload: KioskSessionRequest) -> dict[str, object]:
+    conn = get_connection()
+    try:
+        return kiosk_service.create_kiosk_session(
+            clock_token=payload.clock_token,
+            employee_id=payload.employee_id,
+            pin=payload.pin,
+            conn=conn,
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    finally:
+        conn.close()
+
+
+@kiosk_router.post("/punch")
+def kiosk_punch(payload: KioskPunchRequest) -> dict[str, object]:
+    conn = get_connection()
+    try:
+        return kiosk_service.record_kiosk_punch(
+            session_token=payload.session_token,
+            punch_type=payload.punch_type,
+            conn=conn,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    finally:
+        conn.close()
+
+
+@admin_router.get("/timesheet")
+def get_timesheet(
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+    week_start: str | None = None,
+) -> dict[str, object]:
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    parsed = _parse_optional_date(week_start, "week_start") if week_start else None
+    conn = get_connection()
+    try:
+        return timesheet_service.weekly_timesheet(
+            tenant_id=tenant_id,
+            week_start=parsed,
+            conn=conn,
+        )
+    finally:
+        conn.close()
+
+
+@admin_router.post("/timesheet/approve")
+def approve_timesheet_row(
+    payload: TimesheetApprovalRequest,
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, object]:
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    week_start = _parse_optional_date(payload.week_start, "week_start")
+    if not week_start:
+        raise HTTPException(status_code=400, detail="week_start is required")
+    conn = get_connection()
+    try:
+        return timesheet_service.set_timesheet_approval(
+            tenant_id=tenant_id,
+            week_start=week_start,
+            employee_id=payload.employee_id,
+            status=payload.status,
+            note=payload.note,
+            decided_by=current_user.username,
+            conn=conn,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    finally:
+        conn.close()
+
+
+@admin_router.post("/timesheet/approve-all")
+def approve_all_timesheets(
+    payload: TimesheetBulkApprovalRequest,
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, object]:
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    week_start = _parse_optional_date(payload.week_start, "week_start")
+    if not week_start:
+        raise HTTPException(status_code=400, detail="week_start is required")
+    conn = get_connection()
+    try:
+        return timesheet_service.approve_all_timesheets(
+            tenant_id=tenant_id,
+            week_start=week_start,
+            status=payload.status,
+            decided_by=current_user.username,
+            conn=conn,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    finally:
+        conn.close()
+
+
+@admin_router.put("/employees/{employee_id}/kiosk-pin")
+def set_kiosk_pin(
+    employee_id: int,
+    payload: KioskPinRequest,
+    current_user: Annotated[AuthUser, Depends(get_hr_user)],
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, object]:
+    tenant_id = resolve_tenant_id(current_user, x_tenant_id, settings=settings)
+    conn = get_connection()
+    try:
+        kiosk_service.set_employee_kiosk_pin(
+            tenant_id=tenant_id,
+            employee_id=employee_id,
+            pin=payload.pin,
+            conn=conn,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    finally:
+        conn.close()
+    return {"employee_id": employee_id, "kiosk_pin_set": bool(payload.pin)}

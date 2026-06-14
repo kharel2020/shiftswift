@@ -18,6 +18,8 @@
   let tenantProfile = null;
   let selectedSiteId = null;
   let activeTab = "sites";
+  let timesheetWeekStart = mondayIso();
+  let timesheetData = null;
   let filters = { date_from: "", date_to: "", employee_id: "", site_id: "", punch_type: "" };
   let bound = false;
 
@@ -154,9 +156,14 @@
   }
 
   function renderTypeBadge(type) {
-    return type === "in"
-      ? '<span class="punch-type-badge punch-type-badge--in">Clock in</span>'
-      : '<span class="punch-type-badge punch-type-badge--out">Clock out</span>';
+    const labels = {
+      in: ["Clock in", "in"],
+      out: ["Clock out", "out"],
+      break_start: ["Break start", "out"],
+      break_end: ["Break end", "in"],
+    };
+    const [label, tone] = labels[type] || ["Punch", "out"];
+    return `<span class="punch-type-badge punch-type-badge--${tone}">${label}</span>`;
   }
 
   function showMessage(text, tone) {
@@ -235,6 +242,7 @@
       panel.hidden = panel.dataset.punchPanel !== tab;
     });
     if (tab === "summary") renderActivityChart();
+    if (tab === "timesheet") loadTimesheet();
   }
 
   function populateSelect(select, items, placeholder) {
@@ -357,6 +365,7 @@
               <button type="button" class="btn outline" id="punch-copy-clock-url">Copy link</button>
               <button type="button" class="btn outline" id="punch-print-clock-card">Print QR card</button>
               <button type="button" class="btn outline" id="punch-print-tent-card">Print tent card</button>
+              <button type="button" class="btn outline" id="punch-open-kiosk-btn">Open kiosk</button>
               <button type="button" class="btn ghost" id="punch-rotate-clock-token">Rotate QR</button>
             </div>
           </div>
@@ -381,6 +390,12 @@
         cardUrl.searchParams.set("site", data.site_name || "Work site");
         cardUrl.searchParams.set("layout", "tent");
         window.open(cardUrl.toString(), "_blank", "noopener");
+      });
+      host.querySelector("#punch-open-kiosk-btn")?.addEventListener("click", () => {
+        const url =
+          data.kiosk_url ||
+          `./punch-kiosk.html?clock=${encodeURIComponent(data.clock_token || "")}`;
+        window.open(new URL(url, window.location.href).toString(), "_blank", "noopener");
       });
       host.querySelector("#punch-rotate-clock-token")?.addEventListener("click", async () => {
         if (!window.confirm("Rotate this QR code? Old printed codes will stop working.")) return;
@@ -824,6 +839,119 @@
     }
   }
 
+      showMessage(error.message || "Could not prepare poster.");
+    }
+  }
+
+  function shiftTimesheetWeek(delta) {
+    const base = new Date(`${timesheetWeekStart}T12:00:00`);
+    base.setDate(base.getDate() + delta * 7);
+    timesheetWeekStart = toLocalIsoDate(base);
+    loadTimesheet();
+  }
+
+  function approvalBadge(status) {
+    if (status === "approved") return '<span class="contracts-status-pill contracts-status-pill--signed">Approved</span>';
+    if (status === "rejected") return '<span class="contracts-status-pill contracts-status-pill--draft">Rejected</span>';
+    return '<span class="contracts-status-pill">Pending</span>';
+  }
+
+  function renderTimesheetTable() {
+    const host = $("punch-timesheet-body");
+    const label = $("punch-timesheet-week-label");
+    if (label && timesheetData) {
+      label.textContent = `${timesheetData.week_start} → ${timesheetData.week_end}`;
+    }
+    if (!host) return;
+    const rows = timesheetData?.employees || [];
+    if (!rows.length) {
+      host.innerHTML = '<tr><td colspan="11" class="muted">No active employees.</td></tr>';
+      return;
+    }
+    host.innerHTML = rows
+      .map((row) => {
+        const dayCells = (row.days || [])
+          .map((day) => {
+            const hours = day.total_hours ? `${day.total_hours}h` : "—";
+            const warn = day.complete ? "" : " punch-timesheet-cell--warn";
+            const title = day.issues?.length ? day.issues.join("; ") : "";
+            return `<td class="punch-timesheet-cell${warn}" title="${escapeHtml(title)}">${hours}</td>`;
+          })
+          .join("");
+        const actions =
+          row.approval_status === "approved"
+            ? `<button type="button" class="btn ghost punch-ts-reject" data-employee-id="${row.employee_id}">Reject</button>`
+            : `<button type="button" class="btn outline punch-ts-approve" data-employee-id="${row.employee_id}">Approve</button>`;
+        return `<tr>
+          <td><strong>${escapeHtml(row.employee_name)}</strong></td>
+          ${dayCells}
+          <td><strong>${row.week_total_hours.toFixed(1)}h</strong></td>
+          <td>${row.week_break_minutes || 0}m</td>
+          <td>${approvalBadge(row.approval_status)}</td>
+          <td class="punch-timesheet-actions">${actions}</td>
+        </tr>`;
+      })
+      .join("");
+    host.querySelectorAll(".punch-ts-approve").forEach((btn) => {
+      btn.addEventListener("click", () => approveTimesheetRow(Number(btn.dataset.employeeId), "approved"));
+    });
+    host.querySelectorAll(".punch-ts-reject").forEach((btn) => {
+      btn.addEventListener("click", () => approveTimesheetRow(Number(btn.dataset.employeeId), "rejected"));
+    });
+    const summary = $("punch-timesheet-summary");
+    if (summary && timesheetData?.summary) {
+      const s = timesheetData.summary;
+      summary.textContent = `${s.approved} approved · ${s.pending} pending · ${s.rejected} rejected`;
+    }
+  }
+
+  async function loadTimesheet() {
+    try {
+      const res = await apiFetch(`/admin/time-punch/timesheet?week_start=${timesheetWeekStart}`);
+      if (!res.ok) throw new Error("Load failed");
+      timesheetData = await res.json();
+      renderTimesheetTable();
+    } catch {
+      timesheetData = null;
+      const host = $("punch-timesheet-body");
+      if (host) host.innerHTML = '<tr><td colspan="11" class="muted">Could not load timesheet.</td></tr>';
+    }
+  }
+
+  async function approveTimesheetRow(employeeId, status) {
+    try {
+      const res = await apiFetch("/admin/time-punch/timesheet/approve", {
+        method: "POST",
+        body: JSON.stringify({
+          week_start: timesheetWeekStart,
+          employee_id: employeeId,
+          status,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || "Approve failed");
+      showMessage(status === "approved" ? "Timesheet approved." : "Timesheet rejected.", "ok");
+      await loadTimesheet();
+    } catch (error) {
+      showMessage(error.message || "Could not update approval.");
+    }
+  }
+
+  async function approveAllTimesheets(status) {
+    try {
+      const res = await apiFetch("/admin/time-punch/timesheet/approve-all", {
+        method: "POST",
+        body: JSON.stringify({ week_start: timesheetWeekStart, status }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || "Bulk approve failed");
+      showMessage(`${data.updated} timesheet${data.updated === 1 ? "" : "s"} marked ${status}.`, "ok");
+      await loadTimesheet();
+    } catch (error) {
+      showMessage(error.message || "Could not approve all.");
+    }
+  }
+
   async function submitManualSite(form) {
     const payload = {
       name: form.name.value.trim(),
@@ -978,6 +1106,13 @@
       setActiveTab("sites");
     });
     $("punch-print-all-poster-btn")?.addEventListener("click", () => openAllSitesPoster());
+    $("punch-timesheet-prev")?.addEventListener("click", () => shiftTimesheetWeek(-1));
+    $("punch-timesheet-next")?.addEventListener("click", () => shiftTimesheetWeek(1));
+    $("punch-timesheet-this-week")?.addEventListener("click", () => {
+      timesheetWeekStart = mondayIso();
+      loadTimesheet();
+    });
+    $("punch-timesheet-approve-all")?.addEventListener("click", () => approveAllTimesheets("approved"));
     $("punch-hide-manual-btn")?.addEventListener("click", () => {
       $("punch-manual-form").hidden = true;
     });
