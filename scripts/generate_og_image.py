@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate 1200×630 Open Graph preview image for ShiftSwift HR."""
+"""Generate 1200×630 Open Graph preview — hero-style with top selling points."""
 
 from __future__ import annotations
 
@@ -12,10 +12,16 @@ OUT = ROOT / "frontend" / "assets" / "og-image.png"
 
 W, H = 1200, 630
 GREEN = (15, 110, 86)
+GREEN_DARK = (8, 80, 65)
 GREEN_LIGHT = (93, 202, 165)
-GREEN_PALE = (240, 250, 246)
+GREEN_PALE = (225, 245, 238)
+GREEN_SOFT = (241, 249, 246)
+GOLD = (212, 160, 23)
 INK = (17, 17, 17)
-MUTED = (100, 100, 96)
+MUTED = (95, 94, 90)
+WHITE = (255, 255, 255)
+WARN = (180, 83, 9)
+OK = (15, 110, 86)
 
 
 def load_font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
@@ -30,66 +36,184 @@ def load_font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont | ImageFo
     return ImageFont.load_default()
 
 
-def draw_logo_mark(draw: ImageDraw.ImageDraw, x: int, y: int, size: int = 120) -> None:
-    r = 18
-    draw.rounded_rectangle([x, y, x + size, y + size], radius=r, fill=GREEN)
-    bar_h = 8
-    draw.rounded_rectangle([x + 22, y + 22, x + 22 + 46, y + 22 + bar_h], radius=4, fill=GREEN_LIGHT)
-    draw.rounded_rectangle([x + 22, y + 38, x + 22 + 32, y + 38 + bar_h], radius=4, fill=(159, 225, 203))
-    draw.rounded_rectangle([x + 22, y + 54, x + 22 + 40, y + 54 + bar_h], radius=4, fill=GREEN_LIGHT)
-    ay = y + size - 28
-    draw.line([x + 22, ay, x + size - 22, ay], fill=(255, 255, 255), width=5)
-    draw.polygon([(x + size - 38, ay - 12), (x + size - 18, ay), (x + size - 38, ay + 12)], fill=(255, 255, 255))
+def draw_logo_mark(draw: ImageDraw.ImageDraw, x: int, y: int, size: int = 72) -> None:
+    draw.rounded_rectangle([x, y, x + size, y + size], radius=14, fill=GREEN)
+    bar_h = 5
+    draw.rounded_rectangle([x + 14, y + 14, x + 14 + 28, y + 14 + bar_h], radius=2, fill=GREEN_LIGHT)
+    draw.rounded_rectangle([x + 14, y + 24, x + 14 + 20, y + 24 + bar_h], radius=2, fill=(159, 225, 203))
+    draw.rounded_rectangle([x + 14, y + 34, x + 14 + 24, y + 34 + bar_h], radius=2, fill=GREEN_LIGHT)
+    ay = y + size - 18
+    draw.line([x + 14, ay, x + size - 14, ay], fill=WHITE, width=3)
+    draw.polygon([(x + size - 28, ay - 8), (x + size - 14, ay), (x + size - 28, ay + 8)], fill=WHITE)
+
+
+def draw_text_block(
+    draw: ImageDraw.ImageDraw,
+    x: int,
+    y: int,
+    lines: list[str],
+    font: ImageFont.ImageFont,
+    fill: tuple[int, int, int],
+    line_gap: int = 8,
+) -> int:
+    cy = y
+    for line in lines:
+        draw.text((x, cy), line, font=font, fill=fill)
+        bbox = draw.textbbox((x, cy), line, font=font)
+        cy = bbox[3] + line_gap
+    return cy
+
+
+def draw_pill(
+    draw: ImageDraw.ImageDraw,
+    x: int,
+    y: int,
+    label: str,
+    font: ImageFont.ImageFont,
+    *,
+    fill: tuple[int, int, int] = GREEN,
+    text_fill: tuple[int, int, int] = WHITE,
+    outline: tuple[int, int, int] | None = None,
+    pad_x: int = 16,
+    pad_y: int = 8,
+) -> int:
+    tw = draw.textlength(label, font=font)
+    w = int(tw + pad_x * 2)
+    h = int(font.size + pad_y * 2)
+    draw.rounded_rectangle(
+        [x, y, x + w, y + h],
+        radius=h // 2,
+        fill=fill,
+        outline=outline or fill,
+        width=2 if outline else 0,
+    )
+    draw.text((x + pad_x, y + pad_y - 1), label, font=font, fill=text_fill)
+    return w
+
+
+def draw_dashboard_mock(draw: ImageDraw.ImageDraw, x: int, y: int, w: int, h: int) -> None:
+    shadow = 6
+    draw.rounded_rectangle([x + shadow, y + shadow, x + w + shadow, y + h + shadow], radius=20, fill=(0, 0, 0, 20))
+    draw.rounded_rectangle([x, y, x + w, y + h], radius=20, fill=WHITE, outline=(211, 209, 199), width=2)
+
+    bar_h = 44
+    draw.rounded_rectangle([x, y, x + w, y + bar_h], radius=20, fill=GREEN_SOFT)
+    draw.rectangle([x, y + bar_h - 20, x + w, y + bar_h], fill=GREEN_SOFT)
+    for i, cx in enumerate([x + 22, x + 38, x + 54]):
+        draw.ellipse([cx, y + 16, cx + 10, y + 26], fill=(180, 178, 170) if i else (255, 120, 120))
+    draw.text((x + 72, y + 12), "ShiftSwift HR · Live dashboard", font=load_font(18, bold=True), fill=MUTED)
+
+    stats_y = y + bar_h + 20
+    stat_w = (w - 56) // 3
+    labels = [("Active staff", "18", INK), ("RTW due", "3", WARN), ("Day-9", "Clear", OK)]
+    for i, (label, value, color) in enumerate(labels):
+        sx = x + 20 + i * (stat_w + 8)
+        draw.rounded_rectangle([sx, stats_y, sx + stat_w, stats_y + 78], radius=12, fill=GREEN_SOFT)
+        draw.text((sx + 12, stats_y + 10), label, font=load_font(15), fill=MUTED)
+        draw.text((sx + 12, stats_y + 34), value, font=load_font(28, bold=True), fill=color)
+
+    list_y = stats_y + 98
+    draw.text((x + 20, list_y), "This week", font=load_font(16, bold=True), fill=INK)
+    rows = [
+        ("Geofenced clock-in", "✓ On site"),
+        ("Hours export", "Ready for accountant"),
+        ("Sponsor audit pack", "1-click export"),
+    ]
+    ry = list_y + 28
+    for title, sub in rows:
+        draw.rounded_rectangle([x + 20, ry, x + w - 20, ry + 52], radius=10, fill=GREEN_SOFT)
+        draw.text((x + 32, ry + 8), title, font=load_font(17, bold=True), fill=INK)
+        draw.text((x + 32, ry + 28), sub, font=load_font(14), fill=GREEN)
+        ry += 58
 
 
 def main() -> None:
-    img = Image.new("RGB", (W, H), (255, 255, 255))
+    img = Image.new("RGB", (W, H), GREEN_SOFT)
     draw = ImageDraw.Draw(img)
 
     for i in range(H):
-        t = i / H
-        r = int(255 - (255 - GREEN_PALE[0]) * t * 0.55)
-        g = int(255 - (255 - GREEN_PALE[1]) * t * 0.55)
-        b = int(255 - (255 - GREEN_PALE[2]) * t * 0.55)
+        t = i / max(H - 1, 1)
+        r = int(GREEN_SOFT[0] + (WHITE[0] - GREEN_SOFT[0]) * (1 - t) * 0.35)
+        g = int(GREEN_SOFT[1] + (WHITE[1] - GREEN_SOFT[1]) * (1 - t) * 0.35)
+        b = int(GREEN_SOFT[2] + (WHITE[2] - GREEN_SOFT[2]) * (1 - t) * 0.35)
         draw.line([(0, i), (W, i)], fill=(r, g, b))
 
-    draw.rounded_rectangle([0, H - 8, W, H], radius=0, fill=GREEN)
-    draw.ellipse([W - 280, -120, W + 80, 240], fill=(220, 240, 233))
-    draw.ellipse([-100, H - 220, 320, H + 80], fill=(232, 248, 242))
+    draw.ellipse([720, -140, 1180, 300], fill=GREEN_PALE)
+    draw.ellipse([-80, 380, 360, 720], fill=(232, 248, 242))
+    draw.rounded_rectangle([0, 0, W, 6], radius=0, fill=GREEN)
 
-    draw_logo_mark(draw, 80, 180, 120)
+    draw_logo_mark(draw, 64, 52, 72)
+    brand_font = load_font(42, bold=True)
+    draw.text((152, 58), "Shift", font=brand_font, fill=INK)
+    sw = draw.textlength("Shift", font=brand_font)
+    draw.text((152 + sw, 58), "Swift", font=brand_font, fill=GREEN)
+    sw2 = draw.textlength("Swift", font=brand_font)
+    bx = int(152 + sw + sw2 + 10)
+    draw.rounded_rectangle([bx, 72, bx + 46, 98], radius=6, fill=GREEN)
+    draw.text((bx + 23, 78), "HR", font=load_font(16, bold=True), fill=WHITE, anchor="mm")
 
-    title_font = load_font(72, bold=True)
-    sub_font = load_font(32)
-    pill_font = load_font(24, bold=True)
-    url_font = load_font(26)
-
-    draw.text((240, 195), "Shift", font=title_font, fill=INK)
-    shift_w = draw.textlength("Shift", font=title_font)
-    draw.text((240 + shift_w, 195), "Swift", font=title_font, fill=GREEN)
-    swift_w = draw.textlength("Swift", font=title_font)
-    badge_x = int(240 + shift_w + swift_w + 14)
-    draw.rounded_rectangle([badge_x, 218, badge_x + 58, 252], radius=8, fill=GREEN)
-    draw.text((badge_x + 29, 224), "HR", font=load_font(22, bold=True), fill=(255, 255, 255), anchor="mm")
-
-    draw.text((240, 290), "UK HR & sponsor compliance recording tools", font=sub_font, fill=MUTED)
+    tagline_font = load_font(26)
     draw.text(
-        (240, 340),
-        "RTW evidence · Day-9 alerts · Time clock · Audit export packs",
-        font=load_font(26),
-        fill=(60, 60, 56),
+        (64, 148),
+        "UK HR & sponsor compliance recording tools",
+        font=tagline_font,
+        fill=MUTED,
     )
 
-    pills = ["14-day free trial", "Recording tools only", "You act on Home Office duties"]
-    px = 240
-    py = 420
-    for label in pills:
-        tw = draw.textlength(label, font=pill_font) + 36
-        draw.rounded_rectangle([px, py, px + tw, py + 44], radius=22, fill=(255, 255, 255), outline=GREEN, width=2)
-        draw.text((px + 18, py + 8), label, font=pill_font, fill=GREEN)
-        px += tw + 16
+    feature_font = load_font(24, bold=True)
+    features = [
+        "RTW evidence · Day-9 alerts ·",
+        "Time clock · Audit export packs",
+    ]
+    draw_text_block(draw, 64, 198, features, feature_font, INK, line_gap=6)
 
-    draw.text((80, H - 56), "shiftswifthr.co.uk", font=url_font, fill=GREEN)
+    pill_font = load_font(20, bold=True)
+    py = 310
+    w1 = draw_pill(draw, 64, py, "14-day free trial", pill_font, fill=GOLD, text_fill=INK, pad_x=16, pad_y=9)
+    draw_pill(
+        draw,
+        64 + w1 + 14,
+        py,
+        "Compliance recording tools",
+        pill_font,
+        fill=WHITE,
+        text_fill=GREEN,
+        outline=GREEN,
+        pad_x=16,
+        pad_y=9,
+    )
+    draw_pill(
+        draw,
+        64,
+        py + 52,
+        "You act on Home Office duties",
+        pill_font,
+        fill=WHITE,
+        text_fill=GREEN,
+        outline=GREEN,
+        pad_x=16,
+        pad_y=9,
+    )
+
+    sub_font = load_font(22)
+    draw.text(
+        (64, 430),
+        "Built for UK SMEs & sponsor licence holders",
+        font=sub_font,
+        fill=MUTED,
+    )
+
+    draw_dashboard_mock(draw, 680, 88, 480, 480)
+
+    draw.rounded_rectangle([0, H - 52, W, H], radius=0, fill=GREEN)
+    draw.text((64, H - 38), "shiftswifthr.co.uk", font=load_font(24, bold=True), fill=WHITE)
+    draw.text(
+        (W - 64, H - 38),
+        "Free 14-day trial · From £9/mo ex VAT",
+        font=load_font(18, bold=True),
+        fill=GREEN_LIGHT,
+        anchor="rm",
+    )
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     img.save(OUT, format="PNG", optimize=True)
