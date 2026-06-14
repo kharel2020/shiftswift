@@ -155,6 +155,11 @@ body.master-app {
   pointer-events: none;
 }
 
+.master-sidebar__foot {
+  margin-top: auto;
+  padding-top: 0.75rem;
+}
+
 .master-sidebar__user {
   display: flex;
   gap: 0.75rem;
@@ -164,13 +169,25 @@ body.master-app {
   font-size: 0.82rem;
 }
 
+.master-sidebar__user-meta {
+  min-width: 0;
+  flex: 1;
+}
+
 .master-sidebar__user strong {
   display: block;
   font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .master-sidebar__user span {
+  display: block;
   color: rgba(255, 255, 255, 0.6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .master-sidebar__avatar {
@@ -221,13 +238,51 @@ body.master-app {
   background: #fff;
 }
 
-.master-topbar__signout {
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  background: transparent;
-  color: #fff;
-  border-radius: 999px;
-  padding: 0.35rem 0.75rem;
+.master-signout-btn {
+  width: 100%;
+  margin-top: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.62rem 0.9rem;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.88rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
   cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.12s ease;
+}
+
+.master-signout-btn:hover {
+  background: linear-gradient(180deg, rgba(248, 113, 113, 0.18) 0%, rgba(197, 48, 48, 0.12) 100%);
+  border-color: rgba(248, 113, 113, 0.42);
+  color: #ffe4e6;
+}
+
+.master-signout-btn:active {
+  transform: scale(0.98);
+}
+
+.master-signout-btn:focus-visible {
+  outline: 2px solid rgba(212, 160, 23, 0.75);
+  outline-offset: 2px;
+}
+
+.master-signout-btn__icon {
+  flex-shrink: 0;
+  opacity: 0.92;
+}
+
+.master-signout-btn--compact {
+  width: auto;
+  margin-top: 0;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.82rem;
+  border-radius: 999px;
 }
 
 .master-main {
