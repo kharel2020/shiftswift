@@ -192,11 +192,7 @@ function storeSession(data) {
   if (data.role) localStorage.setItem("userRole", data.role);
   if (data.tenant_id) {
     localStorage.setItem("masterTenantId", data.tenant_id);
-    if (data.role === "admin" && data.tenant_id === "999") {
-      localStorage.setItem("tenantId", "1");
-    } else {
-      localStorage.setItem("tenantId", data.tenant_id);
-    }
+    localStorage.setItem("tenantId", data.tenant_id);
   }
 }
 

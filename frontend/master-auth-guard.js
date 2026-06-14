@@ -8,7 +8,9 @@
     return;
   }
 
-  if (localStorage.getItem("tenantId") !== masterId && localStorage.getItem("masterTenantId") !== masterId) {
+  const tenantId = localStorage.getItem("tenantId");
+  const masterId = localStorage.getItem("masterTenantId") || "999";
+  if (tenantId !== masterId) {
     window.location.replace("./ops-9x7k2.html");
   }
 })();
