@@ -25,6 +25,12 @@ from modules.master.platform_ops import (
     suspend_tenant,
     unsuspend_tenant,
 )
+from modules.master.tenant_provision import (
+    create_tenant_manually,
+    generate_temporary_password,
+    list_provision_plans,
+    update_tenant_billing,
+)
 from modules.master.platform_settings import (
     api_keys_snapshot,
     list_email_log,
@@ -97,6 +103,28 @@ class DisableMfaRequest(BaseModel):
     current_password: str = Field(min_length=1, max_length=200)
 
 
+class CreateTenantRequest(BaseModel):
+    business_name: str = Field(min_length=2, max_length=200)
+    billing_email: str = Field(min_length=3, max_length=254)
+    admin_password: str = Field(min_length=8, max_length=256)
+    plan_id: str = Field(default="site_medium_monthly", max_length=64)
+    billing_mode: str = Field(default="offline", pattern="^(offline|stripe)$")
+    access: str = Field(default="active", pattern="^(active|trialing)$")
+    trial_days: int = Field(default=14, ge=1, le=90)
+    max_employees: int | None = Field(default=None, ge=1, le=9999)
+    billing_notes: str | None = Field(default=None, max_length=2000)
+    send_welcome_email: bool = True
+
+
+class UpdateTenantBillingRequest(BaseModel):
+    billing_mode: str = Field(pattern="^(offline|stripe)$")
+    subscription_status: str | None = Field(default=None, pattern="^(active|trialing)$")
+    plan_id: str | None = Field(default=None, max_length=64)
+    max_employees: int | None = Field(default=None, ge=1, le=9999)
+    trial_days: int | None = Field(default=None, ge=1, le=90)
+    billing_notes: str | None = Field(default=None, max_length=2000)
+
+
 @router.get("/overview")
 def master_overview(
     request: Request,
@@ -152,6 +180,104 @@ def master_tenant_list(
             "overview": stats,
             "provider_name": os.getenv("PROVIDER_LEGAL_NAME", "Datasoftware Analytics Ltd"),
         }
+    finally:
+        conn.close()
+
+
+@router.get("/plans")
+def master_provision_plans(
+    current_user: Annotated[AuthUser, Depends(get_master_user)],
+) -> dict[str, object]:
+    return {"plans": list_provision_plans()}
+
+
+@router.get("/tenants/generate-password")
+def master_generate_password(
+    current_user: Annotated[AuthUser, Depends(get_master_user)],
+) -> dict[str, str]:
+    return {"password": generate_temporary_password()}
+
+
+@router.post("/tenants/create")
+def master_create_tenant(
+    payload: CreateTenantRequest,
+    request: Request,
+    current_user: Annotated[AuthUser, Depends(get_master_user)],
+) -> dict[str, object]:
+    conn = _db_conn()
+    try:
+        try:
+            result = create_tenant_manually(
+                conn=conn,
+                master_tenant_id=int(settings.master_customer_id),
+                business_name=payload.business_name,
+                billing_email=payload.billing_email,
+                admin_password=payload.admin_password,
+                plan_id=payload.plan_id,
+                billing_mode=payload.billing_mode,  # type: ignore[arg-type]
+                access=payload.access,  # type: ignore[arg-type]
+                trial_days=payload.trial_days,
+                max_employees=payload.max_employees,
+                billing_notes=payload.billing_notes,
+                send_welcome_email=payload.send_welcome_email,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        _audit(
+            request=request,
+            current_user=current_user,
+            action="CREATE_TENANT",
+            conn=conn,
+            target_tenant_id=int(result["tenant_id"]),
+            detail={
+                "billing_mode": payload.billing_mode,
+                "access": payload.access,
+                "plan_id": payload.plan_id,
+            },
+        )
+        conn.commit()
+        return result
+    finally:
+        conn.close()
+
+
+@router.post("/tenants/{tenant_id}/billing")
+def master_update_tenant_billing(
+    tenant_id: int,
+    payload: UpdateTenantBillingRequest,
+    request: Request,
+    current_user: Annotated[AuthUser, Depends(get_master_user)],
+) -> dict[str, object]:
+    if tenant_id == int(settings.master_customer_id):
+        raise HTTPException(status_code=404, detail="Tenant not found")
+    conn = _db_conn()
+    try:
+        try:
+            result = update_tenant_billing(
+                conn=conn,
+                tenant_id=tenant_id,
+                master_tenant_id=int(settings.master_customer_id),
+                billing_mode=payload.billing_mode,  # type: ignore[arg-type]
+                subscription_status=payload.subscription_status,  # type: ignore[arg-type]
+                plan_id=payload.plan_id,
+                max_employees=payload.max_employees,
+                trial_days=payload.trial_days,
+                billing_notes=payload.billing_notes,
+            )
+        except LookupError as exc:
+            raise HTTPException(status_code=404, detail="Tenant not found") from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        _audit(
+            request=request,
+            current_user=current_user,
+            action="UPDATE_TENANT_BILLING",
+            conn=conn,
+            target_tenant_id=tenant_id,
+            detail={"billing_mode": payload.billing_mode, "subscription_status": payload.subscription_status},
+        )
+        conn.commit()
+        return result
     finally:
         conn.close()
 

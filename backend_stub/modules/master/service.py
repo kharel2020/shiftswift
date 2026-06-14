@@ -175,6 +175,8 @@ def _serialize_tenant_row(row: tuple[Any, ...], *, as_of: datetime | None = None
         platform_status,
         deleted_at,
         internal_notes,
+        billing_mode,
+        billing_notes,
         active_employees,
         portal_pending,
         last_login,
@@ -233,6 +235,8 @@ def _serialize_tenant_row(row: tuple[Any, ...], *, as_of: datetime | None = None
         "platform_status": platform_status or "active",
         "deleted_at": deleted_at.isoformat() if isinstance(deleted_at, datetime) else deleted_at,
         "internal_notes": internal_notes or "",
+        "billing_mode": billing_mode or "stripe",
+        "billing_notes": billing_notes or "",
         "can_impersonate": deleted_at is None and (platform_status or "active") == "active",
     }
 
@@ -257,6 +261,8 @@ SELECT
   t.platform_status,
   t.deleted_at,
   t.internal_notes,
+  t.billing_mode,
+  t.billing_notes,
   COALESCE(emp.active_count, 0) AS active_employees,
   COALESCE(emp.portal_pending, 0) AS portal_pending,
   login.last_login,

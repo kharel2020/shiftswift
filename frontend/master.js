@@ -209,6 +209,7 @@
   function tenantSubline(tenant) {
     const bits = [`#${tenant.id}`];
     if (tenant.billing_email) bits.push(tenant.billing_email);
+    if (tenant.billing_mode === "offline") bits.push("offline billing");
     if (tenant.hr_login_email) bits.push(`login: ${tenant.hr_login_email}`);
     else bits.push("no HR login yet");
     return bits.join(" · ");
@@ -309,6 +310,8 @@
       <div><dt>Location</dt><dd>${escapeHtml(tenant.location)}</dd></div>
       <div><dt>Billing email</dt><dd>${escapeHtml(tenant.billing_email || "—")}</dd></div>
       <div><dt>HR login</dt><dd>${escapeHtml(tenant.hr_login_email || "—")}</dd></div>
+      <div><dt>Billing</dt><dd>${escapeHtml(tenant.billing_mode === "offline" ? "Offline / invoice" : "Stripe")} · ${escapeHtml(tenant.subscription_status || "—")}</dd></div>
+      <div><dt>Billing notes</dt><dd>${escapeHtml(tenant.billing_notes || "—")}</dd></div>
       <div><dt>Platform access</dt><dd>${escapeHtml(tenant.platform_status || "active")}${tenant.deleted_at ? " · deleted" : ""}</dd></div>
       <div><dt>Plan</dt><dd>${escapeHtml(tenant.plan_label)} · ${escapeHtml(tenant.mrr_label)}</dd></div>
       <div><dt>Employees</dt><dd>${active} active · ${tenant.employees_pending_portal || 0} portal pending
@@ -392,6 +395,28 @@
         alert(error.message);
       }
     };
+
+    const offlineBtn = document.getElementById("detail-offline-active");
+    if (offlineBtn) {
+      offlineBtn.hidden = isDeleted;
+      offlineBtn.onclick = async () => {
+        const notes = window.prompt(
+          "Mark this tenant as offline billing with active access?\n\nOptional billing note (invoice ref, agreed price):",
+          tenant.billing_notes || "",
+        );
+        if (notes === null) return;
+        try {
+          await apiPost(`/master/tenants/${tenant.id}/billing`, {
+            billing_mode: "offline",
+            subscription_status: "active",
+            billing_notes: notes.trim() || tenant.billing_notes || "",
+          });
+          await refreshSelectedTenant();
+        } catch (error) {
+          alert(error.message);
+        }
+      };
+    }
 
     document.getElementById("detail-email-tenant").onclick = async () => {
       const subject = window.prompt("Email subject");
@@ -746,6 +771,88 @@
     showSection(section);
   }
 
+  async function loadProvisionPlans() {
+    const select = document.getElementById("master-create-plan");
+    if (!select) return;
+    try {
+      const data = await apiGet("/master/plans");
+      const plans = data.plans || [];
+      select.innerHTML = plans
+        .map(
+          (plan) =>
+            `<option value="${escapeHtml(plan.id)}">${escapeHtml(plan.name)} (up to ${plan.max_employees} staff)</option>`,
+        )
+        .join("");
+      const preferred = plans.find((plan) => plan.id === "site_medium_monthly");
+      if (preferred) select.value = preferred.id;
+    } catch {
+      select.innerHTML = `<option value="site_medium_monthly">Compliance</option>`;
+    }
+  }
+
+  function initCreateTenantPanel() {
+    const panel = document.getElementById("master-create-panel");
+    const form = document.getElementById("master-create-form");
+    const status = document.getElementById("master-create-status");
+    const accessSelect = document.getElementById("master-create-access");
+    const trialWrap = document.getElementById("master-create-trial-wrap");
+    if (!panel || !form) return;
+
+    document.getElementById("master-create-tenant-btn")?.addEventListener("click", () => {
+      panel.hidden = false;
+      status.textContent = "";
+      void loadProvisionPlans();
+    });
+    document.getElementById("master-create-cancel")?.addEventListener("click", () => {
+      panel.hidden = true;
+      form.reset();
+      if (trialWrap) trialWrap.hidden = true;
+    });
+    accessSelect?.addEventListener("change", () => {
+      if (trialWrap) trialWrap.hidden = accessSelect.value !== "trialing";
+    });
+    document.getElementById("master-generate-password")?.addEventListener("click", async () => {
+      try {
+        const data = await apiGet("/master/tenants/generate-password");
+        const input = form.querySelector('input[name="admin_password"]');
+        if (input && data.password) input.value = data.password;
+      } catch (error) {
+        if (status) status.textContent = error.message;
+      }
+    });
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const fd = new FormData(form);
+      const maxRaw = String(fd.get("max_employees") || "").trim();
+      const payload = {
+        business_name: String(fd.get("business_name") || "").trim(),
+        billing_email: String(fd.get("billing_email") || "").trim(),
+        admin_password: String(fd.get("admin_password") || ""),
+        plan_id: String(fd.get("plan_id") || "site_medium_monthly"),
+        billing_mode: String(fd.get("billing_mode") || "offline"),
+        access: String(fd.get("access") || "active"),
+        trial_days: Number(fd.get("trial_days") || 14),
+        send_welcome_email: fd.get("send_welcome_email") === "on",
+        billing_notes: String(fd.get("billing_notes") || "").trim() || null,
+      };
+      if (maxRaw) payload.max_employees = Number(maxRaw);
+      if (status) status.textContent = "Creating workspace…";
+      try {
+        const result = await apiPost("/master/tenants/create", payload);
+        panel.hidden = true;
+        form.reset();
+        if (trialWrap) trialWrap.hidden = true;
+        await loadTenants();
+        await selectTenant(result.tenant_id);
+        window.alert(
+          `Workspace #${result.tenant_id} created for ${result.billing_email}.\n\nShare the HR password securely — it is not shown again.`,
+        );
+      } catch (error) {
+        if (status) status.textContent = error.message;
+      }
+    });
+  }
+
   async function bootstrap() {
     try {
       const verify = await apiGet("/auth/verify");
@@ -764,6 +871,7 @@
       console.warn(error);
     }
     routeFromHash();
+    initCreateTenantPanel();
   }
 
   document.querySelectorAll("[data-master-section]").forEach((link) => {

@@ -475,6 +475,52 @@ body.master-app {
   color: #b45309;
 }
 
+.master-create-panel {
+  margin: 0 0 1rem;
+  padding: 1.25rem;
+  border: 1px solid var(--master-border);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.master-create-form {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 520px;
+}
+
+.master-create-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+}
+
+.master-create-form input,
+.master-create-form select,
+.master-create-form textarea {
+  font: inherit;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--master-border);
+  border-radius: 8px;
+}
+
+.master-create-password-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.master-create-password-row input {
+  flex: 1;
+}
+
+.master-create-form__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 .plan-badge,
 .master-status {
   display: inline-flex;

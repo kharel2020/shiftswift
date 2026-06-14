@@ -31,7 +31,7 @@
   bash deploy/cloudpanel/pull-production.sh
   ```
   *(Or manually: `git pull --ff-only`, migrations, restart API, rsync frontend.)*
-- [ ] **All migrations applied through `065_master_platform_ops.sql`**
+- [ ] **All migrations applied through `066_tenant_billing_mode.sql`**
   ```bash
   bash scripts/run_migrations.sh
   ```
@@ -42,6 +42,7 @@
   | `063` | Premises QR clock-in tokens |
   | `064` | Break punches, kiosk PIN, timesheet approvals |
   | `065` | Master tenant suspend / soft delete / internal notes |
+  | `066` | Offline / manual billing mode for sales-led accounts |
 - [ ] `sudo systemctl restart shiftswifthr-api` (if not done by pull script)
 - [ ] `curl -s https://api.shiftswifthr.co.uk/health` → `"status":"ok"`, `"environment":"production"`
 - [ ] GDPR deploy verify:
@@ -54,6 +55,13 @@
 - [ ] **Tenants** list shows **Tenant #ID**, billing email, and **Primary account** / **Duplicate trial** badges
 - [ ] Click **Remove duplicate trials** if duplicate test workspaces exist (keeps the primary HR login per email)
 - [ ] Confirm one **Primary account** row per real pilot customer email
+
+### A.2 Sales-led accounts (direct customers)
+
+- [ ] OPS → **Create account** — offline billing + active access (no Stripe trial required)
+- [ ] Billing notes recorded (agreed price, invoice cadence, PO reference)
+- [ ] Welcome email received; HR password shared securely out of band
+- [ ] Tenant shows **offline billing** in OPS detail
 
 ---
 

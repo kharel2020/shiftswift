@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#142033" />
     <script src="./app-icons.js?v=brandkit-v5"></script>
     <title>ShiftSwift OPS | Master Admin</title>
-    <link rel="stylesheet" href="./master.css?v=4" />
+    <link rel="stylesheet" href="./master.css?v=5" />
   </head>
   <body class="master-app">
     <div id="master-overlay" class="master-overlay" hidden aria-hidden="true"></div>
@@ -70,6 +70,7 @@
             <p class="master-page-sub" id="master-page-sub">Loading…</p>
           </div>
           <div class="master-page-actions">
+            <button type="button" class="master-btn master-btn--gold" id="master-create-tenant-btn">Create account</button>
             <button type="button" class="master-btn master-btn--ghost" id="master-cleanup-duplicates-btn">Remove duplicate trials</button>
             <button type="button" class="master-btn master-btn--ghost" id="master-export-btn" disabled>Export CSV</button>
             <label class="master-check master-page-actions__check">
@@ -87,6 +88,45 @@
             <span class="sr-only">Search tenants</span>
             <input type="search" id="master-search" placeholder="Search business, email, location…" autocomplete="off" />
           </label>
+        </div>
+
+        <div id="master-create-panel" class="master-create-panel" hidden>
+          <h2>Create customer account</h2>
+          <p class="muted">Sales-led onboarding — offline billing by default (no Stripe). One email = one workspace.</p>
+          <form id="master-create-form" class="master-create-form">
+            <label>Business name<input name="business_name" required maxlength="200" autocomplete="organization" /></label>
+            <label>Billing / HR login email<input name="billing_email" type="email" required autocomplete="email" /></label>
+            <label>HR password
+              <span class="master-create-password-row">
+                <input name="admin_password" type="text" required minlength="8" autocomplete="new-password" />
+                <button type="button" class="master-btn master-btn--ghost" id="master-generate-password">Generate</button>
+              </span>
+            </label>
+            <label>Plan
+              <select name="plan_id" id="master-create-plan"></select>
+            </label>
+            <label>Max employees<input name="max_employees" type="number" min="1" max="9999" placeholder="Plan default" /></label>
+            <label>Access
+              <select name="access" id="master-create-access">
+                <option value="active" selected>Active (no trial)</option>
+                <option value="trialing">Trial period</option>
+              </select>
+            </label>
+            <label id="master-create-trial-wrap" hidden>Trial days<input name="trial_days" type="number" min="1" max="90" value="14" /></label>
+            <label>Billing
+              <select name="billing_mode">
+                <option value="offline" selected>Offline / invoice (recommended)</option>
+                <option value="stripe">Stripe subscription</option>
+              </select>
+            </label>
+            <label>Billing notes<textarea name="billing_notes" rows="2" placeholder="e.g. £79/mo agreed, invoice quarterly, PO ref…"></textarea></label>
+            <label class="master-check"><input type="checkbox" name="send_welcome_email" checked /> Send welcome email</label>
+            <p class="master-inline-status muted" id="master-create-status" aria-live="polite"></p>
+            <div class="master-create-form__actions">
+              <button type="submit" class="master-btn master-btn--gold">Create workspace</button>
+              <button type="button" class="master-btn master-btn--ghost" id="master-create-cancel">Cancel</button>
+            </div>
+          </form>
         </div>
 
         <div class="master-layout">
@@ -144,6 +184,7 @@
                 <button type="button" class="master-btn master-btn--gold" id="detail-impersonate">Impersonate this account</button>
                 <div class="master-detail-actions__row">
                   <button type="button" class="master-btn master-btn--ghost" id="detail-extend-trial">Extend trial</button>
+                  <button type="button" class="master-btn master-btn--ghost" id="detail-offline-active">Mark offline / active</button>
                   <button type="button" class="master-btn master-btn--ghost" id="detail-email-tenant">Email tenant</button>
                 </div>
                 <button type="button" class="master-btn master-btn--ghost" id="detail-suspend-toggle">Suspend account</button>
@@ -209,6 +250,6 @@
 
     <script src="./brand-config.js?v=brand-v4"></script>
     <script src="./master-auth-guard.js?v=2"></script>
-    <script src="./master.js?v=5"></script>
+    <script src="./master.js?v=6"></script>
   </body>
 </html>
