@@ -9,6 +9,8 @@
 | Marketing | https://www.shiftswifthr.co.uk |
 | App (HR + employee login) | https://app.shiftswifthr.co.uk/business-login.html |
 | Platform master OPS | https://app.shiftswifthr.co.uk/ops-9x7k2.html |
+
+**Do not use** `www.shiftswifthr.co.uk/business-login.html` — marketing links and nginx redirect app URLs to **app.**
 | API health | https://api.shiftswifthr.co.uk/health |
 
 **Note:** `/master-login.html` and `/tenant-login.html` redirect to business login — use **OPS** for platform master admin only.

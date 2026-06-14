@@ -64,7 +64,52 @@ fi
 
 echo "==> sync frontend"
 rsync -a --delete "${API_ROOT}/frontend/" "${APP_ROOT}/"
-rsync -a --delete "${API_ROOT}/frontend/" "${WWW_ROOT}/"
+
+# WWW: marketing + legal only — HR app (login, admin, OPS) lives on app.shiftswifthr.co.uk
+echo "==> sync marketing frontend to WWW (excluding HR app pages)"
+rsync -a --delete \
+  --include='/' \
+  --include='index.html' \
+  --include='landing.html' \
+  --include='privacy-policy.html' \
+  --include='cookies.html' \
+  --include='eula.html' \
+  --include='dpa.html' \
+  --include='payment-terms.html' \
+  --include='legal.css' \
+  --include='payroll-export-guide.html' \
+  --include='staff-export-guide.html' \
+  --include='compliance-checklist.html' \
+  --include='landing.css' \
+  --include='pricing.css' \
+  --include='landing-*.js' \
+  --include='pricing.js' \
+  --include='cookie-consent.js' \
+  --include='cookie-consent.css' \
+  --include='brand-config.js' \
+  --include='assets/' \
+  --include='assets/**' \
+  --include='docs/' \
+  --include='docs/**' \
+  --exclude='*' \
+  "${API_ROOT}/frontend/" "${WWW_ROOT}/"
+
+WWW_FORBIDDEN=(
+  business-login.html
+  admin.html
+  employee.html
+  signup.html
+  ops-9x7k2.html
+  master.html
+  punch.html
+)
+for page in "${WWW_FORBIDDEN[@]}"; do
+  if [ -f "${WWW_ROOT}/${page}" ]; then
+    echo "ERROR: ${WWW_ROOT}/${page} must not exist on www — check WWW rsync filters"
+    exit 1
+  fi
+done
+echo "    www has no HR app login pages"
 
 echo "==> verify legal pages (WWW + App)"
 LEGAL_PAGES=(

@@ -49,6 +49,12 @@ window.ShiftSwiftBrand.resolveApiBase = function resolveApiBase() {
   return window.ShiftSwiftBrand.urls.localApi;
 };
 
+window.ShiftSwiftBrand.appUrl = function appUrl(path) {
+  const base = window.ShiftSwiftBrand.urls.app.replace(/\/$/, "");
+  const suffix = path.startsWith("/") ? path : `/${path}`;
+  return `${base}${suffix}`;
+};
+
 window.ShiftSwiftBrand.getApiBase = function getApiBase() {
   return window.ShiftSwiftBrand.resolveApiBase();
 };

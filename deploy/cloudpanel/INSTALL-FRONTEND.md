@@ -1,32 +1,34 @@
 # ShiftSwift HR — Frontend install (CloudPanel Static HTML site)
 
-Upload **shiftswifthr-frontend.zip** for **app.shiftswifthr.co.uk** and **www.shiftswifthr.co.uk**.
+Upload **shiftswifthr-frontend.zip** to **both** site roots (same zip contents).
 
-## app.shiftswifthr.co.uk (admin + employee portal)
+## app.shiftswifthr.co.uk (HR app)
+
+Login, admin, employee portal, signup, time clock, platform OPS.
 
 1. Create **Static HTML Site** in CloudPanel for `app.shiftswifthr.co.uk`
-2. Upload zip to site root and extract:
+2. Extract zip into site root (`index.html`, `business-login.html`, `admin.html`, …)
+3. Enable SSL
+4. **Sign in:** `https://app.shiftswifthr.co.uk/business-login.html`
+5. **Platform OPS:** `https://app.shiftswifthr.co.uk/ops-9x7k2.html`
 
-```bash
-cd /home/<user>/htdocs/app.shiftswifthr.co.uk
-unzip -o shiftswifthr-frontend.zip
-```
+## www.shiftswifthr.co.uk (marketing only)
 
-3. Document root must contain `index.html`, `admin.html`, `business-login.html`, `assets/`, etc.  
-   If zip created a `frontend/` folder, move contents up:
+Homepage, pricing, legal pages (`privacy-policy.html`, `eula.html`, …).
 
-```bash
-mv frontend/* . && rmdir frontend
-```
+1. Site root should **not** contain `business-login.html`, `admin.html`, or other HR app pages.
+2. `pull-production.sh` syncs **marketing files only** to www; the full app goes to **app.** only.
+3. Marketing CTAs link to **`https://app.shiftswifthr.co.uk/…`** for sign-in and trial signup.
+4. Legacy bookmarks to `www…/business-login.html` should 404 on www or redirect via nginx to **app.**
 
-4. Enable SSL in CloudPanel
-5. Open `https://app.shiftswifthr.co.uk/business-login.html`
+Do **not** send customers to `www.shiftswifthr.co.uk/business-login.html` — use **app.** only.
 
-## www.shiftswifthr.co.uk (marketing)
+## API
 
-Same zip — extract into www site root. Uses the same `frontend/` files (`index.html` is the marketing home).
+Production API: `https://api.shiftswifthr.co.uk` (set in `brand-config.js` / `CORS_ALLOW_ORIGINS`).
 
-## API URL
-
-Production API is already set in `brand-config.js` to `https://api.shiftswifthr.co.uk`.  
 Ensure the API site is live before testing login.
+
+## nginx
+
+Use `deploy/nginx-shiftswift.conf` — www redirects app paths to `app.shiftswifthr.co.uk`.
